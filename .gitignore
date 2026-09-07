@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.env
+!.env.example
+.pytest_cache/
+
+# Node / Frontend
+node_modules/
+dist/
+backend/static/
+.npm/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+[Dd]esktop.ini
