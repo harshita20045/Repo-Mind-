@@ -1,30 +1,55 @@
+import pytest
+import os
 from fastapi.testclient import TestClient
 from backend.app.main import app
+from backend.app.db import SessionLocal
+from backend.app.auth.models import User, Organization, OrganizationMembership
 
-client = TestClient(app)
+@pytest.fixture
+def client():
+    os.environ["BOOTSTRAP_TOKEN"] = "test_bootstrap_token"
+    return TestClient(app)
 
-def test_organization_membership_roles():
-    import uuid
-    # Create Org Admin
-    email_admin = f"admin_{uuid.uuid4().hex[:8]}@example.com"
-    res_admin = client.post("/auth/register", json={"email": email_admin, "password": "password", "organization_name": "Org 1"})
+@pytest.fixture
+def db_session():
+    session = SessionLocal()
+    try:
+        session.query(OrganizationMembership).delete()
+        session.query(Organization).delete()
+        session.query(User).delete()
+        session.commit()
+        yield session
+    finally:
+        session.rollback()
+        session.close()
+
+def test_organization_membership_roles(client: TestClient, db_session):
+    # 1. Bootstrap to get an Admin and Org 1
+    res_admin = client.post("/auth/bootstrap", json={
+        "email": "admin@example.com", "password": "password", 
+        "organization_name": "Org 1", "bootstrap_token": "test_bootstrap_token"
+    })
     org_id = res_admin.json()["memberships"][0]["organization_id"]
-    token_admin = client.post("/auth/login", json={"email": email_admin, "password": "password"}).cookies.get("access_token")
-
-    # Create target user separately
-    email_user = f"user_{uuid.uuid4().hex[:8]}@example.com"
-    res_user = client.post("/auth/register", json={"email": email_user, "password": "password", "organization_name": "Org 2"})
-    user_id = res_user.json()["user"]["id"]
-    token_user = client.post("/auth/login", json={"email": email_user, "password": "password"}).cookies.get("access_token")
+    token_admin = client.post("/auth/login", json={"email": "admin@example.com", "password": "password"}).cookies.get("access_token")
 
     # Admin adds user to Org 1
-    res_add = client.post(f"/organizations/{org_id}/members", json={"email": email_user, "role": "developer"}, cookies={"access_token": token_admin})
+    res_add = client.post(
+        f"/organizations/{org_id}/members", 
+        json={"email": "user@example.com", "role": "developer"}, 
+        cookies={"access_token": token_admin}
+    )
     assert res_add.status_code == 201
-    
+    invitation_token = res_add.json()["invitation_token"]
+
     # List members
     res_list = client.get(f"/organizations/{org_id}/members", cookies={"access_token": token_admin})
     assert len(res_list.json()) == 2
-    
+
+    # User completes onboarding
+    res_user = client.post("/auth/onboard", json={"invitation_token": invitation_token, "new_password": "user_password"})
+    user_id = res_user.json()["user"]["id"]
+    token_user = res_user.cookies.get("access_token")
+
     # User tries to change own role (fail)
     res_escalate = client.put(f"/organizations/{org_id}/members/{user_id}/role", json={"role": "org_admin"}, cookies={"access_token": token_user})
     assert res_escalate.status_code == 403

@@ -1,8 +1,10 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from backend.app.organizations.models import Project, Repository, GithubConnection
-from backend.app.auth.models import Organization, OrganizationMembership, RoleEnum
+from backend.app.auth.models import Organization, OrganizationMembership, RoleEnum, User
 from fastapi import HTTPException, status
+import secrets
+from datetime import datetime, timedelta, timezone
 
 ROLE_HIERARCHY = {
     RoleEnum.DEVELOPER: 1,
@@ -74,10 +76,21 @@ def get_members(db: Session, organization_id: int):
     return memberships
 
 def add_member(db: Session, user_id: int, organization_id: int, target_email: str, role: RoleEnum, actor_id: int):
-    from backend.app.auth.service import get_user_by_email
+    from backend.app.auth.service import get_user_by_email, hash_invitation_token
     target_user = get_user_by_email(db, target_email)
+    
+    raw_invitation_token = None
+    
     if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raw_invitation_token = secrets.token_urlsafe(32)
+        target_user = User(
+            email=target_email,
+            password_hash=None,
+            invitation_token_hash=hash_invitation_token(raw_invitation_token),
+            invitation_expires_at=datetime.now(timezone.utc) + timedelta(days=7)
+        )
+        db.add(target_user)
+        db.flush()
         
     existing = db.query(OrganizationMembership).filter(
         OrganizationMembership.user_id == target_user.id,
@@ -101,7 +114,10 @@ def add_member(db: Session, user_id: int, organization_id: int, target_email: st
     db.commit()
     
     membership.email = target_user.email
-    return membership
+    return {
+        "membership": membership,
+        "invitation_token": raw_invitation_token
+    }
 
 def update_member_role(db: Session, user_id: int, organization_id: int, target_user_id: int, new_role: RoleEnum, actor_id: int):
     if user_id == target_user_id:

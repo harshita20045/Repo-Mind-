@@ -48,6 +48,10 @@ class OrganizationMemberResponse(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
 
+class OrganizationMemberInviteResponse(BaseModel):
+    membership: OrganizationMemberResponse
+    invitation_token: Optional[str] = None
+
 class GithubConnectionBase(BaseModel):
     encrypted_token: str
     scope: str = "repo"

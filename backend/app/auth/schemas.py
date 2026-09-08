@@ -8,10 +8,21 @@ class UserLogin(BaseModel):
     password: str
 
 
-class UserRegister(BaseModel):
+class BootstrapRequest(BaseModel):
     email: EmailStr
     password: str
-    organization_name: Optional[str] = "Default Org"
+    organization_name: str
+    bootstrap_token: str
+
+
+class OnboardRequest(BaseModel):
+    invitation_token: str
+    new_password: str
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 class OrganizationResponse(BaseModel):

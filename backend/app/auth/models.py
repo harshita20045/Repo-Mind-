@@ -18,7 +18,9 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=True)  # Nullable for pending accounts
+    invitation_token_hash = Column(String(255), nullable=True, unique=True, index=True)
+    invitation_expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     memberships = relationship("OrganizationMembership", back_populates="user", cascade="all, delete-orphan")
@@ -42,7 +44,7 @@ class OrganizationMembership(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
     organization_id = Column(Integer, ForeignKey("organization.id", ondelete="CASCADE"), nullable=False, index=True)
-    role = Column(SQLEnum(RoleEnum, native_enum=False), default=RoleEnum.DEVELOPER, nullable=False)
+    role = Column(SQLEnum(RoleEnum, native_enum=False, values_callable=lambda x: [e.value for e in x]), default=RoleEnum.DEVELOPER, nullable=False)
 
     user = relationship("User", back_populates="memberships")
     organization = relationship("Organization", back_populates="memberships")

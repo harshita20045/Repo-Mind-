@@ -39,11 +39,12 @@ def list_members(organization_id: int, db: Session = Depends(get_db), current_us
     service.verify_org_member(db, current_user.id, organization_id)
     return service.get_members(db, organization_id)
 
-@router.post("/organizations/{organization_id}/members", response_model=schemas.OrganizationMemberResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/organizations/{organization_id}/members", response_model=schemas.OrganizationMemberInviteResponse, status_code=status.HTTP_201_CREATED)
 def invite_member(organization_id: int, invite: schemas.MemberInvite, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     service.verify_org_admin(db, current_user.id, organization_id)
     role = RoleEnum(invite.role)
-    return service.add_member(db, current_user.id, organization_id, invite.email, role, current_user.id)
+    result = service.add_member(db, current_user.id, organization_id, invite.email, role, current_user.id)
+    return result
 
 @router.put("/organizations/{organization_id}/members/{target_user_id}/role", response_model=schemas.OrganizationMemberResponse)
 def update_member_role(organization_id: int, target_user_id: int, role_update: schemas.MemberRoleUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

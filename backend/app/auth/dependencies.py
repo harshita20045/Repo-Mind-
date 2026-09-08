@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from backend.app.db import get_db
-from backend.app.auth.models import User, RoleEnum
+from backend.app.auth.models import User
 from backend.app.auth.service import decode_access_token, get_user_by_id
 
 
@@ -65,27 +65,3 @@ async def get_current_user(
 
     return user
 
-
-def require_role(min_role: RoleEnum):
-    role_hierarchy = {
-        RoleEnum.DEVELOPER: 1,
-        RoleEnum.REVIEWER: 2,
-        RoleEnum.TEAM_LEAD: 3,
-        RoleEnum.ORG_ADMIN: 4,
-    }
-
-    async def role_checker(
-        current_user: User = Depends(get_current_user),
-    ) -> User:
-        user_roles = [m.role for m in current_user.memberships]
-        max_user_level = max([role_hierarchy.get(r, 0) for r in user_roles], default=0)
-        required_level = role_hierarchy.get(min_role, 1)
-
-        if max_user_level < required_level:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Operation requires '{min_role.value}' role or higher",
-            )
-        return current_user
-
-    return role_checker
