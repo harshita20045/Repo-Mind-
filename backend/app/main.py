@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.routes.health import router as health_router
 from backend.app.auth.routes import router as auth_router
 from backend.app.organizations.routes import router as orgs_router
-from backend.app.github.routes import router as github_router
+
 
 app = FastAPI(
     title="RepoMind Backend",
@@ -29,7 +29,7 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(orgs_router)
-app.include_router(github_router)
+
 
 if __name__ == "__main__":
     uvicorn.run(
