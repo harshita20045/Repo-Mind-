@@ -80,7 +80,7 @@ def register_user(db: Session, email: str, password: str, org_name: str = "Defau
     membership = OrganizationMembership(
         user_id=user.id,
         organization_id=org.id,
-        role=RoleEnum.ORG_ADMIN,
+        role=RoleEnum.DEVELOPER,
     )
     db.add(membership)
     db.commit()
