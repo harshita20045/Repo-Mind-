@@ -1,5 +1,6 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -15,5 +16,6 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "local"
     DEMO: bool = False
     EMBEDDING_MODEL: str = "sentence-transformers/all-mpnet-base-v2"
+    BOOTSTRAP_TOKEN: Optional[str] = "fkjerngiorneognrengioirw0rrrrrth348h3fin3gnw3480"
 
 settings = Settings()

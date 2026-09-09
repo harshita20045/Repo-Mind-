@@ -79,7 +79,8 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
 def bootstrap_system(
     db: Session, email: str, password: str, org_name: str, bootstrap_token: str
 ) -> User:
-    expected_token = os.environ.get("BOOTSTRAP_TOKEN")
+    expected_token = settings.BOOTSTRAP_TOKEN
+    print(expected_token, bootstrap_token)
     if not expected_token or bootstrap_token != expected_token:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid bootstrap token")
 

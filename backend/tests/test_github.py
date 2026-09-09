@@ -13,25 +13,7 @@ from backend.app.github.encryption import encrypt_token, decrypt_token
 from backend.app.auth.models import User, Organization, OrganizationMembership, RoleEnum
 from backend.app.organizations.models import Project, Repository
 
-@pytest.fixture
-def client():
-    os.environ["BOOTSTRAP_TOKEN"] = "test_bootstrap_token"
-    return TestClient(app)
 
-@pytest.fixture
-def db_session():
-    session = SessionLocal()
-    try:
-        session.query(Repository).delete()
-        session.query(Project).delete()
-        session.query(OrganizationMembership).delete()
-        session.query(Organization).delete()
-        session.query(User).delete()
-        session.commit()
-        yield session
-    finally:
-        session.rollback()
-        session.close()
 
 def _setup_user_and_org(client: TestClient, db_session, org_name: str = None) -> tuple[str, int, int]:
     """Register a user, return (token, org_id, user_id)."""

@@ -6,26 +6,7 @@ from backend.app.db import get_db, SessionLocal
 from backend.app.auth.models import User, Organization, OrganizationMembership
 
 
-@pytest.fixture
-def client():
-    # Ensure a valid bootstrap token is set for tests
-    os.environ["BOOTSTRAP_TOKEN"] = "test_bootstrap_token"
-    return TestClient(app)
 
-
-@pytest.fixture
-def db_session():
-    session = SessionLocal()
-    try:
-        # Clear users for fresh bootstrap test
-        session.query(OrganizationMembership).delete()
-        session.query(Organization).delete()
-        session.query(User).delete()
-        session.commit()
-        yield session
-    finally:
-        session.rollback()
-        session.close()
 
 
 def test_bootstrap_flow(client: TestClient, db_session):

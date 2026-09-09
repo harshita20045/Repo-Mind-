@@ -145,3 +145,5 @@ def get_pull_request(
     _assert_repo_access(db, pr.repository_id, current_user.id)
 
     return pr
+
+

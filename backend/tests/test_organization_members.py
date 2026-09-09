@@ -5,23 +5,7 @@ from backend.app.main import app
 from backend.app.db import SessionLocal
 from backend.app.auth.models import User, Organization, OrganizationMembership
 
-@pytest.fixture
-def client():
-    os.environ["BOOTSTRAP_TOKEN"] = "test_bootstrap_token"
-    return TestClient(app)
 
-@pytest.fixture
-def db_session():
-    session = SessionLocal()
-    try:
-        session.query(OrganizationMembership).delete()
-        session.query(Organization).delete()
-        session.query(User).delete()
-        session.commit()
-        yield session
-    finally:
-        session.rollback()
-        session.close()
 
 def test_organization_membership_roles(client: TestClient, db_session):
     # 1. Bootstrap to get an Admin and Org 1
