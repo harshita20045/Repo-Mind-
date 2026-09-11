@@ -42,6 +42,8 @@ _verify_test_db_identity()
 def setup_test_db():
     """Create all tables in the test database once per session."""
     _verify_test_db_identity()
+    with engine.begin() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     Base.metadata.create_all(bind=engine)
     yield
 
