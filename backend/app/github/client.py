@@ -149,3 +149,34 @@ class GitHubClient:
         if ref:
             params["ref"] = ref
         return self._get(f"/repos/{owner}/{repo}/contents/{path}", params=params or None)
+
+    def get_repository_tree(self, owner: str, repo: str, sha: str, recursive: bool = True) -> Dict[str, Any]:
+        """
+        Fetch the Git tree for a repository, optionally recursively.
+        Returns the tree structure to avoid rate limits of the contents API.
+        """
+        params = {}
+        if recursive:
+            params["recursive"] = "1"
+        return self._get(f"/repos/{owner}/{repo}/git/trees/{sha}", params=params or None)
+
+    def get_blob_content(self, owner: str, repo: str, sha: str) -> bytes:
+        """
+        Fetch the raw content of a Git blob (file) by its SHA.
+        Returns the raw bytes since the file might be binary or UTF-8.
+        """
+        url = f"{GITHUB_API_BASE}/repos/{owner}/{repo}/git/blobs/{sha}"
+        headers = {**self._headers, "Accept": "application/vnd.github.v3.raw"}
+        with httpx.Client(timeout=_DEFAULT_TIMEOUT) as http:
+            response = http.get(url, headers=headers)
+
+        if response.status_code in (401, 403, 404):
+            raise GitHubAPIError(response.status_code, response.text[:200])
+        if response.status_code == 429:
+            raise GitHubAPIError(429, "Rate limit exceeded")
+        if response.status_code >= 500:
+            raise GitHubTransientError(response.status_code)
+        if not response.is_success:
+            raise GitHubAPIError(response.status_code, "Failed to fetch blob content")
+
+        return response.content

@@ -14,6 +14,8 @@ from backend.app.db import engine, Base
 import backend.app.auth.models
 import backend.app.organizations.models
 import backend.app.audit.models
+import backend.app.rag.models
+import backend.app.github.models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

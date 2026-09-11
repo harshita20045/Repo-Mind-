@@ -7,7 +7,7 @@ venv/
 *.env
 !.env.example
 .pytest_cache/
-
+backend/%VENV%/
 # Node / Frontend
 node_modules/
 dist/
