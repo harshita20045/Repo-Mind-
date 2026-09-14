@@ -43,3 +43,14 @@ export const authApi = {
       method: 'GET',
     }),
 };
+
+export const reviewApi = {
+  triggerReview: (prId) =>
+    apiRequest(`/pull-requests/${prId}/review`, {
+      method: 'POST',
+    }),
+  getReviewRun: (runId) =>
+    apiRequest(`/review-runs/${runId}`, {
+      method: 'GET',
+    }),
+};
