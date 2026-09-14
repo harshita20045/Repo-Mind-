@@ -11,6 +11,7 @@ from backend.app.core.config import settings
 from backend.app.auth.models import User, Organization, OrganizationMembership
 from backend.app.organizations.models import Project, Repository, GithubConnection
 from backend.app.github.models import PullRequest, Commit
+from backend.app.review.models import ReviewRun, Finding, LinterResult  # Phase 8
 
 # Explicitly configure the test database URL
 from sqlalchemy.engine.url import make_url
