@@ -119,3 +119,43 @@ def parse_llm_output(raw: str) -> List[FindingSchema]:
         ) from exc
 
     return output.findings
+
+
+# --- Phase 10 API Schemas ---
+
+from datetime import datetime
+
+class ReviewTriggerResponse(BaseModel):
+    """Returned by POST /pull-requests/{id}/review to provide the job reference."""
+    job_id: int = Field(..., description="The ID of the ReviewRun, acting as the job_id.")
+    status: str
+
+class FindingResponse(BaseModel):
+    """API view of a Finding."""
+    id: int
+    severity: str
+    type: str
+    file: Optional[str] = None
+    line: Optional[int] = None
+    title: str
+    explanation: str
+    rule_source: Optional[str] = None
+    recommendation: Optional[str] = None
+    confidence: float
+    status: str
+
+    class Config:
+        from_attributes = True
+
+class ReviewRunResponse(BaseModel):
+    """Returned by GET /review-runs/{id} to provide run details and findings."""
+    id: int
+    pull_request_id: int
+    commit_sha: str
+    status: str
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+    findings: List[FindingResponse] = []
+
+    class Config:
+        from_attributes = True

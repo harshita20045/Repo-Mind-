@@ -26,10 +26,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from backend.app.review.router import router as review_router
+
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(orgs_router)
 app.include_router(github_router)
+app.include_router(review_router)
 
 
 if __name__ == "__main__":
