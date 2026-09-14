@@ -130,6 +130,23 @@ class GitHubClient:
         """List commits on a pull request (for re-analysis diffing)."""
         return self._get(f"/repos/{owner}/{repo}/pulls/{pr_number}/commits")
 
+    def get_pull_request_files(
+        self,
+        owner: str,
+        repo: str,
+        pr_number: int,
+        per_page: int = 100,
+        page: int = 1,
+    ) -> List[Dict[str, Any]]:
+        """
+        List files modified/added/renamed/deleted in a pull request.
+        Returns metadata including file path, status, and contents_url/sha.
+        """
+        return self._get(
+            f"/repos/{owner}/{repo}/pulls/{pr_number}/files",
+            params={"per_page": per_page, "page": page},
+        )
+
     # ------------------------------------------------------------------
     # Repository documentation discovery (Phase 6/7 — RAG)
     # ------------------------------------------------------------------

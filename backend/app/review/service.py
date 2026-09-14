@@ -31,7 +31,7 @@ from backend.app.organizations.service import get_repository_by_id
 from backend.app.organizations.models import Repository
 from backend.app.rag.retriever import RAGRetriever
 from backend.app.rag.embedder import LocalEmbedder
-from backend.app.review.models import ReviewRun, Finding
+from backend.app.review.models import ReviewRun, Finding, LinterResult
 from backend.app.review.provider import LLMProvider, LLMProviderError
 from backend.app.review.schemas import (
     parse_llm_output, LLMOutputParseError, FindingSchema,
@@ -41,6 +41,7 @@ from backend.app.review.prompts import (
     build_user_content,
 )
 from backend.app.review.context import derive_query_from_diff, retrieve_context
+from backend.app.linter.service import run_linters
 
 logger = logging.getLogger(__name__)
 
@@ -178,14 +179,39 @@ def run_review(
         top_k=5,
     )
 
-    # --- 6. Build prompt (system separated from untrusted content) -----------
+    # --- 6. Run static analysis (Phase 9) ------------------------------------
+    run_linters(
+        db=db,
+        client=client,
+        owner=repo.github_owner,
+        repo=repo.github_name,
+        pr_number=pr.github_number,
+        review_run_id=run.id,
+    )
+    
+    # Fetch linter results to pass to the prompt
+    linter_rows = db.query(LinterResult).filter(LinterResult.review_run_id == run.id).all()
+    linter_text_parts = []
+    for lr in linter_rows:
+        import json
+        # Pretty print the JSON so the LLM can read it easily
+        try:
+            formatted_output = json.dumps(lr.raw_output, indent=2)
+            linter_text_parts.append(f"Tool: {lr.tool}\nResult:\n{formatted_output}")
+        except Exception:
+            linter_text_parts.append(f"Tool: {lr.tool}\nResult: Unparseable output")
+            
+    linter_results_text = "\n\n".join(linter_text_parts)
+
+    # --- 7. Build prompt (system separated from untrusted content) -----------
     user_content = build_user_content(
         pr_title=pr.title,
         diff=diff,
         retrieved_chunks=retrieved_chunks,
+        linter_results_text=linter_results_text,
     )
 
-    # --- 7. Call provider + validate (with one retry on parse failure) --------
+    # --- 8. Call provider + validate (with one retry on parse failure) --------
     raw_output: Optional[str] = None
     findings: Optional[list] = None
 
