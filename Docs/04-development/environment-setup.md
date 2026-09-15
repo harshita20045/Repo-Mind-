@@ -1,8 +1,7 @@
 # Local development environment
 
+RepoMind 2.0 strictly runs on bare-metal or VMs. Docker is NOT used.
 RepoMind uses a repository-local `.venv` and the committed frontend lockfile.
-The literal `%VENV%` directory was an obsolete virtual environment tied to a
-missing local Python installation and is intentionally not part of the project.
 
 ## Backend
 
@@ -12,24 +11,38 @@ From the repository root on Windows:
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
-.\.venv\Scripts\python.exe -m alembic heads
-.\.venv\Scripts\python.exe -m pytest backend\tests -q
 ```
 
-Copy `.env.example` to `.env` and provide a PostgreSQL connection, JWT secret,
-and Fernet key before running migrations or the API. Tests require a separate
-`repomind_test` PostgreSQL database with the `vector` extension available.
+### PostgreSQL & pgvector
+You must have PostgreSQL running locally on port 5432.
+Since RepoMind 2.0 uses Code-Aware RAG, you MUST install the `pgvector` extension natively on your Windows PostgreSQL server:
+1. Download or build the pre-compiled Windows pgvector binaries.
+2. Install them into your PostgreSQL `share/extension` folder.
+3. Start the PostgreSQL server.
+
+### Environment Configuration
+Copy `.env.example` to `.env` and fill it out. The following are required:
+- `POSTGRES_URL`: `postgresql://postgres:<your_password>@localhost:5432/repomind`
+- `LLM_PROVIDER`: `gemini`
+- `GEMINI_API_KEY`: Your Google Gemini API Key
+
+Once configured and pgvector is installed, run database migrations:
+```powershell
+.\.venv\Scripts\python.exe -m alembic upgrade head
+```
 
 ## Frontend
 
+The frontend uses Vite, React, and TanStack query.
+
 ```powershell
-npm --prefix frontend ci
-npm --prefix frontend test
-npm --prefix frontend run build
+cd frontend
+npm ci
+npm run dev
 ```
 
-## Cookie security
-
-`ENVIRONMENT=production` or `staging` enables the `Secure` session-cookie flag
-by default. Local development and tests remain compatible with HTTP. Override
-this only through `COOKIE_SECURE` when the deployment transport is intentional.
+## Running the Application
+The backend and frontend can be started using the provided batch scripts in the root directory:
+- `start_backend.bat`
+- `start_worker.bat` (Starts the async task queue)
+- `start_frontend.bat`

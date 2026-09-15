@@ -1,66 +1,55 @@
-# RepoMind — UI Design
+# RepoMind 2.0 — UI Design
 
-**Status: Confirmed** (routes and structure per the Implementation Blueprint, Part 9)
+**Status: Completed**
 
 ## Application Shell
 
-A React + TypeScript + Tailwind CSS single-page application. There is no separate admin dashboard shell — settings and administrative actions (connecting a GitHub repository, managing members) live within the same navigation as everything else, gated by role.
+A React + Vite + TailwindCSS (v3.4.0) single-page application. The design system uses a premium dark-mode glassmorphism aesthetic with smooth micro-animations.
 
 ## Navigation
 
-- **Top navigation / sidebar:** organization context, links to Dashboard, Projects, Evaluation, Settings.
-- Route hierarchy follows the Organization → Project → Repository → Pull Request data model.
+- **Sidebar navigation:** Includes links to Dashboard, Repositories, My PRs, Security, and Settings.
+- Route hierarchy follows the Application Core models.
 
 ## Page Hierarchy / Route Structure
 
-| Route | Purpose | Key Components | Loading / Empty / Error States |
-|---|---|---|---|
-| `/login` | Authentication entry point | `LoginForm` | Error state on bad credentials |
-| `/dashboard` | Organization overview | `ProjectList`, `RecentActivity` | Empty state for new organizations |
-| `/projects` | List projects | `ProjectCard[]` | Empty state, create prompt (admin only) |
-| `/projects/:id` | Repositories within a project | `RepositoryCard[]` | — |
-| `/projects/:pid/repositories/:rid` | Repository overview: rules, PR list (tabs) | `RepoHeader`, `RulesList`, `PRList` | Loading spinner during indexing |
-| `/repositories/:rid/pull-requests/:prid` | Core PR review page | `PRHeader`, `PRMetadata`, `FindingsSummary`, `FindingList` → `FindingCard`, `LinterResults`, `RiskPanel`, `ReviewTimeline` | Loading state during the async review job; error state on job failure |
-| `/evaluation` | Comparison table | `EvaluationTable`, `RunEvaluationButton` | Empty state before the first run |
-| `/settings` | Profile, org, GitHub connection | `ProfileForm`, `GitHubConnectionPanel`, `MemberList` | — |
-
-**Note on route naming:** the source materials list both `/pull-requests/:pullRequestId` / `/pull-requests/:pullRequestId/review` (in the general project structure) and the more specific `/repositories/:rid/pull-requests/:prid` (in the Implementation Blueprint's confirmed 9-page frontend). Per the "prefer the latest explicit decision" rule, the confirmed route is `/repositories/:rid/pull-requests/:prid`, matching the Organization → Project → Repository → PR hierarchy actually modeled in the database.
-
-**Deferred route (Future, P2):** `/team-analytics` — team/repository trend views only, no individual ranking, built only on explicit request. Not part of the current 9 confirmed pages' functionality beyond being reserved as a route.
-
-No route exists for individual developer performance/ranking pages — this is a deliberate omission, not an oversight (see `01-project/requirements.md`, NFR-010).
+| Route | View Component | Purpose |
+|---|---|---|
+| `/login` | `LoginPage` | Authentication entry point |
+| `/` | `DashboardPage` | Overview of active PRs, recent security alerts, and system health |
+| `/repositories` | `RepositoriesPage` | List of connected repositories with their sync/index status |
+| `/my-prs` | `MyPRsPage` | Developer-focused view of their active PRs awaiting review |
+| `/security` | `SecurityBrowserPage` | Organization-wide vulnerability and security findings tracking |
+| `/settings` | `SettingsPage` | User profile, GitHub connection, and Org member management |
+| `/review/:prId` | `ReviewPage` | Core PR review interface (Findings, Risk, Conflicts, Chat) |
 
 ## Reusable / Feature Components — PR Review Page Breakdown
 
 ```
-PullRequestPage
-├── PRHeader (title, author, status)
-├── PRMetadata (files, additions/deletions)
-├── RiskPanel (ML cycle-time + delay prediction)
-├── FindingsSummary (counts by severity)
-├── FindingList
-│   └── FindingCard (severity, category, file:line, evidence, recommendation, accept/reject buttons)
-├── LinterResults (raw static-analysis output, collapsed by default)
-└── ReviewTimeline (history of review_runs for this PR)
+ReviewPage
+├── TopNav (PR Title, Author, Merge Status)
+├── Sidebar (Navigation)
+├── MainContent
+│   ├── StatsPanel (Risk Score, Conflicts Detected, Files Changed)
+│   ├── ChatAssistant (Real-time Gemini AI chat grounded in PR context)
+│   ├── FindingsList
+│   │   └── FindingCard (Severity badge, category, file:line, evidence, recommendation)
+│   └── RiskPanel (Architectural risk & cyclomatic complexity)
 ```
 
 ## State Management
 
 | State Type | Used For | Tool |
 |---|---|---|
-| Server state | Projects, repositories, PRs, findings | React Query (or equivalent fetch+cache) — no Redux |
-| Client state | UI toggles (expanded finding, filter selection) | Local component state |
-| URL state | Current project/repository/PR id, active tab | Route params |
-| Form state | Login, GitHub connection, feedback reason | Local form state |
+| Server state | Repositories, PRs, findings, session auth | `TanStack Query` |
+| Client state | UI toggles (expanded finding, chat input) | React `useState` |
+| Route state | Current page, active PR id | `react-router-dom` |
 
-No global state library is used — nothing in the confirmed scope requires cross-cutting client state beyond what the router and query cache already provide.
+## Design System
 
-## UI States
-
-- **Loading:** shown during repository indexing and during an in-progress async review job (the review job's status is polled from `GET /review-runs/{id}`).
-- **Empty:** shown for new organizations with no projects, projects with no repositories, and the Evaluation page before the first run.
-- **Error:** shown on bad login credentials and on review job failure (see the error-handling matrix in `06-testing/testing-strategy.md`), with a retry action where applicable.
-
-## Responsive Behavior
-
-Not specified in detail in the source materials beyond the choice of Tailwind CSS, which supports responsive utility classes. Specific breakpoint behavior is left to implementation-time design decisions — **not specified as a confirmed requirement beyond "use Tailwind."**
+The application uses a strict set of Tailwind utility tokens to achieve its look:
+- **Backgrounds:** `#09090b` (Main), `#18181b` (Cards/Panels)
+- **Glassmorphism:** `bg-white/5` with `backdrop-blur-xl` and `border-white/10`
+- **Accents:** Indigo and Violet gradients for primary actions and AI elements
+- **Typography:** Inter/sans-serif with crisp contrast
+- **Micro-animations:** Hover transitions (`transition-all duration-200`) and entry animations.
