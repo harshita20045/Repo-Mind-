@@ -1,0 +1,84 @@
+const API_BASE = 'http://localhost:8000';
+
+export async function apiRequest(endpoint, options = {}) {
+  const url = `${API_BASE}${endpoint}`;
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: 'include', // Ensures HttpOnly auth cookies are sent and received
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const errorMsg = data?.detail || `Request failed with status ${response.status}`;
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
+
+export const authApi = {
+  login: (email, password) =>
+    apiRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }),
+  register: (email, password, organization_name) =>
+    apiRequest('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, organization_name }),
+    }),
+  logout: () =>
+    apiRequest('/auth/logout', {
+      method: 'POST',
+    }),
+  getMe: () =>
+    apiRequest('/auth/me', {
+      method: 'GET',
+    }),
+};
+
+export const reviewApi = {
+  triggerReview: (prId) =>
+    apiRequest(`/pull-requests/${prId}/review`, {
+      method: 'POST',
+    }),
+  getReviewRun: (runId) =>
+    apiRequest(`/review-runs/${runId}`, {
+      method: 'GET',
+    }),
+};
+
+export const analyticsApi = {
+  getOrgAnalytics: (orgId, days = 30) =>
+    apiRequest(`/analytics/organization/${orgId}?days=${days}`, {
+      method: 'GET',
+    }),
+};
+
+export const chatApi = {
+  createSession: (data) =>
+    apiRequest('/chat/sessions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getSessions: (orgId, contextType, contextId) =>
+    apiRequest(`/chat/sessions?organization_id=${orgId}&context_type=${contextType}&context_id=${contextId}`, {
+      method: 'GET',
+    }),
+  getHistory: (sessionId, orgId) =>
+    apiRequest(`/chat/sessions/${sessionId}/messages?organization_id=${orgId}`, {
+      method: 'GET',
+    }),
+  sendMessage: (sessionId, orgId, data) =>
+    apiRequest(`/chat/sessions/${sessionId}/messages?organization_id=${orgId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+};
