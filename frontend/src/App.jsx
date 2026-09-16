@@ -7,9 +7,10 @@ import DashboardPage from './pages/DashboardPage';
 import ReviewPage from './pages/ReviewPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import RepositoriesPage from './pages/RepositoriesPage';
-import MyPRsPage from './pages/MyPRsPage';
+import PullRequestsPage from './pages/PullRequestsPage';
 import SecurityBrowserPage from './pages/SecurityBrowserPage';
 import SettingsPage from './pages/SettingsPage';
+import ChatPage from './pages/ChatPage';
 import AppLayout from './components/Layout/AppLayout';
 
 const queryClient = new QueryClient();
@@ -65,12 +66,13 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route element={<AppLayout user={currentUser} memberships={memberships} />}>
+          <Route element={<AppLayout user={currentUser} memberships={memberships} onLogout={handleLogout} />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/repositories" element={<RepositoriesPage />} />
-            <Route path="/prs" element={<MyPRsPage />} />
+            <Route path="/repositories/:rid/pull-requests" element={<PullRequestsPage />} />
             <Route path="/security" element={<SecurityBrowserPage />} />
             <Route path="/settings" element={<SettingsPage user={currentUser} />} />
+            <Route path="/chat" element={<ChatPage user={currentUser} memberships={memberships} />} />
             <Route path="/repositories/:rid/pull-requests/:prid" element={<ReviewPage user={currentUser} memberships={memberships} onLogout={handleLogout} />} />
             <Route path="/analytics" element={<AnalyticsPage user={currentUser} memberships={memberships} />} />
           </Route>

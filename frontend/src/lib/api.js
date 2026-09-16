@@ -55,6 +55,32 @@ export const reviewApi = {
     }),
 };
 
+export const orgApi = {
+  getProjects: (orgId) =>
+    apiRequest(`/organizations/${orgId}/projects`, {
+      method: 'GET',
+    }),
+  getRepositories: (projectId) =>
+    apiRequest(`/projects/${projectId}/repositories`, {
+      method: 'GET',
+    }),
+  getRepository: (repoId) =>
+    apiRequest(`/repositories/${repoId}`, {
+      method: 'GET',
+    }),
+};
+
+export const githubApi = {
+  getPullRequests: (repoId) =>
+    apiRequest(`/repositories/${repoId}/pull-requests`, {
+      method: 'GET',
+    }),
+  getPullRequest: (prId) =>
+    apiRequest(`/pull-requests/${prId}`, {
+      method: 'GET',
+    }),
+};
+
 export const analyticsApi = {
   getOrgAnalytics: (orgId, days = 30) =>
     apiRequest(`/analytics/organization/${orgId}?days=${days}`, {

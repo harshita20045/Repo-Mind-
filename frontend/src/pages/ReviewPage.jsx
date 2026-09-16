@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { reviewApi } from '../lib/api';
+import { reviewApi, githubApi, orgApi } from '../lib/api';
 import ReviewStateIndicator from '../components/Review/ReviewStateIndicator';
 import FindingList from '../components/Review/FindingList';
 import ChatAssistant from '../components/Review/ChatAssistant';
@@ -37,6 +37,18 @@ export default function ReviewPage({ user }) {
     },
   });
 
+  const { data: prData, isLoading: loadingPr } = useQuery({
+    queryKey: ['pullRequest', prid],
+    queryFn: () => githubApi.getPullRequest(prid),
+    enabled: !!prid,
+  });
+
+  const { data: repoData } = useQuery({
+    queryKey: ['repository', rid],
+    queryFn: () => orgApi.getRepository(rid),
+    enabled: !!rid,
+  });
+
   const currentStatus = runData?.status || null;
   const error = triggerError || runError;
 
@@ -53,13 +65,13 @@ export default function ReviewPage({ user }) {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <Link to="/repositories" className="text-gray-400 hover:text-white transition-colors">
-              backend-api
+            <Link to={`/repositories/${rid}/pull-requests`} className="text-gray-400 hover:text-white transition-colors">
+              {repoData?.github_name || 'repository'}
             </Link>
             <span className="text-gray-600">/</span>
-            <span className="text-white font-medium">PR #{prid}</span>
+            <span className="text-white font-medium">PR #{prData?.github_number || prid}</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white">Implement Payment Gateway Integration</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white">{prData?.title || 'Loading Pull Request...'}</h1>
         </div>
         
         <div className="flex items-center gap-3">
@@ -142,26 +154,26 @@ export default function ReviewPage({ user }) {
           <div className="bg-surface/50 backdrop-blur-md border border-white/5 rounded-2xl p-5">
             <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-4">Risk Profile</h3>
             <div className="flex items-center gap-4 mb-4">
-              <div className="relative w-16 h-16 flex items-center justify-center rounded-full border-4 border-danger/30">
-                <span className="text-xl font-bold text-danger">85</span>
+              <div className={`relative w-16 h-16 flex items-center justify-center rounded-full border-4 ${
+                runData?.risk_assessment?.score > 70 ? 'border-danger/30 text-danger' : 
+                runData?.risk_assessment?.score > 40 ? 'border-warning/30 text-warning' : 
+                'border-success/30 text-success'
+              }`}>
+                <span className="text-xl font-bold">{runData?.risk_assessment?.score || '--'}</span>
               </div>
               <div>
-                <div className="text-danger font-bold">Critical Risk</div>
-                <div className="text-xs text-gray-400">Blast radius: 4 modules</div>
-              </div>
-            </div>
-            <div className="space-y-2 text-sm text-gray-300">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Security:</span>
-                <span className="text-danger font-medium">High</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Architecture:</span>
-                <span className="text-warning font-medium">Medium</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Tests:</span>
-                <span className="text-success font-medium">Low</span>
+                <div className={`font-bold ${
+                  runData?.risk_assessment?.score > 70 ? 'text-danger' : 
+                  runData?.risk_assessment?.score > 40 ? 'text-warning' : 
+                  'text-success'
+                }`}>
+                  {runData?.risk_assessment?.score > 70 ? 'High Risk' : 
+                   runData?.risk_assessment?.score > 40 ? 'Medium Risk' : 
+                   runData?.risk_assessment?.score ? 'Low Risk' : 'Pending'}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {runData?.risk_assessment?.summary || 'Waiting for review...'}
+                </div>
               </div>
             </div>
           </div>
@@ -172,17 +184,21 @@ export default function ReviewPage({ user }) {
               <div>
                 <div className="text-gray-500 mb-0.5">Author</div>
                 <div className="flex items-center gap-2 text-gray-300">
-                  <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-accent to-primary flex items-center justify-center text-[10px] font-bold text-white">J</div>
-                  Jane Doe
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-accent to-primary flex items-center justify-center text-[10px] font-bold text-white">
+                    {prData?.author?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  {prData?.author || 'Unknown'}
                 </div>
               </div>
               <div>
-                <div className="text-gray-500 mb-0.5">Branch</div>
-                <div className="font-mono text-gray-300 bg-white/5 px-2 py-1 rounded inline-block text-xs">feature/payment-gw</div>
+                <div className="text-gray-500 mb-0.5">Commit SHA</div>
+                <div className="font-mono text-gray-300 bg-white/5 px-2 py-1 rounded inline-block text-xs">
+                  {prData?.head_sha ? prData.head_sha.substring(0, 7) : 'unknown'}
+                </div>
               </div>
               <div>
-                <div className="text-gray-500 mb-0.5">Changes</div>
-                <div className="text-gray-300"><span className="text-success">+452</span> <span className="text-danger">-12</span> in 8 files</div>
+                <div className="text-gray-500 mb-0.5">Status</div>
+                <div className="text-gray-300 capitalize">{prData?.state || 'unknown'}</div>
               </div>
             </div>
           </div>

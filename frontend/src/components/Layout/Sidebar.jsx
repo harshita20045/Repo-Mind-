@@ -1,22 +1,34 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 
-const Sidebar = ({ user }) => {
+import { authApi } from '../../lib/api';
+
+const Sidebar = ({ user, memberships, onLogout }) => {
   
   // Basic RBAC navigation items
   const navItems = [
     { name: 'Dashboard', path: '/', roles: ['org_owner', 'org_admin', 'eng_manager', 'tech_lead', 'security_reviewer', 'reviewer', 'developer', 'read_only'] },
-    { name: 'Repositories', path: '/repositories', roles: ['org_owner', 'org_admin', 'eng_manager', 'tech_lead'] },
-    { name: 'My PRs', path: '/prs', roles: ['developer', 'reviewer', 'tech_lead'] },
+    { name: 'Repositories', path: '/repositories', roles: ['org_owner', 'org_admin', 'eng_manager', 'tech_lead', 'developer', 'reviewer'] },
     { name: 'Security', path: '/security', roles: ['org_owner', 'security_reviewer'] },
     { name: 'Analytics', path: '/analytics', roles: ['org_owner', 'org_admin', 'eng_manager'] },
+    { name: 'Chat', path: '/chat', roles: ['org_owner', 'org_admin', 'eng_manager', 'tech_lead', 'security_reviewer', 'reviewer', 'developer'] },
     { name: 'Settings', path: '/settings', roles: ['org_owner', 'org_admin'] },
   ];
   
-  // Fake user role for UI preview if auth not fully loaded
-  const role = user?.role || 'org_owner'; 
+  // Real user role from memberships, default to least privilege
+  const role = memberships?.[0]?.role || 'read_only';
   
   const filteredNav = navItems.filter(item => item.roles.includes(role));
+
+  const handleLogoutClick = async () => {
+    try {
+      await authApi.logout();
+    } catch (e) {
+      console.error('Logout API failed', e);
+    } finally {
+      if (onLogout) onLogout();
+    }
+  };
 
   return (
     <aside className="w-64 bg-surface/50 backdrop-blur-xl border-r border-white/5 flex flex-col h-full transition-all duration-300">
@@ -49,7 +61,7 @@ const Sidebar = ({ user }) => {
         ))}
       </nav>
       
-      <div className="p-4 border-t border-white/5">
+      <div className="p-4 border-t border-white/5 space-y-3">
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-surfaceHighlight/50 border border-white/5">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center border border-white/10">
             <span className="text-xs font-medium text-white">{user?.email?.charAt(0).toUpperCase() || 'U'}</span>
@@ -59,6 +71,16 @@ const Sidebar = ({ user }) => {
             <span className="text-xs text-primary/80 capitalize">{role.replace('_', ' ')}</span>
           </div>
         </div>
+        
+        <button 
+          onClick={handleLogoutClick}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors border border-transparent hover:border-danger/20"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Logout
+        </button>
       </div>
     </aside>
   );

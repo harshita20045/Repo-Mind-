@@ -10,4 +10,5 @@ call %VENV%\Scripts\activate
 
 pip install -r backend/requirements.txt
 
+set PYTHONPATH=.
 python worker/worker.py

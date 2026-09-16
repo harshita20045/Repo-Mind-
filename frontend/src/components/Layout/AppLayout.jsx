@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopNav from './TopNav';
 
-const AppLayout = ({ user, memberships }) => {
+const AppLayout = ({ user, memberships, onLogout }) => {
   return (
     <div className="flex h-screen bg-background overflow-hidden text-gray-200 font-sans selection:bg-primary/30">
       {/* Background ambient glow */}
@@ -12,7 +12,7 @@ const AppLayout = ({ user, memberships }) => {
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-accent/5 blur-[120px]" />
       </div>
 
-      <Sidebar user={user} />
+      <Sidebar user={user} memberships={memberships} onLogout={onLogout} />
       
       <div className="flex-1 flex flex-col h-full overflow-hidden relative z-0">
         <TopNav user={user} />
