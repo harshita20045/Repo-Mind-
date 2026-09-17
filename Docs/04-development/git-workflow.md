@@ -16,7 +16,6 @@
 ## Pull Requests and Code Review
 
 - Every change to RepoMind itself goes through a GitHub PR (RepoMind is, fittingly, expected to eventually review its own PRs once the pipeline is stable — this is a natural dogfooding opportunity, not a formal requirement in the source materials).
-- CI (per `06-testing/testing-strategy.md`) must pass before merge: unit + integration tests, and — critically — the **AI evaluation regression suite**, which asserts that a change to prompt/RAG config does not silently regress precision/recall/groundedness on the labeled answer-key test set.
 
 ## Merge Strategy
 
@@ -24,7 +23,6 @@
 
 ## Release / Versioning Approach
 
-- Not explicitly defined in the source materials beyond `review_run.repomind_version`, which tags each review run with the application version active at the time it ran, for evaluation reproducibility (see `03-design/database-design.md`). No semantic-versioning or release-branch process is specified — **Open Decision** if one becomes necessary.
 
 ## Handling Database Migrations
 
@@ -33,5 +31,4 @@
 
 ## Handling AI Prompt / Model Changes
 
-- A prompt change is a **versioned** change (`prompt_v2.py`, etc.) reviewed like any other code change, and must pass the AI-evaluation regression suite before merge — this is the project's chosen substitute for a separate "prompt review board" or similar process, which is not described in the source materials and is not introduced here.
 - ML model retraining produces a new versioned `.pkl` artifact (see `04-development/coding-standards.md`); the training script itself goes through normal PR review, and the resulting model version is compared against the previous version's baseline metrics before being adopted (see `02-architecture/diagrams/ml-pipeline.md`).

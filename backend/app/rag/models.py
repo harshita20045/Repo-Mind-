@@ -20,8 +20,8 @@ class DocumentChunk(Base):
     document_id = Column(Integer, ForeignKey("document.id", ondelete="CASCADE"), nullable=False, index=True)
     repository_id = Column(Integer, ForeignKey("repository.id", ondelete="CASCADE"), nullable=False, index=True)
     text = Column(Text, nullable=False)
-    # Changed to 768 to match all-mpnet-base-v2
-    embedding = Column(Vector(768), nullable=False)
+    # Changed to 384 to match local sentence-transformers model (all-MiniLM-L6-v2)
+    embedding = Column(Vector(384), nullable=False)
     chunk_index = Column(Integer, nullable=False)
     
     # RepoMind 2.0 extensions

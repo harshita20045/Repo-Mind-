@@ -25,7 +25,6 @@ PostgreSQL, with the `pgvector` extension enabled for embedding storage and cosi
 | `finding_feedback` | `id`, `finding_id` (FK), `user_id` (FK), `decision` (enum), `reason`, `created_at` | Append-only |
 | `linter_result` | `id`, `review_run_id` (FK), `tool`, `raw_output` (json) | |
 | `ml_prediction` | `id`, `pull_request_id` (FK), `model_version`, `predicted_cycle_time_hours`, `delay_probability`, `created_at` | |
-| `evaluation_run` | `id`, `run_at`, `config` (json: variant, dataset_version), `precision`, `recall`, `f1`, `false_positive_rate`, `groundedness` | |
 | `job` | `id`, `type`, `status` (enum: `pending`/`running`/`completed`/`failed`/`cancelled`), `payload` (json), `result` (json), `retries`, `created_at`, `updated_at` | The background job "queue" |
 | `audit_log` | `id`, `user_id` (FK), `action`, `target_type`, `target_id`, `created_at` | |
 
@@ -78,9 +77,7 @@ erDiagram
 
 A `pull_request` can have many `review_run`s (one per analysis, including re-analyses on new commits). Each `review_run` produces many `finding`s and `linter_result`s. Each `finding` can receive many `finding_feedback` rows over time (append-only — feedback is never overwritten, only added), allowing a full history of who accepted/rejected/ignored a finding and when.
 
-## Evaluation Data
 
-`evaluation_run` stores one row per evaluation execution, with a `config` JSON field recording the variant (generic / linter / RAG), dataset version, and other reproducibility parameters, alongside the resulting precision/recall/F1/false-positive-rate/groundedness scores. This table is intentionally separate from `review_run`/`finding` — evaluation results never mix with production review data.
 
 ## ML Prediction Data
 
@@ -88,7 +85,6 @@ A `pull_request` can have many `review_run`s (one per analysis, including re-ana
 
 ## Audit Information
 
-`audit_log` records sensitive actions (GitHub connection changes, org membership changes, feedback actions, evaluation runs) per the security requirements in `05-security/security.md`. This table is added in migration 010, during the security-hardening phase.
 
 ## Migration Plan
 
@@ -102,7 +98,6 @@ A `pull_request` can have many `review_run`s (one per analysis, including re-ana
 | 006 | `finding_feedback` | Phase 12 (Feedback) |
 | 007 | `job` | Phase 13 (Background jobs / re-analysis) |
 | 008 | `ml_prediction` | Phase 15 (ML risk prediction) |
-| 009 | `evaluation_run` | Phase 14 (Evaluation) |
 | 010 | `audit_log` | Phase 17 (Security hardening) |
 
 See `07-deployment/database-migrations.md` for the operational Alembic workflow.

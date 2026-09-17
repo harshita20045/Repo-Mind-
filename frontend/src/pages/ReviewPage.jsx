@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { reviewApi, githubApi, orgApi } from '../lib/api';
+import { reviewApi, githubApi, orgApi, mlApi } from '../lib/api';
 import ReviewStateIndicator from '../components/Review/ReviewStateIndicator';
 import FindingList from '../components/Review/FindingList';
 import ChatAssistant from '../components/Review/ChatAssistant';
@@ -37,6 +37,13 @@ export default function ReviewPage({ user }) {
     },
   });
 
+  const { data: mlPrediction } = useQuery({
+    queryKey: ['mlPrediction', prid],
+    queryFn: () => mlApi.getPrPrediction(prid),
+    enabled: !!prid,
+    retry: false,
+  });
+
   const { data: prData, isLoading: loadingPr } = useQuery({
     queryKey: ['pullRequest', prid],
     queryFn: () => githubApi.getPullRequest(prid),
@@ -49,8 +56,36 @@ export default function ReviewPage({ user }) {
     enabled: !!rid,
   });
 
+  const { mutate: submitDecision, isPending: isSubmittingDecision } = useMutation({
+    mutationFn: (decision) => reviewApi.approveReviewRun(activeRunId, decision),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviewRun', activeRunId] });
+    },
+    onError: (err) => {
+      alert(`Failed to submit decision: ${err.message}`);
+    }
+  });
+
+  // Automatically fetch existing review run on mount
+  React.useEffect(() => {
+    if (!activeRunId) {
+      triggerReview();
+    }
+  }, [prid]);
+
+  const handleDecision = (action) => {
+    if (!activeRunId || currentStatus !== 'completed') {
+      alert("Review must be completed first.");
+      return;
+    }
+    const note = prompt(`Enter optional note for your ${action}:`);
+    if (note === null) return; // cancelled
+    submitDecision({ action, note });
+  };
+
   const currentStatus = runData?.status || null;
   const error = triggerError || runError;
+  const existingDecision = runData?.human_decisions?.length > 0 ? runData.human_decisions[runData.human_decisions.length - 1] : null;
 
   const tabs = [
     { id: 'risk', label: 'Risk Assessment', badge: 'Critical' },
@@ -75,13 +110,27 @@ export default function ReviewPage({ user }) {
         </div>
         
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2 bg-surfaceHighlight/50 hover:bg-surfaceHighlight text-white rounded-lg font-medium transition-colors border border-white/10">
-            Dismiss All
-          </button>
-          <button className="px-4 py-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg font-medium transition-colors border border-danger/20">
+          {existingDecision && (
+            <div className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
+              existingDecision.action === 'approve' 
+                ? 'bg-success/10 text-success border-success/20' 
+                : 'bg-danger/10 text-danger border-danger/20'
+            }`}>
+              {existingDecision.action === 'approve' ? 'Approved' : 'Changes Requested'}
+            </div>
+          )}
+          <button 
+            onClick={() => handleDecision('reject')}
+            disabled={isSubmittingDecision || currentStatus !== 'completed'}
+            className="px-4 py-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg font-medium transition-colors border border-danger/20 disabled:opacity-50"
+          >
             Request Changes
           </button>
-          <button className="px-4 py-2 bg-success hover:bg-success/90 text-white rounded-lg font-medium transition-colors shadow-lg shadow-success/20 border border-white/10">
+          <button 
+            onClick={() => handleDecision('approve')}
+            disabled={isSubmittingDecision || currentStatus !== 'completed'}
+            className="px-4 py-2 bg-success hover:bg-success/90 text-white rounded-lg font-medium transition-colors shadow-lg shadow-success/20 border border-white/10 disabled:opacity-50"
+          >
             Approve PR
           </button>
         </div>
@@ -178,6 +227,30 @@ export default function ReviewPage({ user }) {
             </div>
           </div>
           
+          <div className="bg-surface/50 backdrop-blur-md border border-white/5 rounded-2xl p-5">
+            <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">ML Delay Prediction</h3>
+            <div className="space-y-3 text-sm">
+              <div>
+                <div className="text-gray-500 mb-0.5">Prediction Category</div>
+                <div className="flex items-center gap-2 text-gray-300">
+                  {mlPrediction ? (
+                    <span className={mlPrediction.predicted_delay_category === 'SLOW' ? 'text-warning font-bold' : 'text-success font-bold'}>
+                      {mlPrediction.predicted_delay_category}
+                    </span>
+                  ) : (
+                    <span className="text-gray-500 italic">Not Available</span>
+                  )}
+                </div>
+              </div>
+              {mlPrediction && mlPrediction.confidence_score && (
+                <div>
+                  <div className="text-gray-500 mb-0.5">Confidence Score</div>
+                  <div className="text-gray-300\">{(mlPrediction.confidence_score * 100).toFixed(0)}%</div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="bg-surface/50 backdrop-blur-md border border-white/5 rounded-2xl p-5">
             <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">PR Details</h3>
             <div className="space-y-3 text-sm">

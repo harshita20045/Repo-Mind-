@@ -24,9 +24,7 @@ flowchart TB
     MLPred --> UI
     Findings --> Feedback[Accept/Reject]
     Feedback --> FeedbackStore[(finding_feedback)]
-    Findings --> Eval[Evaluation Runner]
     FeedbackStore --> Eval
-    Eval --> EvalStore[(evaluation_run)]
 ```
 
 This diagram traces every data item from its GitHub source through to where it is stored and where it is surfaced in the UI, matching the module boundaries in `02-architecture/system-architecture.md`.

@@ -37,7 +37,7 @@ class ChatSessionResponse(BaseModel):
     
 class ChatMessageRequest(BaseModel):
     message: str
-    repository_id: int  # Needed for RAG isolation
+    repository_id: Optional[int] = None  # Needed for RAG isolation
 
 class ChatMessageResponse(BaseModel):
     id: int

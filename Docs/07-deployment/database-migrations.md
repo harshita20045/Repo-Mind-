@@ -4,7 +4,6 @@
 
 ## SQLAlchemy Model Workflow
 
-Each backend module (`auth`, `organizations`, `github`, `rag`, `review`, `linter`, `ml`, `evaluation`, `feedback`, `audit`) defines its own SQLAlchemy models under its `models.py` (see `04-development/development-guide.md` folder structure). Model changes are the source of truth Alembic migrations are generated/authored against.
 
 ## Alembic Workflow
 

@@ -147,6 +147,31 @@ class FindingResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class HumanDecisionRequest(BaseModel):
+    """Payload to approve or reject a ReviewRun."""
+    action: str = Field(..., description="approve or reject")
+    note: Optional[str] = None
+
+    @field_validator("action")
+    @classmethod
+    def validate_action(cls, v: str) -> str:
+        if v not in ("approve", "reject"):
+            raise ValueError("action must be 'approve' or 'reject'")
+        return v
+
+class HumanDecisionResponse(BaseModel):
+    """API view of a HumanDecision."""
+    id: int
+    review_run_id: int
+    user_id: Optional[int] = None
+    action: str
+    note: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ReviewRunResponse(BaseModel):
     """Returned by GET /review-runs/{id} to provide run details and findings."""
     id: int
@@ -156,6 +181,7 @@ class ReviewRunResponse(BaseModel):
     started_at: datetime
     completed_at: Optional[datetime] = None
     findings: List[FindingResponse] = []
+    human_decisions: List[HumanDecisionResponse] = []
 
     class Config:
         from_attributes = True

@@ -91,27 +91,26 @@ def connect_repository(
     # For MVP: we create/update the repository record using GitHub metadata
     default_branch_actual = repo_meta.get("default_branch", default_branch)
 
-    # We need a project to hang the repository under — use the first project for the org
-    # (caller is org_admin so they must have a project, or we raise 400)
     from backend.app.organizations.models import Project
-    project = db.query(Project).filter(Project.organization_id == organization_id).first()
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Create a project first before connecting a repository.",
-        )
 
-    # Check for existing repository
+    # Check for existing repository across any project in this organization
     repo = (
         db.query(Repository)
+        .join(Project, Project.id == Repository.project_id)
         .filter(
-            Repository.project_id == project.id,
+            Project.organization_id == organization_id,
             Repository.github_owner == github_owner,
             Repository.github_name == github_name,
         )
         .first()
     )
     if not repo:
+        project = db.query(Project).filter(Project.organization_id == organization_id).first()
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Create a project first before connecting a repository.",
+            )
         repo = Repository(
             project_id=project.id,
             github_owner=github_owner,

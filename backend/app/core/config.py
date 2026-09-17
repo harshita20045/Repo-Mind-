@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     # If not set, all incoming webhooks will be rejected with 401.
     GITHUB_WEBHOOK_SECRET: Optional[str] = None
 
+    # Context bounding limits
+    RAG_MAX_CHUNKS: int = 5
+    MAX_DIFF_CHARS: int = 30000
+    MAX_LINTER_CHARS: int = 5000
+
     @property
     def session_cookie_secure(self) -> bool:
         if self.COOKIE_SECURE is not None:

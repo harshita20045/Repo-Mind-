@@ -36,7 +36,6 @@ Repository-level data (PRs, findings, documentation chunks) is reached only thro
 |---|---|---|
 | `developer` | Opens PRs, views findings | Read access to their org's projects/repos/PRs/findings |
 | `reviewer` | Reviews findings, accepts/rejects | Same read access + `POST /findings/{id}/feedback` |
-| `team_lead` | Reviewer capabilities + can run evaluations | + `POST /evaluations/run` |
 | `org_admin` | Full org administration | + `POST /repositories/connect`, membership management |
 
 This is a deliberately small, flat role set — **not** a complex RBAC system. The source materials are explicit that RepoMind should not build complicated RBAC beyond what's required: GitHub's own author/reviewer/admin roles were sufficient for the research-MVP scope, and the 4-role table above is the confirmed extension for the shared company scope, not a larger permission matrix.
@@ -46,7 +45,6 @@ This is a deliberately small, flat role set — **not** a complex RBAC system. T
 | Endpoint | Minimum Role |
 |---|---|
 | `POST /repositories/connect` | `org_admin` |
-| `POST /evaluations/run` | `team_lead` |
 | All other authenticated endpoints | any org member (`developer` and above) |
 
 ## What Is Explicitly Not Built

@@ -10,7 +10,6 @@ SECURITY INVARIANT (security.md, ADR-011):
 
 VERSIONING:
   PROMPT_VERSION is a constant used to populate review_run.prompt_version.
-  Increment it when any prompt text changes, to preserve evaluation reproducibility.
 """
 
 PROMPT_VERSION = "p8-v1"

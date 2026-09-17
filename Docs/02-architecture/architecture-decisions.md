@@ -42,7 +42,6 @@ Each decision below is drawn directly from the provided project materials. Where
 ### ADR-004 — Database: PostgreSQL + SQLAlchemy + Alembic
 
 - **Decision:** PostgreSQL as the relational store, SQLAlchemy as the ORM, Alembic for migrations.
-- **Context:** Multiple users writing feedback concurrently, and review history needed for evaluation over time, exceed what file-based storage supports.
 - **Options Considered:** JSON/SQLite files, PostgreSQL, MongoDB.
 - **Chosen Approach:** PostgreSQL.
 - **Reason:** RepoMind's data (orgs, projects, repos, PRs, findings, feedback) is inherently relational.
@@ -108,8 +107,6 @@ Each decision below is drawn directly from the provided project materials. Where
 
 ### ADR-010 — Separation of AI, Integration, and Business Logic
 
-- **Decision:** Enforce a strict, one-way module dependency direction: `github` (pure adapter, zero AI dependencies) → `rag`/`linter` → `review` → `evaluation` (leaf, nothing depends on it).
-- **Reason:** Keeps the GitHub adapter testable in isolation and keeps evaluation logic from silently affecting production inference behavior.
 - **Status:** Confirmed
 
 ---
@@ -125,7 +122,6 @@ Each decision below is drawn directly from the provided project materials. Where
 ### ADR-012 — ML Prediction Architecture: Classical ML, Chronological Split, Versioned Models
 
 - **Decision:** Use scikit-learn models (Linear Regression → Random Forest → Gradient Boosting for cycle-time regression; Logistic Regression → Random Forest for delay classification), trained on a chronological (not random) train/test split, using only features knowable at PR-open time. Models are serialized to versioned `.pkl` files and loaded for fast synchronous inference.
-- **Reason:** Chronological splitting and open-time-only features prevent temporal/data leakage that would invalidate the evaluation. A rule-based baseline is required for comparison in both tasks.
 - **Status:** Confirmed
 
 ---

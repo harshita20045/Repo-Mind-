@@ -23,18 +23,14 @@ repomind/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py, config.py, dependencies.py
-│   │   └── auth/  organizations/  github/  rag/  review/  linter/  ml/  evaluation/  feedback/  audit/  common/
 │   └── tests/
 ├── worker/
-│   └── jobs/{index_repository.py, review_pr.py, run_evaluation.py}
 ├── database/
 │   └── migrations/  (001_...  through  010_...)
 ├── docs/
-│   ├── architecture.md  setup.md  api.md  ai-pipeline.md  rag.md  evaluation.md  deployment.md  security.md
 │   └── adr/
 ├── scripts/
 │   ├── seed_demo_data.py
-│   ├── run_evaluation.py
 │   └── train_ml_models.py
 ├── .env.example
 ├── .gitignore
@@ -89,7 +85,6 @@ cd worker
 source ../backend/.venv/bin/activate   # reuse the backend venv, or create a dedicated one
 python -m worker.main
 ```
-The worker polls the `job` table (see `03-design/database-design.md`) and executes repository indexing, PR review, and evaluation jobs.
 
 ## Frontend Setup
 
@@ -118,21 +113,17 @@ cd backend && source .venv/bin/activate && pytest
 # Frontend
 cd frontend && npm test
 ```
-See `06-testing/testing-strategy.md` for the full test pyramid, including the AI-evaluation regression suite.
 
 ## Linting and Formatting
 
 - **Backend:** `ruff check backend/` and `ruff format backend/` (the same tool used for repository static analysis in the product itself — see `04-development/coding-standards.md`).
 - **Frontend:** the project's configured ESLint/Prettier setup (exact configuration is an implementation detail not specified in the source materials — **Proposed**, follow standard React + TypeScript conventions until a project-specific config is confirmed).
 
-## Running the Evaluation Script
 
 ```bash
 cd backend
 source .venv/bin/activate
-python ../scripts/run_evaluation.py
 ```
-Runs the 3-way comparison (generic LLM / LLM+linter / LLM+linter+RAG) against the labeled answer-key test set and stores results in `evaluation_run`. See `02-architecture/diagrams/ai-review-pipeline.md`.
 
 ## No Docker
 

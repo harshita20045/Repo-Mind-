@@ -6,7 +6,6 @@
 
 - Every API query is scoped by `organization_id`/`repository_id` derived from the authenticated session — **never trusted from client-supplied request input**.
 - Rate limiting: a standard per-user request rate limit is applied on the API.
-- Audit logging: GitHub connection changes, organization membership changes, feedback actions, and evaluation runs are recorded in `audit_log` (see `03-design/database-design.md`).
 
 ## Repository / Organization / Project / Team Isolation
 
@@ -51,7 +50,6 @@ Every `standards_violation` finding must cite a specific source and quoted rule 
 
 - Structured logs per pipeline stage, with timing (see `08-operations/monitoring.md`).
 - No source code retained in logs beyond what's needed for a specific, time-boxed debugging session — raw diffs and document text are **not** retained indefinitely; findings and feedback records (accept/reject) are fine to retain long-term, since they do not contain raw source code.
-- Sensitive actions (GitHub connection changes, membership changes, feedback, evaluation runs) are captured in `audit_log`.
 
 ## Data Protection
 

@@ -17,6 +17,8 @@ Security invariants:
 """
 import logging
 import json
+import time
+from backend.app.core.config import settings
 from datetime import datetime, timezone
 from typing import Optional, List
 
@@ -351,7 +353,7 @@ def run_review(
         retriever=retriever,
         repository_id=repository_id,   # DB-authoritative
         query=query,
-        top_k=5,
+        top_k=settings.RAG_MAX_CHUNKS,
     )
 
     # --- 5. Run static analysis -----------------------------------------------
@@ -377,7 +379,18 @@ def run_review(
             linter_text_parts.append(f"Tool: {lr.tool}\nResult: Unparseable output")
     linter_results_text = "\n\n".join(linter_text_parts)
 
+    orig_linter_chars = len(linter_results_text)
+    if orig_linter_chars > settings.MAX_LINTER_CHARS:
+        linter_results_text = linter_results_text[:settings.MAX_LINTER_CHARS] + "\n\n[LINTER RESULTS TRUNCATED]"
+
+
+    orig_diff_chars = len(diff)
+    bounded_diff = diff
+    if orig_diff_chars > settings.MAX_DIFF_CHARS:
+        bounded_diff = diff[:settings.MAX_DIFF_CHARS] + "\n\n[DIFF TRUNCATED]"
+
     # --- 6. Detect semantic + mechanical conflicts ----------------------------
+
     _update_progress(db, run, "Detecting semantic conflicts...")
     detected_conflicts: List[DetectedConflict] = detect_conflicts(
         diff=diff,
@@ -392,10 +405,23 @@ def run_review(
     _update_progress(db, run, "Generating AI review...")
     user_content = build_user_content(
         pr_title=pr.title,
-        diff=diff,
+        diff=bounded_diff,
         retrieved_chunks=retrieved_chunks,
         linter_results_text=linter_results_text,
     )
+
+    uc_len = len(user_content)
+    logger.info("=== GEMINI REQUEST METADATA ===")
+    logger.info("Model: %s", getattr(provider, '_model', type(provider).__name__))
+    logger.info("Original diff chars: %d | Bounded diff chars: %d", orig_diff_chars, len(bounded_diff))
+    logger.info("Original linter chars: %d | Bounded linter chars: %d", orig_linter_chars, len(linter_results_text))
+    logger.info("RAG chunks count (bounded): %d", len(retrieved_chunks))
+    logger.info("Semantic conflict count: %d", len(detected_conflicts))
+    logger.info("Final user-content chars (token proxy): %d", uc_len)
+    logger.info("Requested output token limit: N/A (using default limit)")
+    logger.info("Changed-file count: %d", len(changed_files))
+    logger.info("===============================")
+
 
     raw_output: Optional[str] = None
     findings_raw: Optional[List[FindingSchema]] = None
@@ -403,11 +429,16 @@ def run_review(
     for attempt in (1, 2):
         system = SYSTEM_PROMPT if attempt == 1 else RETRY_SYSTEM_PROMPT
         try:
+            t0 = time.time()
             raw_output = provider.complete(
                 system_prompt=system,
                 user_content=user_content,
             )
+            t1 = time.time()
+            logger.info("Gemini HTTP Request SUCCESS - Duration: %.2fs, Attempt: %d", t1 - t0, attempt)
         except LLMProviderError as exc:
+            t1 = time.time()
+            logger.info("Gemini HTTP Request FAILURE - Duration: %.2fs, Attempt: %d", t1 - t0, attempt)
             logger.warning(
                 "ReviewRun %d: provider infrastructure failure on attempt %d. Type: %s.",
                 run.id, attempt, type(exc).__name__,

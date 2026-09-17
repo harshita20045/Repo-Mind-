@@ -7,8 +7,13 @@ from backend.app.db import get_db
 from backend.app.auth.models import User
 from backend.app.auth.dependencies import get_current_user
 from backend.app.github.models import PullRequest
-from backend.app.review.models import ReviewRun
-from backend.app.review.schemas import ReviewTriggerResponse, ReviewRunResponse
+from backend.app.review.models import ReviewRun, HumanDecision
+from backend.app.review.schemas import (
+    ReviewTriggerResponse, 
+    ReviewRunResponse,
+    HumanDecisionRequest,
+    HumanDecisionResponse
+)
 from backend.app.review.prompts import REPOMIND_VERSION, PROMPT_VERSION
 from backend.app.organizations.service import verify_org_member
 from backend.app.review.service import _get_org_id_for_pr, ReviewError
@@ -120,3 +125,57 @@ def get_review_run(
     verify_org_member(db, current_user.id, org_id)
 
     return run
+
+@router.post("/review-runs/{review_run_id}/approve", response_model=HumanDecisionResponse)
+def approve_review_run(
+    review_run_id: int,
+    decision: HumanDecisionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Approve or reject a review run."""
+    # Ensure user is reviewer or admin
+    if current_user.role not in ("reviewer", "team_lead", "org_admin"):
+        raise HTTPException(status_code=403, detail="Not authorized to approve reviews")
+
+    run = db.get(ReviewRun, review_run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Review run not found")
+        
+    if run.status != "completed":
+        raise HTTPException(status_code=400, detail="Cannot approve a review run that is not completed")
+
+    pr = db.get(PullRequest, run.pull_request_id)
+    try:
+        org_id = _get_org_id_for_pr(db, pr)
+    except ReviewError:
+        raise HTTPException(status_code=404, detail="Review run not found")
+
+    # Authorize organization access
+    verify_org_member(db, current_user.id, org_id)
+
+    # Check for existing decision
+    existing = db.query(HumanDecision).filter_by(
+        review_run_id=review_run_id,
+        user_id=current_user.id
+    ).first()
+
+    if existing:
+        existing.action = decision.action
+        existing.note = decision.note
+        existing.created_at = datetime.now(timezone.utc)
+        human_decision = existing
+    else:
+        human_decision = HumanDecision(
+            review_run_id=review_run_id,
+            user_id=current_user.id,
+            action=decision.action,
+            note=decision.note,
+            created_at=datetime.now(timezone.utc)
+        )
+        db.add(human_decision)
+        
+    db.commit()
+    db.refresh(human_decision)
+
+    return human_decision

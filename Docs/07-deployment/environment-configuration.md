@@ -31,7 +31,6 @@ No real secret values are shown above — this table exists to document required
 ## Testing / CI
 
 - A dedicated test database (separate from development/production) via a CI-specific `DATABASE_URL`.
-- `LLM_API_KEY` in CI should point to a test/mock configuration for most suites; the AI-evaluation regression suite (see `06-testing/testing-strategy.md`) may require a real (rate-limited/budgeted) LLM credential — treat this key as CI-secret-store managed, not committed.
 
 ## Production
 

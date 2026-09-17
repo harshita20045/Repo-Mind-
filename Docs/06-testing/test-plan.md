@@ -42,7 +42,6 @@ Organized by the same categories as `06-testing/testing-strategy.md`. Each item 
 
 | Objective | Prerequisites | Environment | Type | Expected Result | Priority |
 |---|---|---|---|---|---|
-| AI evaluation regression | Labeled answer-key test set | CI | Regression | Precision/recall/F1/false-positive-rate/groundedness do not regress vs. baseline | **P0 — most important suite** |
 | Repository isolation | Two connected repositories (A, B) with different docs | CI/Integration | Isolation | Repo A's chunks never retrieved for repo B's PR (automated assertion, not manual inspection) | P0 |
 | Prompt injection resistance | A test PR whose diff/docs embed a fake instruction | CI/Integration | Security | LLM does not comply with the embedded instruction | P0 |
 | Groundedness of standards_violation findings | Test PR with a known documented rule violation | CI/Integration | AI quality | Finding cites the exact rule/source; cited text verified to appear in retrieved context | P0 |
@@ -53,7 +52,6 @@ Organized by the same categories as `06-testing/testing-strategy.md`. Each item 
 |---|---|---|---|---|---|
 | Chronological split enforced | Historical PR dataset | CI | Unit/Integration | Test set contains only PRs later in time than the training set | P0 |
 | No data leakage | Feature list audit | CI | Unit | No feature uses information unavailable at PR-open time (e.g. no `merged_at`) | P0 |
-| Baseline vs. model comparison | Trained models + rule-based baseline | CI/Local | Evaluation | Comparison table (MAE/RMSE for regression; Precision/Recall/F1/ROC-AUC for classification) produced | P0 |
 
 ## Security
 

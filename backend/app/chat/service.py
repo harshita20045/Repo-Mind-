@@ -78,7 +78,7 @@ def send_message(
     user_id: int,
     message: str,
     provider: LLMProvider,
-    repository_id: int,
+    repository_id: Optional[int],
 ) -> ChatMessage:
     """
     Send a message in a chat session.
@@ -99,12 +99,14 @@ def send_message(
     # 2. Retrieve context via RAG
     retriever = RAGRetriever(db=db)
     # Search across all chunk types
-    chunks = retriever.search(
-        repository_id=repository_id,
-        query_text=message,
-        top_k=5,
-        chunk_types=["documentation", "source_code", "test_code"]
-    )
+    chunks = []
+    if repository_id is not None:
+        chunks = retriever.search(
+            repository_id=repository_id,
+            query_text=message,
+            top_k=5,
+            chunk_types=["documentation", "source_code", "test_code"]
+        )
     
     # 3. Build evidence string
     evidence_parts = []

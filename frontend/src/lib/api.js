@@ -53,6 +53,11 @@ export const reviewApi = {
     apiRequest(`/review-runs/${runId}`, {
       method: 'GET',
     }),
+  approveReviewRun: (runId, decisionData) =>
+    apiRequest(`/review-runs/${runId}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(decisionData),
+    }),
 };
 
 export const orgApi = {
@@ -106,5 +111,12 @@ export const chatApi = {
     apiRequest(`/chat/sessions/${sessionId}/messages?organization_id=${orgId}`, {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+};
+
+export const mlApi = {
+  getPrPrediction: (prId) =>
+    apiRequest(`/ml/prediction/pr/${prId}`, {
+      method: 'GET',
     }),
 };

@@ -90,12 +90,26 @@ def poll_and_execute() -> None:
                 "Crash recovery: reset %d stale 'running' job(s) to 'pending'.",
                 stale_count,
             )
+            
+        from backend.app.organizations.models import Repository
+        stale_repo_count = (
+            db.query(Repository)
+            .filter(Repository.index_status == "indexing")
+            .update({"index_status": "unindexed"}, synchronize_session=False)
+        )
+        if stale_repo_count:
+            db.commit()
+            logger.warning(
+                "Crash recovery: reset %d stale 'indexing' repository(s) to 'unindexed'.",
+                stale_repo_count,
+            )
 
     consecutive_errors = 0
 
     while True:
         try:
             _process_one_job(provider)
+            _process_one_indexing_job()
             consecutive_errors = 0
         except Exception as exc:
             consecutive_errors += 1
@@ -237,6 +251,56 @@ def _fail_run(db, run: "ReviewRun", reason: str) -> None:
     except Exception as commit_exc:
         logger.error("Failed to mark ReviewRun %d as failed: %s", run.id, commit_exc)
 
+
+def _process_one_indexing_job() -> None:
+    """
+    Pick up one pending Repository indexing job (unindexed)
+    and run the indexing pipeline.
+    """
+    from backend.app.db import SessionLocal
+    from backend.app.organizations.models import Repository
+    from backend.app.rag.service import index_repository
+
+    with SessionLocal() as db:
+        # Atomically claim one unindexed repository
+        repo = (
+            db.query(Repository)
+            .filter(Repository.index_status == "unindexed")
+            .with_for_update(skip_locked=True)
+            .order_by(Repository.id.asc())
+            .first()
+        )
+
+        if repo is None:
+            return  # Nothing to index
+
+        repo.index_status = "indexing"
+        repo.last_indexed_at = datetime.now(timezone.utc)
+        db.commit()
+        repo_id = repo.id
+
+        logger.info("Worker picked up Repository %d (%s/%s) for indexing", repo_id, repo.github_owner, repo.github_name)
+
+    # Execute indexing in a fresh session
+    with SessionLocal() as db:
+        repo = db.get(Repository, repo_id)
+        if not repo:
+            return
+
+        try:
+            index_repository(db, repo_id)
+            repo.index_status = "indexed"
+            repo.last_indexed_at = datetime.now(timezone.utc)
+            db.commit()
+            logger.info("Repository %d indexed successfully.", repo_id)
+        except Exception as exc:
+            logger.error("Repository %d indexing error: %s: %s", repo_id, type(exc).__name__, exc)
+            try:
+                repo.index_status = "failed"
+                repo.last_indexed_at = datetime.now(timezone.utc)
+                db.commit()
+            except Exception as commit_exc:
+                logger.error("Failed to mark Repository %d as failed: %s", repo_id, commit_exc)
 
 if __name__ == "__main__":
     poll_and_execute()

@@ -10,7 +10,6 @@ The provided project materials describe RepoMind at three different points of ev
 2. **Team-workflow critique** (`RepoMind_Team_Workflow_Analysis.md`): largely confirms and lightly extends the Research MVP (adds the accept/reject feedback record), explicitly recommends *not* building auth, roles, or a database yet.
 3. **Company Implementation Blueprint** (`RepoMind_Implementation_Blueprint.md`): explicitly and deliberately supersedes decisions 1 and 2 for a shared, multi-team company deployment — adding authentication, an Organization/Project/Repository hierarchy, PostgreSQL + pgvector, a React frontend, and background workers, "because a shared internal tool has different requirements than a solo research prototype."
 
-Per the instruction to **prefer the latest explicit decision when materials conflict**, this documentation set treats the **Company Implementation Blueprint's scope ("Scope B — Internal Company MVP") as the current, confirmed target** for the sections describing architecture, database, API, frontend, security, testing, and deployment. The Research MVP's AI logic (RAG pipeline, prompt design, evaluation methodology, ML approach) is **not discarded** — it ports directly into the corresponding modules of the company scope, as the Implementation Blueprint itself states.
 
 One additional override applies throughout this documentation regardless of source-material recommendations: **Docker is explicitly excluded from this project** per direct project-owner instruction, even though the Implementation Blueprint recommends Docker Compose for deployment. All setup and deployment documentation in this project uses native (non-Docker) tooling. See `07-deployment/deployment-guide.md`.
 
@@ -26,7 +25,6 @@ One additional override applies throughout this documentation regardless of sour
 - Re-analysis of a PR on new commits, with NEW / PERSISTENT / RESOLVED finding reconciliation.
 - Human accept / reject / ignore feedback per finding, persisted per user.
 - ML pipeline: PR cycle-time regression and delay-probability classification, each benchmarked against a rule-based baseline, trained on historical PR metadata with leakage-safe, chronologically-split features.
-- Evaluation framework: manually-triggered, reproducible 3-way comparison (generic LLM / LLM+linter / LLM+linter+RAG), scored with precision, recall, F1, false-positive rate, and groundedness against a labeled answer-key test set.
 - React + TypeScript frontend, 9 pages (see `03-design/ui-design.md`).
 - FastAPI backend, modular monolith, PostgreSQL + pgvector.
 - Basic security hardening: encrypted-at-rest secrets, audit logging of sensitive actions, prompt-injection defenses, repository isolation guarantees.

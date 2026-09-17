@@ -72,14 +72,11 @@ After deploying a new version (see `07-deployment/deployment-guide.md`, "Deploym
 3. Worker process is running and its poll loop is active (check recent log timestamps).
 4. A test repository connection + review completes successfully end-to-end (staging only — never run this against a real organization's data casually).
 
-## Run an Evaluation
 
 ```bash
 cd backend
 source .venv/bin/activate
-python ../scripts/run_evaluation.py
 ```
-Or via the UI: `/evaluation` page → "Run Evaluation" (requires `team_lead` role or above, per `05-security/authentication-authorization.md`). Results are stored in `evaluation_run` and displayed in the Evaluation Results table.
 
 ## Retrain ML Models
 

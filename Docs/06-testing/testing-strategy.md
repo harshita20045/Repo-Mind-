@@ -9,13 +9,11 @@
 | Unit | Chunker, GitHub parser, output parser, feature engineering | P0 |
 | Integration | GitHub client against a real test repo, RAG retrieval end-to-end, DB migrations | P0 |
 | API | Every endpoint in `03-design/api-design.md`, auth/authz enforcement | P0 |
-| **AI evaluation regression** | Run the labeled answer-key test set through the pipeline on every change to prompt/RAG config; assert metrics don't regress | **P0 — the most important suite** |
 | RAG isolation | Explicit test that repository A's docs are never retrieved for repository B's PR | P0 |
 | Prompt injection | A test PR whose diff/docs contain an embedded fake instruction ("ignore previous instructions...") — assert the LLM does not comply | P0 |
 | Frontend | Component rendering, PR page states (loading/empty/error) | P1 |
 | E2E | Login → project → repo → PR → review → feedback → re-analysis | P1 |
 
-This is intentionally weighted toward the AI-specific suites (evaluation regression, isolation, prompt injection) rather than a conventional unit-heavy pyramid alone — these are the suites that actually validate RepoMind's core value proposition and its most important safety guarantee.
 
 ## Frontend Unit Tests
 
@@ -37,7 +35,6 @@ Every endpoint listed in `03-design/api-design.md`, including authorization enfo
 
 ## AI Tests
 
-The AI-evaluation regression suite (below) plus unit tests for prompt construction, JSON-schema validation, and retry-once-then-fail behavior on invalid LLM output.
 
 ## RAG Tests
 
@@ -59,7 +56,6 @@ Login → project → repository → PR → review → feedback → re-analysis,
 
 Prompt-injection test (above) and authorization-boundary tests confirming that org/repository scoping cannot be bypassed via client-supplied parameters (see `05-security/security.md`).
 
-## AI Evaluation Regression Suite (Detail)
 
 This is the **single most important test suite** in the project, because it operationalizes the project's central research question as a CI gate:
 

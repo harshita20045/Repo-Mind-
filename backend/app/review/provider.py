@@ -109,16 +109,38 @@ class GeminiProvider:
         try:
             from google import genai
             from google.genai import types
+            from google.genai.errors import APIError
         except ImportError as exc:
             raise LLMProviderError(
                 "google-genai package is not installed. "
                 "Run: pip install google-genai"
             ) from exc
 
-        try:
+        import tenacity
+        
+        def retry_if_transient_error(exception):
+            if isinstance(exception, APIError):
+                # Retry on 429 (Rate Limit) and 500, 502, 503, 504 (Server Errors)
+                if exception.code in (429, 500, 502, 503, 504):
+                    return True
+            return False
+
+        @tenacity.retry(
+            retry=tenacity.retry_if_exception(retry_if_transient_error),
+            wait=tenacity.wait_exponential(multiplier=1, min=4, max=60),
+            stop=tenacity.stop_after_attempt(3),
+            reraise=True,
+            before_sleep=lambda retry_state: logger.warning(
+                "Gemini transient failure (attempt %d). Retrying... Error: %s",
+                retry_state.attempt_number, retry_state.outcome.exception()
+            )
+        )
+        def _call_gemini():
             client = genai.Client(api_key=self._api_key)
+            # Add reasonable timeout and deterministic temperature
             config = types.GenerateContentConfig(
                 system_instruction=system_prompt,
+                temperature=0.2,
             )
             
             response = client.models.generate_content(
@@ -127,6 +149,14 @@ class GeminiProvider:
                 config=config
             )
             return response.text
+
+        try:
+            return _call_gemini()
+        except APIError as exc:
+            # Handle terminal APIError (e.g., 400, 401, 403, or max retries exhausted)
+            raise LLMProviderError(
+                f"Gemini API Error (status={exc.code}): {exc.message}"
+            ) from exc
         except Exception as exc:
             raise LLMProviderError(
                 f"Unexpected error calling Gemini provider: {exc}"

@@ -39,6 +39,8 @@ app.include_router(review_router)
 app.include_router(webhooks_router)
 app.include_router(chat_router)
 app.include_router(analytics_router)
+from backend.app.ml.routes import router as ml_router
+app.include_router(ml_router)
 
 
 

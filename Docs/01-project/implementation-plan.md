@@ -21,11 +21,9 @@ This plan follows the phase order specified in the source materials. Docker refe
 | 11 | Review frontend | PR page + components | — | Findings visible with citations in the UI | Planned |
 | 12 | Feedback | `feedback/` module | 006 (`finding_feedback`) | Accept/reject persists and is visible on reload | Planned |
 | 13 | Background jobs / re-analysis | `job` table, worker process | 007 (`job`) | Reviews run asynchronously; a new commit triggers re-analysis; findings reconciled as NEW/PERSISTENT/RESOLVED | Planned |
-| 14 | Evaluation | `evaluation/` module | 009 (`evaluation_run`) | 3-way comparison table produced and displayed — **the project's central deliverable; not to be delayed by ML** | Planned |
 | 15 | ML risk prediction | `ml/` module | 008 (`ml_prediction`) | Regressor/classifier trained; comparison against rule-based baseline shown | Planned |
 | 16 | Analytics (P2, optional) | Team/repo trend views only | — | No individual ranking anywhere in schema or UI; built only on explicit request | Future |
 | 17 | Security hardening | Secret encryption, audit log | 010 (`audit_log`) | Audit log populated on sensitive actions | Planned |
-| 18 | Testing | Full suite (see `06-testing/testing-strategy.md`) | — | AI-evaluation regression suite passes in CI | Planned |
 | 19 | Deployment | Native process setup + CI/CD pipeline (no Docker) | — | Staging deploy succeeds from a clean checkout using the native setup in `07-deployment/deployment-guide.md` | Planned |
 
 ## Dependency Graph
@@ -44,11 +42,7 @@ flowchart TB
     ReviewAPI --> ReviewUI[Phase 11: Review Frontend]
     ReviewUI --> Feedback[Phase 12: Feedback]
     ReviewAPI --> AsyncJobs[Phase 13: Background Jobs]
-    Feedback --> Evaluation[Phase 14: Evaluation]
-    LLMReview --> Evaluation
     GH --> ML[Phase 15: ML Risk Prediction]
-    Evaluation --> Analytics[Phase 16: Analytics — optional, P2]
-    Evaluation --> Security[Phase 17: Security Hardening]
     Security --> Testing[Phase 18: Testing]
     Testing --> Deployment[Phase 19: Deployment]
 ```
@@ -57,8 +51,6 @@ flowchart TB
 
 - Frontend shell scaffolding can start alongside GitHub integration (Phase 5), using mocked API responses initially.
 - Static analysis (Phase 9) has no dependency on RAG (Phase 7) and can be built in parallel with it.
-- ML risk prediction (Phase 15) depends only on GitHub integration data, not on RAG/LLM review, and can proceed in parallel once historical PR data is available — but must not delay Phase 14 (Evaluation), which is the project's central research deliverable.
-- GitHub integration and static analysis can be built by one contributor while another begins RAG design against mocked documentation data, converging at the LLM review + evaluation phase.
 
 ## Recommended Build Order (condensed)
 
@@ -73,7 +65,6 @@ Phase 8    → LLM review
 Phase 10-11→ Review API + frontend
 Phase 12   → Feedback
 Phase 13   → Async jobs + re-analysis
-Phase 14   → Evaluation                (central deliverable — do not let ML delay this)
 Phase 15   → ML risk prediction        (parallel-safe once Phase 5 data exists)
 Phase 17-19→ Security, testing, deployment (native, no Docker)
 Phase 16   → Analytics — build last, and only if a real, specific request appears
