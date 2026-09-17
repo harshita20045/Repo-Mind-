@@ -12,8 +12,8 @@ export default {
         surface: '#1e293b',    // Slate 800
         surfaceHighlight: '#334155', // Slate 700
         primary: {
-          DEFAULT: '#6366f1', // Indigo 500
-          hover: '#4f46e5',   // Indigo 600
+          DEFAULT: '#0d9488', // teal-600
+          hover: '#0f766e',   // teal-700
         },
         accent: {
           DEFAULT: '#a855f7', // Purple 500

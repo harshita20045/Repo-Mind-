@@ -50,8 +50,8 @@ const Sidebar = ({ user, memberships, onLogout }) => {
             to={item.path}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
-                isActive 
-                  ? 'bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20' 
+                isActive
+                  ? 'bg-[var(--color-primary-teal)]/10 text-[var(--color-primary-teal)] shadow-sm ring-1 ring-[var(--color-primary-teal)]/20'
                   : 'text-gray-400 hover:bg-white/5 hover:text-white'
               }`
             }
