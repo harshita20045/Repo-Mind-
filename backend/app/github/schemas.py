@@ -17,6 +17,7 @@ class GitHubConnectRequest(BaseModel):
     The PAT is accepted as plaintext and encrypted server-side before storage.
     It is NEVER stored in plaintext and NEVER returned.
     """
+    project_id: int
     github_owner: str
     github_name: str
     default_branch: str = "main"

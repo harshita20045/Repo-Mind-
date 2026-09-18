@@ -2,23 +2,29 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 
 import { authApi } from '../../lib/api';
+import { usePermissions, Permissions } from '../../hooks/usePermissions';
 
 const Sidebar = ({ user, memberships, onLogout }) => {
+  const { can, isOrgAdmin, isLead, isReviewer, isDeveloper } = usePermissions(memberships);
   
   // Basic RBAC navigation items
   const navItems = [
-    { name: 'Dashboard', path: '/', roles: ['org_owner', 'org_admin', 'eng_manager', 'tech_lead', 'security_reviewer', 'reviewer', 'developer', 'read_only'] },
-    { name: 'Repositories', path: '/repositories', roles: ['org_owner', 'org_admin', 'eng_manager', 'tech_lead', 'developer', 'reviewer'] },
-    { name: 'Security', path: '/security', roles: ['org_owner', 'security_reviewer'] },
-    { name: 'Analytics', path: '/analytics', roles: ['org_owner', 'org_admin', 'eng_manager'] },
-    { name: 'Chat', path: '/chat', roles: ['org_owner', 'org_admin', 'eng_manager', 'tech_lead', 'security_reviewer', 'reviewer', 'developer'] },
-    { name: 'Settings', path: '/settings', roles: ['org_owner', 'org_admin'] },
+    { name: 'Dashboard', path: '/', show: true }, // Available to all
+    { name: 'Repositories', path: '/repositories', show: can(Permissions.REPOS_READ) },
+    { name: 'Security', path: '/security', show: can(Permissions.SECURITY_READ) },
+    { name: 'Analytics', path: '/analytics', show: can(Permissions.ANALYTICS_READ) },
+    { name: 'Chat', path: '/chat', show: can(Permissions.CHAT_USE) },
+    { name: 'Settings', path: '/settings', show: can(Permissions.ORG_UPDATE) },
   ];
   
-  // Real user role from memberships, default to least privilege
-  const role = memberships?.[0]?.role || 'read_only';
-  
-  const filteredNav = navItems.filter(item => item.roles.includes(role));
+  // Determine display role name for UI (defaulting to the target 4 roles for presentation if possible)
+  let displayRole = 'Read Only';
+  if (isOrgAdmin) displayRole = 'Org Admin';
+  else if (isLead) displayRole = 'Lead';
+  else if (isReviewer) displayRole = 'Reviewer';
+  else if (isDeveloper) displayRole = 'Developer';
+
+  const filteredNav = navItems.filter(item => item.show);
 
   const handleLogoutClick = async () => {
     try {
@@ -68,7 +74,7 @@ const Sidebar = ({ user, memberships, onLogout }) => {
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-medium text-white truncate max-w-[120px]">{user?.email || 'User'}</span>
-            <span className="text-xs text-primary/80 capitalize">{role.replace('_', ' ')}</span>
+            <span className="text-xs text-primary/80 capitalize">{displayRole}</span>
           </div>
         </div>
         

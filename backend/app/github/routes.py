@@ -71,6 +71,7 @@ def connect_repository(
     repo, connection = service.connect_repository(
         db,
         organization_id=organization_id,
+        project_id=payload.project_id,
         github_owner=payload.github_owner,
         github_name=payload.github_name,
         default_branch=payload.default_branch,
@@ -146,4 +147,43 @@ def get_pull_request(
 
     return pr
 
+@router.post(
+    "/repositories/{repository_id}/index",
+    response_model=schemas.RepositoryConnectResponse, # Re-using response model for simplicity, or we can just return a dict
+    summary="Trigger indexing for a repository",
+)
+def trigger_index(
+    repository_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Reset a repository's index_status to 'unindexed' so the worker picks it up.
+    Only allows transitioning if currently 'indexed' or 'failed'.
+    """
+    repo, project, org_id = _assert_repo_access(db, repository_id, current_user.id)
+    verify_org_admin(db, current_user.id, org_id)
 
+    if repo.index_status in ("unindexed", "indexing"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Repository is currently {repo.index_status}. Cannot trigger re-index.",
+        )
+
+    repo.index_status = "unindexed"
+    db.commit()
+
+    # Audit log
+    db.add(AuditLog(
+        user_id=current_user.id,
+        action=f"Triggered re-indexing for repository {repo.github_owner}/{repo.github_name}",
+        target_type="repository",
+        target_id=repo.id,
+    ))
+    db.commit()
+
+    return schemas.RepositoryConnectResponse(
+        repository_id=repo.id,
+        github_connection_id=0, # N/A here
+        message=f"Indexing queued for {repo.github_owner}/{repo.github_name}",
+    )

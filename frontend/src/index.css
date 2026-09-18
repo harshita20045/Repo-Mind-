@@ -1,3 +1,8 @@
+@import "./styles/design-tokens.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   /* Colors */
   --color-primary-teal: #0d9488; /* teal-600 */
@@ -37,11 +42,6 @@
   /* Transitions */
   --transition-default: all 0.2s ease-in-out;
 }
-
-@import "./styles/design-tokens.css";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 /* Global base styles */
 html {

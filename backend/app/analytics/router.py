@@ -18,7 +18,7 @@ def get_org_analytics(
     org_id: int,
     days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
     db: Session = Depends(get_db),
-    user: User = Depends(require_org_permission(Permission.ANALYTICS_READ))
+    user: User = Depends(require_org_permission(Permission.ANALYTICS_READ, org_id_param="org_id"))
 ):
     """
     Get engineering intelligence analytics for an organization.

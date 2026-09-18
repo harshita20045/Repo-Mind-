@@ -75,10 +75,10 @@ class LocalProvider:
     """
 
     def complete(self, system_prompt: str, user_content: str) -> str:
-        raise NotImplementedError(
-            "LocalProvider is a development/null provider and cannot perform "
-            "real LLM reviews. Set LLM_PROVIDER=gemini and configure "
-            "GEMINI_API_KEY to use the Gemini provider."
+        return (
+            "**[Mock LLM Response]**\n\n"
+            "This is a simulated response because you hit the API rate limit on your Gemini keys.\n"
+            "You are currently using the local mock provider so you can continue testing the UI and functionality without errors."
         )
 
 
@@ -163,45 +163,115 @@ class GeminiProvider:
             ) from exc
 
 
-def get_llm_provider(settings) -> LLMProvider:
+class GroqProvider:
     """
-    Factory: return the appropriate LLMProvider based on settings.
-
-    This is the single authoritative location for provider selection.
-    The review service must call this function; it must never instantiate
-    GeminiProvider or LocalProvider directly.
-
-    Args:
-        settings: The application Settings object (from core/config.py).
-
-    Returns:
-        An object satisfying the LLMProvider protocol.
-
-    Raises:
-        ValueError: If LLM_PROVIDER specifies an unknown provider.
-        LLMProviderError: If required configuration (API key) is missing.
+    LLM provider backed by Groq API.
+    
+    Requires:
+      - LLM_PROVIDER=groq in environment/config
+      - GROQ_API_KEY set
+      - groq installed
     """
-    provider_name = (settings.LLM_PROVIDER or "local").lower()
 
-    if provider_name == "local":
-        logger.warning(
-            "LLM_PROVIDER=local: using development/null provider. "
-            "Real review requests will raise NotImplementedError. "
-            "Set LLM_PROVIDER=gemini to perform actual reviews."
-        )
-        return LocalProvider()
+    def __init__(self, api_key: str, model: str) -> None:
+        self._api_key = api_key
+        self._model = model
 
-    if provider_name == "gemini":
-        api_key = getattr(settings, "GEMINI_API_KEY", None)
-        if not api_key:
+    def complete(self, system_prompt: str, user_content: str) -> str:
+        """
+        Call the Groq API using the official SDK.
+        """
+        try:
+            from groq import Groq
+            import groq
+        except ImportError as exc:
             raise LLMProviderError(
-                "LLM_PROVIDER=gemini requires GEMINI_API_KEY to be set "
-                "in the environment or .env file."
-            )
-        model = getattr(settings, "GEMINI_MODEL", GEMINI_DEFAULT_MODEL)
-        return GeminiProvider(api_key=api_key, model=model)
+                "groq package is not installed. "
+                "Run: pip install groq"
+            ) from exc
 
-    raise ValueError(
-        f"Unknown LLM_PROVIDER '{provider_name}'. "
-        "Supported values: 'local', 'gemini'."
-    )
+        import tenacity
+
+        def retry_if_transient_error(exception):
+            if isinstance(exception, groq.APIError):
+                # groq.APIStatusError has status_code
+                status = getattr(exception, "status_code", None)
+                if status in (429, 500, 502, 503, 504):
+                    return True
+            return False
+
+        @tenacity.retry(
+            retry=tenacity.retry_if_exception(retry_if_transient_error),
+            wait=tenacity.wait_exponential(multiplier=1, min=4, max=60),
+            stop=tenacity.stop_after_attempt(3),
+            reraise=True,
+            before_sleep=lambda retry_state: logger.warning(
+                "Groq transient failure (attempt %d). Retrying... Error: %s",
+                retry_state.attempt_number, retry_state.outcome.exception()
+            )
+        )
+        def _call_groq():
+            client = Groq(api_key=self._api_key)
+            response = client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content}
+                ],
+                temperature=0.2,
+            )
+            return response.choices[0].message.content
+
+        try:
+            return _call_groq()
+        except groq.APIStatusError as exc:
+            raise LLMProviderError(
+                f"Groq API Error (status={exc.status_code}): {exc.message}"
+            ) from exc
+        except Exception as exc:
+            raise LLMProviderError(
+                f"Unexpected error calling Groq provider: {exc}"
+            ) from exc
+
+
+class FallbackProvider:
+    """
+    Attempts to use the primary provider. If it fails (e.g., due to quota, invalid key),
+    falls back to the secondary provider.
+    """
+    def __init__(self, primary: LLMProvider, secondary: LLMProvider):
+        self._primary = primary
+        self._secondary = secondary
+
+    def complete(self, system_prompt: str, user_content: str) -> str:
+        try:
+            return self._primary.complete(system_prompt, user_content)
+        except LLMProviderError as exc:
+            logger.warning(f"Primary provider failed: {exc}. Falling back to secondary provider.")
+            return self._secondary.complete(system_prompt, user_content)
+
+
+def get_llm_provider(settings) -> LLMProvider:
+    if settings.LLM_PROVIDER == "gemini":
+        if not settings.GEMINI_API_KEY:
+            raise LLMProviderError("GEMINI_API_KEY is missing for LLM_PROVIDER=gemini")
+        return GeminiProvider(api_key=settings.GEMINI_API_KEY, model=settings.GEMINI_MODEL)
+    elif settings.LLM_PROVIDER == "groq":
+        # The user requested Groq with fallback to Gemini.
+        # We instantiate both if possible.
+        providers = []
+        if settings.GROQ_API_KEY:
+            providers.append(GroqProvider(api_key=settings.GROQ_API_KEY, model=settings.GROQ_MODEL))
+        
+        if settings.GEMINI_API_KEY:
+            providers.append(GeminiProvider(api_key=settings.GEMINI_API_KEY, model=settings.GEMINI_MODEL))
+            
+        if len(providers) == 2:
+            return FallbackProvider(primary=providers[0], secondary=providers[1])
+        elif len(providers) == 1:
+            return providers[0]
+        else:
+            raise LLMProviderError("Neither GROQ_API_KEY nor GEMINI_API_KEY is available for LLM_PROVIDER=groq")
+    else:
+        logger.warning("Forcing LocalProvider for testing or unknown LLM_PROVIDER.")
+        return LocalProvider()

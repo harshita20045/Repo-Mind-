@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from backend.app.db import get_db
 from backend.app.auth.dependencies import get_current_user
 from backend.app.auth.models import User
-from backend.app.auth.permissions import Permission, require_org_permission
+from backend.app.auth.permissions import Permission, assert_org_permission
 from backend.app.review.provider import get_llm_provider
 from backend.app.core.config import settings
 
@@ -54,7 +54,7 @@ def start_chat_session(
 ):
     """Start a new chat session."""
     # Ensure user has CHAT_USE permission in this organization
-    require_org_permission(request.organization_id, Permission.CHAT_USE)(user, db)
+    assert_org_permission(db, user.id, request.organization_id, Permission.CHAT_USE)
     
     session = create_session(
         db=db,
@@ -78,7 +78,7 @@ def list_chat_sessions(
     db: Session = Depends(get_db)
 ):
     """List chat sessions for a specific context."""
-    require_org_permission(organization_id, Permission.CHAT_USE)(user, db)
+    assert_org_permission(db, user.id, organization_id, Permission.CHAT_USE)
     
     sessions = get_sessions(db, user.id, context_type, context_id)
     return [
@@ -97,7 +97,7 @@ def get_chat_history(
     db: Session = Depends(get_db)
 ):
     """Get message history for a session."""
-    require_org_permission(organization_id, Permission.CHAT_USE)(user, db)
+    assert_org_permission(db, user.id, organization_id, Permission.CHAT_USE)
     
     messages = get_session_messages(db, session_id, user.id)
     return [
@@ -119,7 +119,7 @@ def post_chat_message(
     db: Session = Depends(get_db)
 ):
     """Send a message and get the AI assistant response."""
-    require_org_permission(organization_id, Permission.CHAT_USE)(user, db)
+    assert_org_permission(db, user.id, organization_id, Permission.CHAT_USE)
     
     provider = get_llm_provider(settings)
     try:

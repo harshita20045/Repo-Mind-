@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import MemberManagement from '../components/MemberManagement';
 
-export default function SettingsPage({ user }) {
+export default function SettingsPage() {
+  const { user, memberships } = useOutletContext();
   const [activeTab, setActiveTab] = useState('profile');
 
   const tabs = [
@@ -93,7 +96,7 @@ export default function SettingsPage({ user }) {
                   <label className="block text-sm font-medium text-gray-300 mb-1.5">Organization Name</label>
                   <input 
                     type="text" 
-                    defaultValue={user?.memberships?.[0]?.organization?.name || 'My Organization'}
+                    defaultValue={memberships?.[0]?.organization?.name || 'My Organization'}
                     className="w-full bg-surfaceHighlight/30 border border-white/10 text-gray-200 text-sm rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
                   />
                 </div>
@@ -147,8 +150,13 @@ export default function SettingsPage({ user }) {
             </div>
           )}
 
-          {/* Members / Billing placeholders */}
-          {(activeTab === 'members' || activeTab === 'billing') && (
+          {activeTab === 'members' && (
+            <div className="bg-surface/50 backdrop-blur-md border border-white/5 rounded-2xl">
+              <MemberManagement organizationId={memberships?.[0]?.organization_id} memberships={memberships || []} />
+            </div>
+          )}
+
+          {activeTab === 'billing' && (
             <div className="bg-surface/50 backdrop-blur-md border border-white/5 rounded-2xl p-12 text-center">
               <svg className="w-12 h-12 text-gray-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />

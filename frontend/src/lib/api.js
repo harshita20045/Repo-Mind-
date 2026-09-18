@@ -16,8 +16,15 @@ export async function apiRequest(endpoint, options = {}) {
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const errorMsg = data?.detail || `Request failed with status ${response.status}`;
-    throw new Error(errorMsg);
+    let errorMsg = data?.detail || `Request failed with status ${response.status}`;
+    if (response.status === 403) {
+      errorMsg = "You don't have permission to perform this action.";
+    } else if (response.status === 401) {
+      errorMsg = "Authentication required. Please log in again.";
+    }
+    const err = new Error(errorMsg);
+    err.status = response.status;
+    throw err;
   }
 
   return data;
@@ -72,6 +79,20 @@ export const orgApi = {
   getRepository: (repoId) =>
     apiRequest(`/repositories/${repoId}`, {
       method: 'GET',
+    }),
+  createProject: (orgId, name) =>
+    apiRequest(`/organizations/${orgId}/projects`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+  connectRepository: (orgId, payload) =>
+    apiRequest(`/repositories/connect?organization_id=${orgId}`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  triggerIndex: (repoId) =>
+    apiRequest(`/repositories/${repoId}/index`, {
+      method: 'POST',
     }),
 };
 

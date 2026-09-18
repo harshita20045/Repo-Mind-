@@ -29,6 +29,7 @@ from backend.app.organizations.service import get_repository_by_id, get_project_
 def connect_repository(
     db: Session,
     organization_id: int,
+    project_id: int,
     github_owner: str,
     github_name: str,
     default_branch: str,
@@ -93,6 +94,14 @@ def connect_repository(
 
     from backend.app.organizations.models import Project
 
+    # Validate project exists and belongs to the organization
+    project = db.query(Project).filter(Project.id == project_id, Project.organization_id == organization_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found or does not belong to the organization.",
+        )
+
     # Check for existing repository across any project in this organization
     repo = (
         db.query(Repository)
@@ -105,12 +114,6 @@ def connect_repository(
         .first()
     )
     if not repo:
-        project = db.query(Project).filter(Project.organization_id == organization_id).first()
-        if not project:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Create a project first before connecting a repository.",
-            )
         repo = Repository(
             project_id=project.id,
             github_owner=github_owner,

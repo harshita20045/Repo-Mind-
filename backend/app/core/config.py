@@ -26,9 +26,12 @@ class Settings(BaseSettings):
     # LLM provider — Phase 8
     # "local": development/null provider (raises NotImplementedError on real reviews)
     # "gemini": Google Gemini API (requires GEMINI_API_KEY)
+    # "groq": Groq API (requires GROQ_API_KEY)
     LLM_PROVIDER: str = "local"
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-2.5-flash"
+    GROQ_API_KEY: Optional[str] = None
+    GROQ_MODEL: str = "qwen/qwen3.8-27b"
 
     # GitHub Webhook — RepoMind 2.0
     # Set this to the secret configured in GitHub repo webhook settings.

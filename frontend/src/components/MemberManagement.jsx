@@ -1,24 +1,25 @@
 import React, { useEffect, useState } from 'react';
+import { usePermissions, Permissions } from '../hooks/usePermissions';
+import { apiRequest } from '../lib/api';
 
-export default function MemberManagement({ organizationId, currentUserRole }) {
+export default function MemberManagement({ organizationId, memberships }) {
   const [members, setMembers] = useState([]);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('developer');
   const [error, setError] = useState(null);
 
-  const isAdmin = currentUserRole === 'org_admin';
+  const { can } = usePermissions(memberships, organizationId);
+  const isAdmin = can(Permissions.MEMBERS_UPDATE);
 
   useEffect(() => {
     fetchMembers();
   }, [organizationId]);
 
   async function fetchMembers() {
+    if (!organizationId) return;
     try {
-      const res = await fetch(`/api/organizations/${organizationId}/members`);
-      if (res.ok) {
-        const data = await res.json();
-        setMembers(data);
-      }
+      const data = await apiRequest(`/organizations/${organizationId}/members`);
+      setMembers(data);
     } catch (e) {
       console.error(e);
     }
@@ -27,56 +28,42 @@ export default function MemberManagement({ organizationId, currentUserRole }) {
   async function handleInvite(e) {
     e.preventDefault();
     setError(null);
+    if (!organizationId) return;
     try {
-      const res = await fetch(`/api/organizations/${organizationId}/members`, {
+      await apiRequest(`/organizations/${organizationId}/members`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: inviteEmail, role: inviteRole })
       });
-      if (!res.ok) {
-        const err = await res.json();
-        setError(err.detail || 'Failed to invite');
-        return;
-      }
       setInviteEmail('');
       fetchMembers();
     } catch (e) {
-      setError('An error occurred');
+      setError(e.message || 'An error occurred');
     }
   }
 
   async function handleUpdateRole(userId, newRole) {
+    if (!organizationId) return;
     try {
-      const res = await fetch(`/api/organizations/${organizationId}/members/${userId}/role`, {
+      await apiRequest(`/organizations/${organizationId}/members/${userId}/role`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: newRole })
       });
-      if (res.ok) {
-        fetchMembers();
-      } else {
-        const err = await res.json();
-        alert(err.detail || 'Failed to update role');
-      }
+      fetchMembers();
     } catch (e) {
-      alert('Error updating role');
+      alert(e.message || 'Error updating role');
     }
   }
 
   async function handleRemove(userId) {
+    if (!organizationId) return;
     if (!confirm('Are you sure you want to remove this member?')) return;
     try {
-      const res = await fetch(`/api/organizations/${organizationId}/members/${userId}`, {
+      await apiRequest(`/organizations/${organizationId}/members/${userId}`, {
         method: 'DELETE'
       });
-      if (res.ok) {
-        fetchMembers();
-      } else {
-        const err = await res.json();
-        alert(err.detail || 'Failed to remove member');
-      }
+      fetchMembers();
     } catch (e) {
-      alert('Error removing member');
+      alert(e.message || 'Error removing member');
     }
   }
 
@@ -118,7 +105,7 @@ export default function MemberManagement({ organizationId, currentUserRole }) {
         >
           <option value="developer">Developer</option>
           <option value="reviewer">Reviewer</option>
-          <option value="team_lead">Team Lead</option>
+          <option value="tech_lead">Lead</option>
           <option value="org_admin">Org Admin</option>
         </select>
         <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-1.5 rounded font-medium transition">
@@ -138,7 +125,7 @@ export default function MemberManagement({ organizationId, currentUserRole }) {
               >
                 <option value="developer">Developer</option>
                 <option value="reviewer">Reviewer</option>
-                <option value="team_lead">Team Lead</option>
+                <option value="tech_lead">Lead</option>
                 <option value="org_admin">Org Admin</option>
               </select>
               <button 
