@@ -1,43 +1,97 @@
 import React from 'react';
-import { authApi } from '../../lib/api';
+import { useLocation, Link } from 'react-router-dom';
 
-const TopNav = ({ user }) => {
-  
+// Map route patterns to readable labels
+const ROUTE_LABELS = {
+  '/':            { label: 'Dashboard',            crumbs: [] },
+  '/repositories':{ label: 'Repositories',         crumbs: [] },
+  '/analytics':   { label: 'Engineering Intelligence', crumbs: [] },
+  '/security':    { label: 'Security Browser',     crumbs: [] },
+  '/chat':        { label: 'Developer Assistant',  crumbs: [] },
+  '/settings':    { label: 'Settings',             crumbs: [] },
+};
+
+function getPageInfo(pathname) {
+  // Exact match first
+  if (ROUTE_LABELS[pathname]) return ROUTE_LABELS[pathname];
+
+  // Pull-requests detail: /repositories/:rid/pull-requests/:prid
+  if (/^\/repositories\/\d+\/pull-requests\/\d+$/.test(pathname)) {
+    const parts = pathname.split('/');
+    return {
+      label: `PR #${parts[4]}`,
+      crumbs: [
+        { label: 'Repositories', to: '/repositories' },
+        { label: 'Pull Requests', to: `/repositories/${parts[2]}/pull-requests` },
+      ],
+    };
+  }
+
+  // Pull-requests list: /repositories/:rid/pull-requests
+  if (/^\/repositories\/\d+\/pull-requests$/.test(pathname)) {
+    return {
+      label: 'Pull Requests',
+      crumbs: [{ label: 'Repositories', to: '/repositories' }],
+    };
+  }
+
+  return { label: 'RepoMind', crumbs: [] };
+}
+
+export default function TopNav({ user }) {
+  const { pathname } = useLocation();
+  const { label, crumbs } = getPageInfo(pathname);
+
   return (
-    <header className="h-16 flex items-center justify-between px-8 bg-background/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-10">
-      <div className="flex items-center gap-4">
-        {/* Search placeholder */}
-        <div className="relative group">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="w-4 h-4 text-gray-500 group-focus-within:text-[var(--color-primary-teal)] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-          <input 
-            type="text" 
-            placeholder="Search repositories, PRs..." 
-            className="bg-surface/50 border border-white/5 text-sm rounded-full pl-10 pr-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-teal)]/50 focus:border-transparent transition-all placeholder-gray-500 text-gray-200"
-          />
-        </div>
+    <header
+      className="h-14 flex-shrink-0 flex items-center justify-between px-6 bg-background/80 backdrop-blur-md border-b border-white/[0.07] sticky top-0 z-20"
+      role="banner"
+    >
+      {/* Left: breadcrumbs + page title */}
+      <div className="flex items-center gap-2 min-w-0">
+        {crumbs.length > 0 && (
+          <>
+            {crumbs.map((crumb, i) => (
+              <React.Fragment key={i}>
+                <Link
+                  to={crumb.to}
+                  className="text-sm text-text-muted hover:text-text-secondary transition-colors truncate"
+                >
+                  {crumb.label}
+                </Link>
+                <svg className="w-3.5 h-3.5 text-text-muted/40 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </React.Fragment>
+            ))}
+          </>
+        )}
+        <h1 className="text-sm font-semibold text-text-primary truncate">{label}</h1>
       </div>
-      
-      <div className="flex items-center gap-4">
-        <button className="relative p-2 text-[var(--color-primary-teal)] hover:text-white transition-colors rounded-full hover:bg-white/5">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-          </svg>
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[var(--color-primary-teal)] rounded-full border border-background"></span>
-        </button>
-        
-        <button 
-          onClick={() => authApi.logout().then(() => window.location.reload())}
-          className="text-sm font-medium text-[var(--color-primary-teal)] hover:text-white transition-colors px-3 py-1.5 rounded-md hover:bg-white/5"
+
+      {/* Right: user info */}
+      <div className="flex items-center gap-3 flex-shrink-0">
+        {/* Status dot */}
+        <div
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 border border-success/20"
+          title="API connected"
+          aria-label="System status: connected"
         >
-          Sign Out
-        </button>
+          <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" aria-hidden="true" />
+          <span className="text-2xs font-semibold text-success">Live</span>
+        </div>
+
+        {/* User avatar */}
+        {user && (
+          <div
+            className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 border border-white/10 flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+            aria-label={`Signed in as ${user.email}`}
+            title={user.email}
+          >
+            {user.email?.charAt(0).toUpperCase() || 'U'}
+          </div>
+        )}
       </div>
     </header>
   );
-};
-
-export default TopNav;
+}

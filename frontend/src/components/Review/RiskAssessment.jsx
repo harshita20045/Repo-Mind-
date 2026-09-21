@@ -1,8 +1,50 @@
 import React from 'react';
+import { RiskBadge } from '../ui/Badge';
+import EmptyState from '../ui/EmptyState';
 
+// ─── Risk vector card ──────────────────────────────────────────────────────────
+function RiskVector({ label, level, description }) {
+  const styles = {
+    critical: { badge: 'bg-danger/10 text-danger border-danger/25', bar: 'bg-danger', width: '100%' },
+    high:     { badge: 'bg-orange-500/10 text-orange-400 border-orange-400/25', bar: 'bg-orange-500', width: '75%' },
+    medium:   { badge: 'bg-warning/10 text-warning border-warning/25', bar: 'bg-warning', width: '50%' },
+    low:      { badge: 'bg-success/10 text-success border-success/25', bar: 'bg-success', width: '25%' },
+    unknown:  { badge: 'bg-white/5 text-text-muted border-white/10', bar: 'bg-text-muted', width: '0%' },
+  };
+  const normalized = level?.toLowerCase() || 'unknown';
+  const style = styles[normalized] || styles.unknown;
+
+  return (
+    <div className="bg-surfaceHighlight/30 border border-white/[0.07] rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-semibold text-text-secondary">{label}</span>
+        <span className={`text-xs font-bold px-2 py-0.5 rounded border uppercase tracking-wide ${style.badge}`}>
+          {level || 'Unknown'}
+        </span>
+      </div>
+      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-2">
+        <div
+          className={`h-full rounded-full ${style.bar} transition-all duration-1000`}
+          style={{ width: style.width }}
+          role="presentation"
+        />
+      </div>
+      <p className="text-xs text-text-muted leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
+// ─── Risk Assessment ───────────────────────────────────────────────────────────
 export default function RiskAssessment({ riskData }) {
   if (!riskData) {
-    return <div className="text-gray-400 p-8 text-center">No risk assessment data available for this run.</div>;
+    return (
+      <EmptyState
+        icon="analytics"
+        title="No risk assessment data"
+        description="Risk assessment data will appear here after the review run completes."
+        className="py-12"
+      />
+    );
   }
 
   const {
@@ -11,122 +53,109 @@ export default function RiskAssessment({ riskData }) {
     architecture_risk_level,
     test_gap_level,
     blast_radius_modules,
-    explanation
+    explanation,
   } = riskData;
 
-  const getRiskColor = (level) => {
-    switch (level?.toLowerCase()) {
-      case 'critical':
-      case 'high': return 'text-danger bg-danger/10 border-danger/20';
-      case 'medium': return 'text-warning bg-warning/10 border-warning/20';
-      case 'low': return 'text-success bg-success/10 border-success/20';
-      default: return 'text-gray-300 bg-white/5 border-white/10';
-    }
-  };
+  const isHigh = risk_score > 70;
+  const isMed = risk_score > 40;
+  const riskLevel = isHigh ? 'high' : isMed ? 'medium' : risk_score > 0 ? 'low' : null;
+  const scoreColor = isHigh ? 'text-danger' : isMed ? 'text-warning' : risk_score > 0 ? 'text-success' : 'text-text-muted';
+  const trackColor = isHigh ? 'text-danger' : isMed ? 'text-warning' : risk_score > 0 ? 'text-success' : 'text-text-muted';
 
-  const getTextColor = (level) => {
-    switch (level?.toLowerCase()) {
-      case 'critical':
-      case 'high': return 'text-danger';
-      case 'medium': return 'text-warning';
-      case 'low': return 'text-success';
-      default: return 'text-gray-300';
-    }
-  };
+  // SVG ring
+  const r = 52;
+  const circ = 2 * Math.PI * r;
+  const filled = circ - (circ * (risk_score || 0)) / 100;
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header section */}
-      <div className="flex flex-col md:flex-row gap-8 items-center bg-surfaceHighlight/20 p-6 rounded-2xl border border-white/5">
+    <div className="space-y-6 animate-fade-in">
+
+      {/* Overall risk header */}
+      <div className="flex flex-col md:flex-row gap-6 items-center bg-surfaceHighlight/20 border border-white/[0.06] rounded-xl p-6">
+        {/* Ring gauge */}
         <div className="relative flex-shrink-0">
-          <svg className="w-32 h-32 transform -rotate-90">
-            <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-surfaceHighlight/50" />
-            <circle 
-              cx="64" cy="64" r="56" 
-              stroke="currentColor" 
-              strokeWidth="12" 
-              fill="transparent" 
-              strokeDasharray={351.8} 
-              strokeDashoffset={351.8 - (351.8 * (risk_score || 0)) / 100}
-              className={`transition-all duration-1000 ${
-                risk_score > 70 ? 'text-danger' : risk_score > 40 ? 'text-warning' : 'text-success'
-              }`}
+          <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
+            <circle cx="60" cy="60" r={r} fill="none" stroke="currentColor" strokeWidth="10" className="text-white/5" />
+            <circle
+              cx="60" cy="60" r={r}
+              fill="none" stroke="currentColor" strokeWidth="10"
+              strokeDasharray={circ}
+              strokeDashoffset={filled}
+              strokeLinecap="round"
+              className={`${trackColor} transition-all duration-1200`}
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-4xl font-bold text-white">{risk_score || 0}</span>
-            <span className="text-xs text-gray-400 uppercase tracking-wider font-medium">Risk Score</span>
+            <span className={`text-4xl font-bold tabular-nums ${scoreColor}`}>{risk_score ?? '—'}</span>
+            <span className="text-xs text-text-muted uppercase tracking-wider">/ 100</span>
           </div>
         </div>
-        
+
+        {/* Summary text */}
         <div className="flex-1">
-          <h2 className="text-2xl font-bold text-white mb-3">Overall Structural Risk</h2>
-          <p className="text-gray-300 leading-relaxed text-sm">
-            {explanation || "The risk engine analyzed the structural changes in this PR and computed an aggregate risk score based on blast radius, security implications, and test coverage gaps."}
+          <div className="flex items-center gap-3 mb-3">
+            <h2 className="text-lg font-bold text-text-primary">Overall Risk Assessment</h2>
+            {riskLevel && <RiskBadge level={riskLevel} />}
+          </div>
+          <p className="text-sm text-text-secondary leading-relaxed">
+            {explanation || 'The risk engine analyzed structural changes, security implications, and test coverage gaps to produce this aggregate risk score.'}
           </p>
         </div>
       </div>
 
-      {/* Breakdown Metrics */}
-      <h3 className="text-lg font-semibold text-white mb-4 mt-8">Risk Vectors</h3>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-5 rounded-xl bg-surface/50 border border-white/5">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-gray-400 font-medium">Security</span>
-            <span className={`px-2 py-1 rounded text-xs font-bold border capitalize ${getRiskColor(security_risk_level)}`}>
-              {security_risk_level || 'Unknown'}
-            </span>
-          </div>
-          <p className="text-xs text-gray-500">Risk derived from secrets, auth changes, and injection vulnerabilities.</p>
-        </div>
-
-        <div className="p-5 rounded-xl bg-surface/50 border border-white/5">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-gray-400 font-medium">Architecture</span>
-            <span className={`px-2 py-1 rounded text-xs font-bold border capitalize ${getRiskColor(architecture_risk_level)}`}>
-              {architecture_risk_level || 'Unknown'}
-            </span>
-          </div>
-          <p className="text-xs text-gray-500">Risk derived from core structural modifications or deep dependencies.</p>
-        </div>
-
-        <div className="p-5 rounded-xl bg-surface/50 border border-white/5">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-gray-400 font-medium">Test Gap</span>
-            <span className={`px-2 py-1 rounded text-xs font-bold border capitalize ${getRiskColor(test_gap_level)}`}>
-              {test_gap_level || 'Unknown'}
-            </span>
-          </div>
-          <p className="text-xs text-gray-500">Measures the lack of accompanying tests for new critical logic.</p>
+      {/* Risk vectors */}
+      <div>
+        <h3 className="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">Risk Vectors</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <RiskVector
+            label="Security"
+            level={security_risk_level}
+            description="Derived from secrets exposure, authentication changes, and injection vulnerabilities."
+          />
+          <RiskVector
+            label="Architecture"
+            level={architecture_risk_level}
+            description="Assessed from core structural modifications or changes to deep dependencies."
+          />
+          <RiskVector
+            label="Test Coverage"
+            level={test_gap_level}
+            description="Measures the absence of tests accompanying new critical logic changes."
+          />
         </div>
       </div>
 
-      {/* Blast Radius */}
-      <h3 className="text-lg font-semibold text-white mb-4 mt-8">Blast Radius Analysis</h3>
-      <div className="p-6 rounded-xl bg-surfaceHighlight/20 border border-white/5">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-12 h-12 rounded-full bg-accent/20 text-accent flex items-center justify-center">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
-            </svg>
+      {/* Blast radius */}
+      <div>
+        <h3 className="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">Blast Radius</h3>
+        <div className="bg-surfaceHighlight/20 border border-white/[0.06] rounded-xl p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <circle cx="12" cy="12" r="10" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-text-primary">Impacted Modules</p>
+              <p className="text-xs text-text-muted">Files and services potentially affected by this PR's changes</p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-white font-medium">Impacted Modules</h4>
-            <p className="text-sm text-gray-400">Files and services potentially affected by these changes.</p>
-          </div>
+          {blast_radius_modules && blast_radius_modules.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mt-1">
+              {blast_radius_modules.map((mod, i) => (
+                <span
+                  key={i}
+                  className="font-mono text-xs text-text-secondary bg-white/5 border border-white/[0.08] px-2.5 py-1 rounded-md"
+                >
+                  {mod}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-text-muted italic">No significant multi-module blast radius detected.</p>
+          )}
         </div>
-        
-        {blast_radius_modules && blast_radius_modules.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {blast_radius_modules.map((module, i) => (
-              <span key={i} className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-md text-sm text-gray-300 font-mono">
-                {module}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500 italic">No significant multi-module blast radius detected.</p>
-        )}
       </div>
     </div>
   );

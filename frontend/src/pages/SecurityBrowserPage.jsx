@@ -1,49 +1,64 @@
 import React from 'react';
 
 export default function SecurityBrowserPage() {
-  const findings = []; // Backend does not currently provide a global findings endpoint
-
   return (
-    <div className="space-y-6 animate-slide-up">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Security & Findings Browser</h1>
-          <p className="text-gray-400 text-sm">Global view of all vulnerabilities and code quality issues across the organization.</p>
-        </div>
+    <div className="space-y-5 animate-slide-up">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-text-primary tracking-tight">Security Browser</h1>
+        <p className="text-sm text-text-muted mt-1">
+          Organization-wide view of vulnerabilities and code quality issues.
+        </p>
       </div>
 
-      <div className="bg-surface/50 backdrop-blur-md border border-white/5 rounded-2xl overflow-hidden min-h-[400px]">
-        <div className="p-4 border-b border-white/5 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2 relative">
-            <svg className="w-4 h-4 absolute left-3 top-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input 
-              type="text" 
-              placeholder="Search by rule, file, or repository..." 
-              className="w-full bg-surfaceHighlight/30 border border-white/5 text-gray-200 text-sm rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-all"
-            />
-          </div>
-          <select className="bg-surfaceHighlight/30 border border-white/5 text-gray-200 text-sm rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 appearance-none">
-            <option>All Severities</option>
-            <option>Critical</option>
-            <option>High</option>
-            <option>Medium</option>
-            <option>Low</option>
-          </select>
-          <select className="bg-surfaceHighlight/30 border border-white/5 text-gray-200 text-sm rounded-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 appearance-none">
-            <option>All States</option>
-            <option>New</option>
-            <option>Persistent</option>
-            <option>Resolved</option>
-          </select>
-        </div>
-
-        <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-          <svg className="w-12 h-12 mb-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      {/* Filters bar — static context only */}
+      <div className="bg-surface border border-white/[0.07] rounded-xl p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+        {/* Search */}
+        <div className="md:col-span-2 relative">
+          <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <p>Global findings API is not yet implemented.</p>
+          <input
+            type="text"
+            placeholder="Search by rule, file, or repository…"
+            disabled
+            aria-label="Search (not yet available)"
+            className="w-full bg-surfaceHighlight/20 border border-white/[0.07] text-text-muted text-sm rounded-lg pl-9 pr-4 py-2 cursor-not-allowed opacity-60 focus:outline-none"
+          />
+        </div>
+        <select
+          disabled
+          aria-label="Filter by severity (not yet available)"
+          className="bg-surfaceHighlight/20 border border-white/[0.07] text-text-muted text-sm rounded-lg px-3 py-2 cursor-not-allowed opacity-60 focus:outline-none appearance-none"
+        >
+          <option>All Severities</option>
+        </select>
+        <select
+          disabled
+          aria-label="Filter by state (not yet available)"
+          className="bg-surfaceHighlight/20 border border-white/[0.07] text-text-muted text-sm rounded-lg px-3 py-2 cursor-not-allowed opacity-60 focus:outline-none appearance-none"
+        >
+          <option>All States</option>
+        </select>
+      </div>
+
+      {/* Empty state */}
+      <div className="bg-surface border border-white/[0.07] rounded-xl overflow-hidden">
+        <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-surfaceHighlight/60 border border-white/[0.08] flex items-center justify-center text-text-muted mb-5">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </div>
+          <h3 className="text-sm font-semibold text-text-primary mb-2">Global Security Findings API Not Yet Available</h3>
+          <p className="text-sm text-text-muted max-w-md leading-relaxed mb-2">
+            This view will aggregate security and code quality findings across all repositories.
+            The global findings API endpoint is planned for a future release.
+          </p>
+          <p className="text-xs text-text-muted">
+            Per-PR security findings are available on the{' '}
+            <span className="text-primary font-medium">Pull Request Review</span> page.
+          </p>
         </div>
       </div>
     </div>

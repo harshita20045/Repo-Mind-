@@ -1,90 +1,136 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { SeverityBadge } from '../ui/Badge';
 
-export default function FindingCard({ finding }) {
-  const getSeverityStyle = (severity) => {
-    switch (severity.toLowerCase()) {
-      case 'critical':
-        return 'bg-danger/10 border-danger/20 text-danger shadow-danger/5';
-      case 'high':
-        return 'bg-orange-500/10 border-orange-500/20 text-orange-400 shadow-orange-500/5';
-      case 'medium':
-        return 'bg-warning/10 border-warning/20 text-warning shadow-warning/5';
-      case 'low':
-        return 'bg-primary/10 border-primary/20 text-primary shadow-primary/5';
-      default:
-        return 'bg-surfaceHighlight/30 border-white/10 text-gray-300';
-    }
+// ─── Evidence status ───────────────────────────────────────────────────────────
+function EvidenceStatus({ status }) {
+  const styles = {
+    supported:    'bg-success/10 text-success border-success/20',
+    unverified:   'bg-warning/10 text-warning border-warning/20',
+    contradicted: 'bg-danger/10 text-danger border-danger/20',
   };
-
-  const getCategoryColor = (category) => {
-    switch (category.toLowerCase()) {
-      case 'security': return 'text-danger';
-      case 'bug': return 'text-warning';
-      case 'performance': return 'text-accent';
-      case 'style': return 'text-primary';
-      case 'architecture': return 'text-indigo-400';
-      default: return 'text-gray-400';
-    }
+  const icons = {
+    supported:    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />,
+    unverified:   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
+    contradicted: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />,
   };
-
-  const severityStyle = getSeverityStyle(finding.severity);
-  const categoryColor = getCategoryColor(finding.type);
+  const normalized = status?.toLowerCase() || 'unverified';
+  const style = styles[normalized] || styles.unverified;
+  const icon = icons[normalized] || icons.unverified;
+  const label = normalized.charAt(0).toUpperCase() + normalized.slice(1);
 
   return (
-    <div className={`p-5 rounded-2xl border backdrop-blur-sm shadow-lg transition-all hover:-translate-y-1 ${severityStyle} flex flex-col gap-3 mb-4`}>
-      <div className="flex justify-between items-start gap-4">
-        <h4 className="font-bold text-white text-lg leading-tight tracking-tight">
-          {finding.title}
-        </h4>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className={`px-2.5 py-1 text-[10px] font-bold rounded-md uppercase tracking-wider border ${severityStyle}`}>
-            {finding.severity}
-          </span>
-          <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-surface border border-white/5 ${categoryColor}`}>
-            {finding.type}
-          </span>
-        </div>
-      </div>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded border uppercase tracking-wider ${style}`}>
+      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        {icon}
+      </svg>
+      {label}
+    </span>
+  );
+}
 
-      {(finding.file || finding.line) && (
-        <div className="text-xs font-mono text-gray-300 bg-surfaceHighlight/50 px-3 py-1.5 rounded-lg border border-white/5 self-start shadow-inner">
-          {finding.file || 'Unknown file'} {finding.line ? <span className="text-gray-500">:{finding.line}</span> : ''}
-        </div>
-      )}
+// ─── Finding Card ──────────────────────────────────────────────────────────────
+export default function FindingCard({ finding }) {
+  const [expanded, setExpanded] = useState(true);
 
-      <div className="space-y-3 text-sm text-gray-300 bg-surface/30 p-4 rounded-xl border border-white/5">
-        <div>
-          <span className="font-semibold text-white block mb-1">Problem</span> 
-          <p className="leading-relaxed text-gray-400">{finding.explanation}</p>
+  const sev = finding.severity?.toLowerCase() || 'info';
+  const leftColors = {
+    critical: 'bg-danger',
+    high:     'bg-orange-500',
+    medium:   'bg-warning',
+    low:      'bg-success',
+    info:     'bg-info',
+  };
+  const leftColor = leftColors[sev] || 'bg-text-muted';
+
+  const categoryColors = {
+    security:     'text-danger',
+    bug:          'text-warning',
+    performance:  'text-accent',
+    style:        'text-primary',
+    architecture: 'text-info',
+  };
+  const catColor = categoryColors[finding.type?.toLowerCase()] || 'text-text-muted';
+
+  return (
+    <div className="relative flex overflow-hidden bg-surface border border-white/[0.07] rounded-xl shadow-card mb-3 hover:border-white/10 transition-colors">
+      {/* Left severity strip */}
+      <div className={`w-1 flex-shrink-0 ${leftColor}`} aria-hidden="true" />
+
+      <div className="flex-1 p-4 min-w-0">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <button
+            onClick={() => setExpanded(v => !v)}
+            className="flex-1 text-left group"
+            aria-expanded={expanded}
+          >
+            <h4 className="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors leading-snug">
+              {finding.title}
+            </h4>
+          </button>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <SeverityBadge severity={sev} />
+            {finding.type && (
+              <span className={`text-2xs font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-white/[0.08] bg-white/5 ${catColor}`}>
+                {finding.type}
+              </span>
+            )}
+          </div>
         </div>
-        {finding.recommendation && (
-          <div className="pt-3 border-t border-white/5">
-            <span className="font-semibold text-white block mb-1">Recommendation</span> 
-            <p className="leading-relaxed text-gray-400">{finding.recommendation}</p>
+
+        {/* File + line */}
+        {(finding.file || finding.line) && (
+          <div className="font-mono text-xs text-text-muted bg-surfaceHighlight/50 border border-white/[0.07] px-2.5 py-1 rounded inline-block mb-3">
+            {finding.file || 'Unknown file'}
+            {finding.line && <span className="text-text-muted/60">:{finding.line}</span>}
           </div>
         )}
-      </div>
 
-      <div className="pt-2 mt-2 border-t border-white/10 flex items-center justify-between text-xs">
-        <div className="flex items-center gap-4 text-gray-500 font-medium">
-          {finding.rule_source && (
-            <div className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              {finding.rule_source}
+        {/* Collapsible body */}
+        {expanded && (
+          <div className="space-y-3 animate-fade-in">
+            {/* Problem */}
+            <div className="bg-surfaceHighlight/20 border border-white/[0.05] rounded-lg p-3 text-xs">
+              <span className="block font-semibold text-text-secondary mb-1.5 uppercase tracking-wider text-2xs">Problem</span>
+              <p className="text-text-secondary leading-relaxed">{finding.explanation}</p>
             </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {finding.evidence_status === 'supported' && (
-            <span className="inline-flex items-center gap-1 text-success bg-success/10 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-success/20">
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-              Grounded
-            </span>
-          )}
-          <button className="px-3 py-1.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors border border-transparent hover:border-white/10">
-            Dismiss
-          </button>
-        </div>
+
+            {/* Recommendation */}
+            {finding.recommendation && (
+              <div className="bg-primary/5 border border-primary/15 rounded-lg p-3 text-xs">
+                <span className="block font-semibold text-primary mb-1.5 uppercase tracking-wider text-2xs">Recommendation</span>
+                <p className="text-text-secondary leading-relaxed">{finding.recommendation}</p>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center gap-3">
+                {finding.rule_source && (
+                  <span className="text-xs text-text-muted flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {finding.rule_source}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {finding.evidence_status && (
+                  <EvidenceStatus status={finding.evidence_status} />
+                )}
+                {finding.is_grounded && (
+                  <span className="inline-flex items-center gap-1 text-success bg-success/10 border border-success/20 px-2 py-0.5 rounded text-2xs font-bold uppercase tracking-wider">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Grounded
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

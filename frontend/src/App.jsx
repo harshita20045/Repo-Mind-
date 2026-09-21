@@ -20,13 +20,19 @@ function ProtectedRoute({ memberships, requiredPermission }) {
   const { can } = usePermissions(memberships);
   if (requiredPermission && !can(requiredPermission)) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center space-y-4 text-slate-300">
-        <svg className="w-16 h-16 text-danger/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        <h2 className="text-2xl font-bold">Access Denied</h2>
-        <p className="text-slate-400">You don't have permission to access this page.</p>
-        <a href="/" className="text-indigo-400 hover:text-indigo-300 transition-colors">Return to Dashboard</a>
+      <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center gap-4 animate-fade-in">
+        <div className="w-14 h-14 rounded-2xl bg-danger/10 border border-danger/20 flex items-center justify-center text-danger">
+          <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-text-primary">Access Denied</h2>
+          <p className="text-sm text-text-muted mt-1.5 max-w-xs">You don't have permission to access this page.</p>
+        </div>
+        <a href="/" className="text-sm font-medium text-primary hover:text-primary-hover transition-colors">
+          ← Return to Dashboard
+        </a>
       </div>
     );
   }
@@ -74,9 +80,22 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-300">
-        <div className="animate-spin h-8 w-8 border-4 border-indigo-600 border-t-transparent rounded-full mb-4"></div>
-        <p className="text-sm font-medium tracking-wide text-slate-400">Loading RepoMind session...</p>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        {/* Ambient glow */}
+        <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/[0.05] blur-[120px] pointer-events-none" />
+        <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-accent/[0.04] blur-[120px] pointer-events-none" />
+        {/* Logo */}
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow-primary">
+          <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        {/* Spinner */}
+        <svg className="animate-spin w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+          <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+        </svg>
+        <p className="text-sm text-text-muted font-medium">Connecting to RepoMind…</p>
       </div>
     );
   }

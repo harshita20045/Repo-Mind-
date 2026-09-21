@@ -259,7 +259,7 @@ async def github_webhook(
             event.error_message = "No PR number in payload"
             db.commit()
             return {"status": "skipped", "reason": "no_pr_number"}
-
+                                                                  
         review_run = _enqueue_review(db, repository_id, pr_number)
         if review_run:
             event.status = "processed"
