@@ -1,0 +1,48 @@
+
+def upsert_github_identity(
+    db: Session,
+    user_id: int,
+    github_user_id: str,
+    github_login: str,
+    access_token: str,
+    refresh_token: Optional[str],
+):
+    from backend.app.github.models import GitHubIdentity, GitHubCredential
+    from backend.app.github.encryption import encrypt_token
+
+    identity = db.query(GitHubIdentity).filter(GitHubIdentity.user_id == user_id).first()
+    
+    if not identity:
+        identity = GitHubIdentity(
+            user_id=user_id,
+            github_user_id=github_user_id,
+            github_login=github_login,
+            connection_status="CONNECTED",
+            verified_at=datetime.now(timezone.utc)
+        )
+        db.add(identity)
+        db.flush()
+    else:
+        identity.github_user_id = github_user_id
+        identity.github_login = github_login
+        identity.connection_status = "CONNECTED"
+        identity.verified_at = datetime.now(timezone.utc)
+
+    credential = db.query(GitHubCredential).filter(GitHubCredential.github_identity_id == identity.id).first()
+    encrypted_access = encrypt_token(access_token)
+    encrypted_refresh = encrypt_token(refresh_token) if refresh_token else None
+
+    if not credential:
+        credential = GitHubCredential(
+            github_identity_id=identity.id,
+            encrypted_access_token=encrypted_access,
+            encrypted_refresh_token=encrypted_refresh
+        )
+        db.add(credential)
+    else:
+        credential.encrypted_access_token = encrypted_access
+        credential.encrypted_refresh_token = encrypted_refresh
+        
+    db.commit()
+    db.refresh(identity)
+    return identity

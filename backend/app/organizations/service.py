@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from backend.app.organizations.models import Project, Repository, GithubConnection
+from backend.app.organizations.models import Project, Repository
 from backend.app.auth.models import Organization, OrganizationMembership, RoleEnum, User
 from fastapi import HTTPException, status
 import secrets

@@ -62,7 +62,7 @@ export default function RepositoriesPage() {
   const [newProjectName, setNewProjectName] = useState('');
   const [isConnectRepoOpen, setIsConnectRepoOpen] = useState(false);
   const [repoForm, setRepoForm] = useState({
-    github_owner: '', github_name: '', default_branch: 'main', pat: '',
+    github_owner: '', github_name: '', default_branch: 'main',
   });
   const [errorMsg, setErrorMsg] = useState(null);
   const [indexingRepoId, setIndexingRepoId] = useState(null);
@@ -104,7 +104,7 @@ export default function RepositoriesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['repositories', selectedProjectId] });
       setIsConnectRepoOpen(false);
-      setRepoForm({ github_owner: '', github_name: '', default_branch: 'main', pat: '' });
+      setRepoForm({ github_owner: '', github_name: '', default_branch: 'main' });
       setErrorMsg(null);
     },
     onError: (err) => setErrorMsg(err.message),
@@ -337,8 +337,18 @@ export default function RepositoriesPage() {
         size="sm"
       >
         {errorMsg && (
-          <div className="mb-4 p-3 bg-danger/8 border border-danger/20 text-danger text-sm rounded-lg" role="alert">
-            {errorMsg}
+          <div className="mb-4 p-3 bg-danger/8 border border-danger/20 text-danger text-sm rounded-lg flex flex-col gap-2" role="alert">
+            <div>{errorMsg}</div>
+            {errorMsg.includes('connect your GitHub account') && (
+              <Button
+                variant="primary"
+                size="xs"
+                onClick={() => window.location.href = '/api/github/oauth/login'}
+                className="self-start mt-1"
+              >
+                Connect GitHub Account
+              </Button>
+            )}
           </div>
         )}
         <Field label="Project Name">
@@ -378,8 +388,18 @@ export default function RepositoriesPage() {
         size="md"
       >
         {errorMsg && (
-          <div className="mb-4 p-3 bg-danger/8 border border-danger/20 text-danger text-sm rounded-lg" role="alert">
-            {errorMsg}
+          <div className="mb-4 p-3 bg-danger/8 border border-danger/20 text-danger text-sm rounded-lg flex flex-col gap-2" role="alert">
+            <div>{errorMsg}</div>
+            {errorMsg.includes('connect your GitHub account') && (
+              <Button
+                variant="primary"
+                size="xs"
+                onClick={() => window.location.href = '/api/github/oauth/login'}
+                className="self-start mt-1"
+              >
+                Connect GitHub Account
+              </Button>
+            )}
           </div>
         )}
         <div className="space-y-4">
@@ -432,7 +452,7 @@ export default function RepositoriesPage() {
             size="sm"
             onClick={() => connectRepoMutation.mutate({ ...repoForm, project_id: selectedProjectId })}
             loading={connectRepoMutation.isPending}
-            disabled={!repoForm.github_owner || !repoForm.github_name || !repoForm.pat}
+            disabled={!repoForm.github_owner || !repoForm.github_name}
           >
             Connect Repository
           </Button>

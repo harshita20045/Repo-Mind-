@@ -126,6 +126,7 @@ def get_review_run(
 
     return run
 
+
 @router.post("/review-runs/{review_run_id}/approve", response_model=HumanDecisionResponse)
 def approve_review_run(
     review_run_id: int,
@@ -133,8 +134,7 @@ def approve_review_run(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Approve or reject a review run."""
-    # Ensure user is reviewer or admin
+    """Approve or reject a review run and trigger a GitHub review via AutomationAction."""
     if current_user.role not in ("reviewer", "team_lead", "org_admin"):
         raise HTTPException(status_code=403, detail="Not authorized to approve reviews")
 
@@ -151,10 +151,9 @@ def approve_review_run(
     except ReviewError:
         raise HTTPException(status_code=404, detail="Review run not found")
 
-    # Authorize organization access
     verify_org_member(db, current_user.id, org_id)
 
-    # Check for existing decision
+    # 1. Update legacy HumanDecision (if necessary for backwards compatibility)
     existing = db.query(HumanDecision).filter_by(
         review_run_id=review_run_id,
         user_id=current_user.id
@@ -174,7 +173,54 @@ def approve_review_run(
             created_at=datetime.now(timezone.utc)
         )
         db.add(human_decision)
-        
+
+    # 2. Phase 13: Create HumanReview tracking the commit_sha
+    from backend.app.github.models import HumanReview, AutomationAction
+    human_review = (
+        db.query(HumanReview)
+        .filter_by(
+            pull_request_id=pr.id,
+            commit_sha=run.commit_sha,
+            reviewer_id=current_user.id
+        ).first()
+    )
+    if not human_review:
+        human_review = HumanReview(
+            pull_request_id=pr.id,
+            commit_sha=run.commit_sha,
+            reviewer_id=current_user.id,
+            decision=decision.action,
+            comment=decision.note
+        )
+        db.add(human_review)
+    else:
+        human_review.decision = decision.action
+        human_review.comment = decision.note
+
+    # 3. Create AutomationAction to sync this review to GitHub
+    action_type = "APPROVE" if decision.action == "approve" else "REQUEST_CHANGES"
+    
+    # We need to find the github_identity_id for the current user
+    from backend.app.github.models import GitHubIdentity
+    identity = db.query(GitHubIdentity).filter_by(user_id=current_user.id).first()
+    identity_id = identity.id if identity else None
+
+    # Get project ID from repo
+    repo = get_repository_by_id(db, pr.repository_id)
+    
+    automation_action = AutomationAction(
+        organization_id=org_id,
+        project_id=repo.project_id,
+        repository_id=pr.repository_id,
+        pull_request_id=pr.id,
+        action_type=action_type,
+        requested_by_user_id=current_user.id,
+        github_identity_id=identity_id,
+        commit_sha=run.commit_sha,
+        status="PENDING"
+    )
+    db.add(automation_action)
+
     db.commit()
     db.refresh(human_decision)
 

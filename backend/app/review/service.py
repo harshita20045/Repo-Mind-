@@ -492,6 +492,33 @@ def run_review(
     run.status = "completed"
     run.completed_at = datetime.now(timezone.utc)
     run.progress_message = None
+
+
+    # Phase 12: Save AIAnalysis(commit_sha)
+    from backend.app.github.models import AIAnalysis
+    ai_analysis = (
+        db.query(AIAnalysis)
+        .filter(
+            AIAnalysis.pull_request_id == run.pull_request_id,
+            AIAnalysis.commit_sha == run.commit_sha
+        ).first()
+    )
+    import json
+    findings_json = json.dumps([f.id for f in findings])
+    if not ai_analysis:
+        ai_analysis = AIAnalysis(
+            pull_request_id=run.pull_request_id,
+            commit_sha=run.commit_sha,
+            status="completed",
+            findings=findings_json,
+            completed_at=datetime.now(timezone.utc)
+        )
+        db.add(ai_analysis)
+    else:
+        ai_analysis.status = "completed"
+        ai_analysis.findings = findings_json
+        ai_analysis.completed_at = datetime.now(timezone.utc)
+
     db.commit()
 
     logger.info(

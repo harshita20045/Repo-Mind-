@@ -199,6 +199,13 @@ export default function ReviewPage() {
     enabled: !!prid,
   });
 
+
+  const { data: prEvents } = useQuery({
+    queryKey: ['pullRequestEvents', prid],
+    queryFn: () => githubApi.getPullRequestEvents(prid),
+    enabled: !!prid,
+  });
+
   const { data: repoData } = useQuery({
     queryKey: ['repository', rid],
     queryFn: () => orgApi.getRepository(rid),
@@ -238,6 +245,7 @@ export default function ReviewPage() {
     { id: 'risk', label: 'Risk Assessment', count: null },
     { id: 'conflicts', label: 'Conflicts', count: isCompleted ? conflicts.length : null },
     { id: 'chat', label: 'AI Assistant', count: null },
+    { id: 'events', label: 'Activity Log', count: null },
   ];
 
   // ─── Risk summary bar color ────────────────────────────────────────────────
@@ -383,6 +391,8 @@ export default function ReviewPage() {
                 {activeTab === 'findings' && <FindingList findings={findings} />}
                 {activeTab === 'risk' && <RiskAssessment riskData={runData?.risk_assessment} />}
                 {activeTab === 'conflicts' && <ConflictList conflicts={conflicts} />}
+                {activeTab === 'events' && <ActivityLog events={prEvents} />}
+
               </div>
             )}
           </div>

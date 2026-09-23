@@ -12,11 +12,19 @@ export default function Modal({
   const overlayRef = useRef(null);
   const firstFocusRef = useRef(null);
 
-  // Trap focus inside modal
+  // Initial focus management
   useEffect(() => {
     if (!isOpen) return;
     const previousFocus = document.activeElement;
     setTimeout(() => firstFocusRef.current?.focus(), 50);
+    return () => {
+      previousFocus?.focus();
+    };
+  }, [isOpen]);
+
+  // Trap focus and handle escape key
+  useEffect(() => {
+    if (!isOpen) return;
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
@@ -39,7 +47,6 @@ export default function Modal({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
-      previousFocus?.focus();
     };
   }, [isOpen, onClose]);
 

@@ -14,24 +14,15 @@ from pydantic import BaseModel, ConfigDict
 
 class GitHubConnectRequest(BaseModel):
     """Request body for POST /repositories/connect.
-    The PAT is accepted as plaintext and encrypted server-side before storage.
-    It is NEVER stored in plaintext and NEVER returned.
+    The PAT is no longer accepted here. The user's OAuth token is used.
     """
     project_id: int
     github_owner: str
     github_name: str
     default_branch: str = "main"
-    pat: str  # plaintext PAT accepted here, encrypted before DB write
 
 
-class GitHubConnectionResponse(BaseModel):
-    """Safe response that omits the encrypted token."""
-    model_config = ConfigDict(from_attributes=True)
 
-    id: int
-    organization_id: int
-    scope: str
-    created_at: datetime
 
 
 # ---------------------------------------------------------------------------
@@ -68,5 +59,4 @@ class RepositoryConnectResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     repository_id: int
-    github_connection_id: int
     message: str
