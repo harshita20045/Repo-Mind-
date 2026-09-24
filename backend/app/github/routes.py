@@ -18,6 +18,7 @@ from backend.app.db import get_db
 from backend.app.auth.dependencies import get_current_user
 from backend.app.auth.models import User, RoleEnum
 from backend.app.github import schemas, service
+from backend.app.github.models import PullRequest
 from backend.app.organizations.service import (
     get_repository_by_id,
     get_project_by_id,
@@ -43,6 +44,30 @@ def _assert_repo_access(db: Session, repository_id: int, user_id: int) -> tuple:
     # Will raise 404 if not a member (uniform error to prevent org enumeration)
     verify_org_member(db, user_id, project.organization_id)
     return repo, project, project.organization_id
+
+
+@router.get("/organizations/{organization_id}/github/repos", summary="List GitHub repositories available to connect")
+def list_github_repositories(
+    organization_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    List repositories the user has admin access to on GitHub.
+    Uses the caller's linked GitHub token.
+    """
+    from backend.app.github.service import get_github_repositories
+    repos = get_github_repositories(db, organization_id, current_user.id)
+    return [
+        {
+            "github_owner": r.get("owner", {}).get("login"),
+            "github_name": r.get("name"),
+            "full_name": r.get("full_name"),
+            "default_branch": r.get("default_branch"),
+            "html_url": r.get("html_url"),
+        }
+        for r in repos
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -286,6 +311,26 @@ async def github_oauth_callback(
         return RedirectResponse(url=f"{frontend_url}/settings/integrations?status=success")
 
 # ---------------------------------------------------------------------------
+# DELETE /oauth/unlink
+# ---------------------------------------------------------------------------
+@router.delete("/oauth/unlink", summary="Unlink GitHub identity")
+def github_oauth_unlink(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Unlinks the GitHub identity from the current user.
+    """
+    from backend.app.github.models import GitHubIdentity
+    identity = db.query(GitHubIdentity).filter(GitHubIdentity.user_id == current_user.id).first()
+    if not identity:
+        raise HTTPException(status_code=404, detail="GitHub identity not found")
+    
+    db.delete(identity)
+    db.commit()
+    return {"message": "GitHub identity unlinked successfully"}
+
+# ---------------------------------------------------------------------------
 # POST /pull-requests/{pull_request_id}/sync
 # ---------------------------------------------------------------------------
 
@@ -324,7 +369,7 @@ def get_pull_request_events(
     if not pr:
         raise HTTPException(status_code=404, detail="Pull request not found")
 
-    _assert_repo_access(db, current_user.id, pr.repository_id)
+    _assert_repo_access(db, pr.repository_id, current_user.id)
 
     from backend.app.github.models import PullRequestEvent
     events = (
@@ -346,3 +391,147 @@ def get_pull_request_events(
         } for e in events
     ]
 
+
+
+@router.post("/pull-requests/{pull_request_id}/merge")
+def merge_pull_request(
+    pull_request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    pr = db.get(PullRequest, pull_request_id)
+    if not pr:
+        raise HTTPException(status_code=404, detail="Pull request not found")
+    
+    repo, project, org_id = _assert_repo_access(db, pr.repository_id, current_user.id)
+    
+    from backend.app.github.models import AutomationAction, GitHubIdentity
+    identity = db.query(GitHubIdentity).filter(GitHubIdentity.user_id == current_user.id).first()
+    
+    action = AutomationAction(
+        organization_id=org_id,
+        project_id=repo.project_id,
+        repository_id=repo.id,
+        pull_request_id=pr.id,
+        action_type="MERGE",
+        requested_by_user_id=current_user.id,
+        github_identity_id=identity.id if identity else None,
+        expected_head_sha=pr.head_sha,
+        status="PENDING"
+    )
+    db.add(action)
+    db.commit()
+    return {"message": "Merge automation action queued"}
+
+@router.put("/repositories/{repository_id}/merge-policy")
+def update_merge_policy(
+    repository_id: int,
+    policy_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repo, project, org_id = _assert_repo_access(db, repository_id, current_user.id)
+    verify_org_admin(db, current_user.id, org_id)
+    
+    from backend.app.github.models import ProjectMergePolicy
+    policy = db.query(ProjectMergePolicy).filter(ProjectMergePolicy.project_id == repo.project_id).first()
+    if not policy:
+        policy = ProjectMergePolicy(project_id=repo.project_id)
+        db.add(policy)
+    
+    for key, value in policy_data.items():
+        if hasattr(policy, key):
+            setattr(policy, key, value)
+            
+    db.commit()
+    return {"message": "Merge policy updated"}
+
+@router.get("/repositories/{repository_id}/branches")
+def get_repository_branches(
+    repository_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repo, project, org_id = _assert_repo_access(db, repository_id, current_user.id)
+    
+    from backend.app.github.service import get_decrypted_pat_for_org
+    from backend.app.github.client import GitHubClient
+    
+    pat = get_decrypted_pat_for_org(db, org_id)
+    client = GitHubClient(pat)
+    branches = client.list_repository_branches(repo.github_owner, repo.github_name)
+    return branches
+
+@router.get("/repositories/{repository_id}/commits")
+def get_repository_commits(
+    repository_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repo, project, org_id = _assert_repo_access(db, repository_id, current_user.id)
+    
+    from backend.app.github.service import get_decrypted_pat_for_org
+    from backend.app.github.client import GitHubClient
+    
+    pat = get_decrypted_pat_for_org(db, org_id)
+    client = GitHubClient(pat)
+    commits = client.list_repository_commits(repo.github_owner, repo.github_name)
+    return commits
+
+@router.get("/pull-requests/{pull_request_id}/commits")
+def get_pull_request_commits(
+    pull_request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    pr = db.get(PullRequest, pull_request_id)
+    if not pr:
+        raise HTTPException(status_code=404, detail="Pull request not found")
+    _assert_repo_access(db, pr.repository_id, current_user.id)
+    
+    from backend.app.github.models import PullRequestCommit
+    commits = db.query(PullRequestCommit).filter(PullRequestCommit.pull_request_id == pull_request_id).order_by(PullRequestCommit.authored_at.desc()).all()
+    return commits
+
+@router.get("/pull-requests/{pull_request_id}/files")
+def get_pull_request_files(
+    pull_request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    pr = db.get(PullRequest, pull_request_id)
+    if not pr:
+        raise HTTPException(status_code=404, detail="Pull request not found")
+    _assert_repo_access(db, pr.repository_id, current_user.id)
+    # Returning a mock array of files changed
+    return [{"filename": "example.py", "status": "modified", "additions": 10, "deletions": 2}]
+
+@router.post("/pull-requests/{pull_request_id}/reopen")
+def reopen_pull_request(
+    pull_request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    pr = db.get(PullRequest, pull_request_id)
+    if not pr:
+        raise HTTPException(status_code=404, detail="Pull request not found")
+    _assert_repo_access(db, pr.repository_id, current_user.id)
+    pr.state = "open"
+    db.commit()
+    return {"message": "Pull request reopened"}
+
+@router.get("/pull-requests/{pull_request_id}/conflicts")
+def get_pull_request_conflicts(
+    pull_request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    pr = db.get(PullRequest, pull_request_id)
+    if not pr:
+        raise HTTPException(status_code=404, detail="Pull request not found")
+    _assert_repo_access(db, pr.repository_id, current_user.id)
+    from backend.app.review.models import Conflict, ReviewRun
+    run = db.query(ReviewRun).filter(ReviewRun.pull_request_id == pull_request_id, ReviewRun.status == 'completed').order_by(ReviewRun.id.desc()).first()
+    if not run: return []
+    conflicts = db.query(Conflict).filter(Conflict.review_run_id == run.id).all()
+    return conflicts

@@ -127,8 +127,8 @@ def get_review_run(
     return run
 
 
-@router.post("/review-runs/{review_run_id}/approve", response_model=HumanDecisionResponse)
-def approve_review_run(
+@router.post("/review-runs/{review_run_id}/decide", response_model=HumanDecisionResponse)
+def decide_review_run(
     review_run_id: int,
     decision: HumanDecisionRequest,
     db: Session = Depends(get_db),
@@ -146,6 +146,9 @@ def approve_review_run(
         raise HTTPException(status_code=400, detail="Cannot approve a review run that is not completed")
 
     pr = db.get(PullRequest, run.pull_request_id)
+    if run.commit_sha != pr.head_sha:
+        raise HTTPException(status_code=400, detail="Review run is for a stale commit. Please review the latest commit.")
+
     try:
         org_id = _get_org_id_for_pr(db, pr)
     except ReviewError:
@@ -198,7 +201,10 @@ def approve_review_run(
         human_review.comment = decision.note
 
     # 3. Create AutomationAction to sync this review to GitHub
-    action_type = "APPROVE" if decision.action == "approve" else "REQUEST_CHANGES"
+    action_type = decision.action
+    
+    if action_type == "REJECT":
+        pr.status = "REJECTED"
     
     # We need to find the github_identity_id for the current user
     from backend.app.github.models import GitHubIdentity
@@ -224,4 +230,31 @@ def approve_review_run(
     db.commit()
     db.refresh(human_decision)
 
+    if action_type == "APPROVE":
+        from backend.app.github.automation import evaluate_merge_policy
+        evaluate_merge_policy(db, pr.id)
+
     return human_decision
+
+@router.get("/review-runs/{review_run_id}/decide", response_model=list[HumanDecisionResponse])
+def get_review_run_decisions(
+    review_run_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Retrieve human decisions for a review run."""
+    run = db.get(ReviewRun, review_run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Review run not found")
+
+    pr = db.get(PullRequest, run.pull_request_id)
+    try:
+        org_id = _get_org_id_for_pr(db, pr)
+    except ReviewError:
+        raise HTTPException(status_code=404, detail="Review run not found")
+
+    verify_org_member(db, current_user.id, org_id)
+
+    decisions = db.query(HumanDecision).filter_by(review_run_id=review_run_id).all()
+    return decisions
+

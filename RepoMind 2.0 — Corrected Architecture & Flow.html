@@ -1,0 +1,392 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}</style><style>:root{color-scheme:light dark;--md-bg:#fff;--md-text:rgba(0,0,0,.8);--md-muted:rgba(0,0,0,.6);--md-fill:rgba(0,0,0,.04);--md-fill-strong:rgba(0,0,0,.06);--md-rule:rgba(0,0,0,.1);--md-rule-strong:rgba(0,0,0,.16);--md-link:hsl(210 100% 45%)}@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){--md-bg:#0d0d0d;--md-text:rgba(255,255,255,.85);--md-muted:rgba(255,255,255,.6);--md-fill:rgba(255,255,255,.06);--md-fill-strong:rgba(255,255,255,.09);--md-rule:rgba(255,255,255,.14);--md-rule-strong:rgba(255,255,255,.22);--md-link:hsl(210 100% 72%)}}:root[data-theme="dark"]{color-scheme:dark;--md-bg:#0d0d0d;--md-text:rgba(255,255,255,.85);--md-muted:rgba(255,255,255,.6);--md-fill:rgba(255,255,255,.06);--md-fill-strong:rgba(255,255,255,.09);--md-rule:rgba(255,255,255,.14);--md-rule-strong:rgba(255,255,255,.22);--md-link:hsl(210 100% 72%)}:root[data-theme="light"]{color-scheme:light}@media print{:root,:root[data-theme="dark"]{color-scheme:light;--md-bg:#fff;--md-text:rgba(0,0,0,.8);--md-muted:rgba(0,0,0,.6);--md-fill:rgba(0,0,0,.04);--md-fill-strong:rgba(0,0,0,.06);--md-rule:rgba(0,0,0,.1);--md-rule-strong:rgba(0,0,0,.16);--md-link:hsl(210 100% 45%)}}body{background:var(--md-bg);color:var(--md-text);max-width:720px;margin:0 auto;padding:32px;display:flex;flex-direction:column;gap:10px;font:14px/1.55 -apple-system,BlinkMacSystemFont,'SF Pro','Segoe UI',sans-serif;overflow-wrap:break-word}body>:first-child{margin-top:0}h1,h2,h3,h4,h5,h6{margin:6px 0 0;line-height:1.25;font-weight:600;text-wrap:balance}h1{font-size:1.35em}h2{font-size:1.15em;color:var(--md-muted)}h3,h4,h5,h6{font-size:1em}p,ul,ol,blockquote,table,pre,hr{margin:0}strong{font-weight:600}a{color:var(--md-link);text-decoration:none}a:hover{text-decoration:underline}ul,ol{display:flex;flex-direction:column;gap:6px;padding-left:22px}ul{list-style:disc}ol{list-style:decimal}:is(li,td,th)>*+:is(p,ul,ol,blockquote){margin-top:6px}blockquote{display:flex;flex-direction:column;gap:10px;border-left:2px solid var(--md-rule);padding-left:10px;color:var(--md-muted)}:not(pre)>code{background:var(--md-fill);padding:1px 3px;border-radius:4px;font:.92em 'SF Mono',ui-monospace,Menlo,Consolas,monospace}a>code{background:none;color:inherit}pre{background:var(--md-fill);padding:10px 12px;border-radius:6px;overflow-x:auto;font:12px/1.5 'SF Mono',ui-monospace,Menlo,Consolas,monospace;margin-block:4px}pre code{background:none;padding:0;font:inherit}table{width:100%;border-collapse:separate;border-spacing:2px;font:inherit}th,td{padding:6px 8px;border-radius:3px;text-align:left;vertical-align:top}th{background:var(--md-fill-strong);font-weight:600}td{background:var(--md-fill)}:is(th,td) :not(pre)>code{background:transparent}hr{border:0;border-top:1px solid var(--md-rule-strong);margin-block:10px}img{max-width:100%;height:auto;border-radius:4px}</style>
+</head><body>
+<h1>RepoMind 2.0 — Corrected Architecture &amp; Flow</h1>
+<h2>1. What was wrong in the current design</h2>
+<ol>
+<li><strong>No <code>POST /organizations</code> endpoint</strong> — your flow assumed org creation happens &quot;somewhere&quot; during bootstrap/onboard. It shouldn't. Bootstrap should create <em>only</em> the first ORG_ADMIN user; org creation is a separate, explicit step so an admin can later create additional orgs.</li>
+<li><strong>No <code>PUT/POST</code> decision endpoint distinct from approve</strong> — you only had <code>approve</code>. You need three outcomes: <code>APPROVE</code>, <code>REQUEST_CHANGES</code>, <code>REJECT</code>, each triggering a different downstream path.</li>
+<li><strong>No merge endpoint</strong> — approval and merge are two different actions. Merge should be its own endpoint, auto-triggered by policy or manually invoked.</li>
+<li><strong>&quot;Installing a GitHub App on user desktops&quot; is a misunderstanding to clear up</strong> — a GitHub App is never installed on a desktop; it's installed at the <strong>org/repo level on GitHub's website</strong> by an admin, and then it acts as a <em>bot identity</em> server-side. Since you explicitly don't want a bot identity doing merges, the correct model for you is <strong>per-user GitHub OAuth (not a GitHub App)</strong> — every human links their own GitHub account once, and every GitHub-side action (review, approve, merge) is executed <strong>using that specific person's OAuth token</strong>, so GitHub's own audit log shows the real human, not a bot. This is the model used below.</li>
+<li><strong>No branch/commit-level endpoints</strong> — needed for the PR UI and for the SHA-staleness logic you already have conceptually.</li>
+<li><strong>No chat history / session listing endpoints.</strong></li>
+</ol>
+<hr>
+<h2>2. Corrected Hierarchy</h2>
+<pre class="mermaid">graph TD
+    U[User - RepoMind Identity] --&gt;|OAuth link| GH[GitHub Identity]
+    U --&gt;|member of, with role| O[Organization]
+    O --&gt; T[Team - optional grouping]
+    O --&gt; P[Project]
+    T --&gt; P
+    P --&gt; R[Repository]
+    R --&gt; PR[Pull Request]
+    PR --&gt; RR[Review Run - AI]
+    PR --&gt; HR[Human Review Decision]
+    PR --&gt; CS[Chat Session]
+    PR --&gt; EV[Event Timeline]
+</pre>
+<ul>
+<li><strong>Organization</strong> = a company/tenant. Hard data-isolation boundary (RAG, findings, chat all scoped here).</li>
+<li><strong>Team</strong> = optional sub-grouping inside an org (e.g. &quot;Payments Team&quot;). Used for assigning reviewers and scoping dashboards for Team Leads.</li>
+<li><strong>Project</strong> = a logical folder of repositories (e.g. &quot;Checkout Service&quot; project containing <code>api</code>, <code>worker</code>, <code>frontend</code> repos).</li>
+<li><strong>Repository</strong> = one connected GitHub repo.</li>
+<li>Below that: PRs, Review Runs, human decisions, chat sessions, and the event timeline all hang off the repository.</li>
+</ul>
+<hr>
+<h2>3. Identity Model: RepoMind User ↔ GitHub Identity</h2>
+<p>Two separate identities, explicitly linked — never assume they're the same person implicitly:</p>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>users</code></td>
+<td>RepoMind login identity: email, password hash, org membership, role</td>
+</tr>
+<tr>
+<td><code>github_credentials</code></td>
+<td>1:1 link from a <code>user</code> to their GitHub account: <code>github_user_id</code>, <code>github_username</code>, encrypted OAuth <code>access_token</code> + <code>refresh_token</code>, granted <code>scopes</code>, <code>linked_at</code></td>
+</tr>
+<tr>
+<td><code>organization_github_installation</code> (optional, org-level)</td>
+<td>Which GitHub org/repos this RepoMind org is authorized to see — used only for <strong>listing repos to connect</strong>, not for taking actions</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rule: a user cannot connect a repo, approve a PR, or trigger a merge on GitHub until their <code>github_credentials</code> row exists.</strong> RepoMind enforces this at the API layer — if missing, the endpoint returns <code>403 GITHUB_IDENTITY_NOT_LINKED</code> and the frontend redirects to <code>/oauth/login</code>.</p>
+<h3>Auth + Identity Linking Sequence</h3>
+<pre class="mermaid">sequenceDiagram
+    participant D as Developer Browser
+    participant API as RepoMind API
+    participant DB as PostgreSQL
+    participant GH as GitHub
+
+    D-&gt;&gt;API: POST /auth/bootstrap (first run only, bootstrap_token)
+    API-&gt;&gt;DB: create user (role=ORG_ADMIN)
+    D-&gt;&gt;API: POST /auth/login
+    API-&gt;&gt;DB: verify credentials
+    API--&gt;&gt;D: session cookie / JWT
+    D-&gt;&gt;API: GET /auth/me
+    API--&gt;&gt;D: user profile + org memberships
+
+    Note over D,GH: Link GitHub identity (required before any GitHub action)
+    D-&gt;&gt;API: GET /oauth/github/login
+    API--&gt;&gt;D: redirect to GitHub authorize URL
+    D-&gt;&gt;GH: authorize (repo, read:org scopes)
+    GH--&gt;&gt;API: GET /oauth/github/callback?code=...
+    API-&gt;&gt;GH: exchange code for access_token
+    API-&gt;&gt;DB: upsert github_credentials (encrypted token)
+    API--&gt;&gt;D: redirect to dashboard, identity linked
+</pre>
+<hr>
+<h2>4. Roles &amp; What Each Role Actually Does</h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Scope</th>
+<th>Can do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ORG_ADMIN</strong></td>
+<td>Whole org</td>
+<td>Create org, invite members, assign roles, connect repositories, set merge policies, view Global Security Browser, manage org-level GitHub app-installation-listing token</td>
+</tr>
+<tr>
+<td><strong>TEAM_LEAD</strong></td>
+<td>Assigned projects/teams</td>
+<td>Manage members within their team, assign reviewers to repos, view team-scoped analytics, cannot change org-wide settings</td>
+</tr>
+<tr>
+<td><strong>DEVELOPER</strong></td>
+<td>Repos they have GitHub access to</td>
+<td>Open/view PRs, trigger AI review, use PR Chat, see findings on their own PRs, cannot approve/merge</td>
+</tr>
+<tr>
+<td><strong>REVIEWER</strong></td>
+<td>Assigned repos</td>
+<td>Everything a Developer can do, plus: make the APPROVE / REQUEST_CHANGES / REJECT decision, trigger merge (if policy allows)</td>
+</tr>
+</tbody>
+</table>
+<p>A user is invited into an org by an ORG_ADMIN (<code>POST /organizations/{org_id}/members</code>), given a role, and <strong>separately</strong> links their own GitHub identity. RepoMind never assumes GitHub permissions — it checks both: (a) RepoMind role allows the action, <strong>and</strong> (b) the linked GitHub token actually has permission on that repo (validated live via GitHub API on first connect, cached, re-validated on 403).</p>
+<h3>Dashboards by role</h3>
+<ul>
+<li><strong>Org Admin Dashboard</strong>: org-wide PR volume, repos list, pending invites, Global Security Browser (all orgs' repos' open findings by severity), merge policy config, member list with roles.</li>
+<li><strong>Team Lead Dashboard</strong>: their team's repos, open PRs needing review, reviewer workload, team-scoped risk trend chart.</li>
+<li><strong>Developer Dashboard</strong>: &quot;My PRs&quot; (open/merged/rejected), findings needing my attention, recent chat sessions.</li>
+<li><strong>Reviewer Dashboard</strong>: review queue (PRs with a completed AI review awaiting human decision), history of my past decisions, stale-review alerts.</li>
+</ul>
+<hr>
+<h2>5. Repository Connection (No GitHub App, OAuth-only)</h2>
+<pre class="mermaid">sequenceDiagram
+    participant A as Org Admin
+    participant API as RepoMind API
+    participant GH as GitHub
+
+    A-&gt;&gt;API: GET /organizations/{org_id}/github/repos (uses A&#39;s linked token)
+    API-&gt;&gt;GH: list repos A has admin access to
+    GH--&gt;&gt;API: repo list
+    API--&gt;&gt;A: repo list to choose from
+    A-&gt;&gt;API: POST /repositories/connect {project_id, github_owner, github_name}
+    API-&gt;&gt;GH: create webhook (pull_request, push, pull_request_review) using A&#39;s token
+    GH--&gt;&gt;API: webhook created
+    API-&gt;&gt;DB: save repository row + webhook_secret
+    API--&gt;&gt;A: repository connected
+</pre>
+<p>Webhook delivery secret is verified on every incoming event (<code>X-Hub-Signature-256</code>). No GitHub App, no desktop install — just a webhook created via the connecting admin's OAuth token with <code>admin:repo_hook</code> scope.</p>
+<hr>
+<h2>6. PR Ingestion → AI Review</h2>
+<pre class="mermaid">sequenceDiagram
+    participant GH as GitHub
+    participant WH as RepoMind Webhook Handler
+    participant DB as PostgreSQL / pgvector
+    participant LLM as Gemini
+
+    GH-&gt;&gt;WH: webhook: pull_request opened/synchronize
+    WH-&gt;&gt;DB: upsert pull_request (head_sha, base_sha, branches, status=OPEN)
+    WH-&gt;&gt;DB: mark prior review_runs for this PR as STALE (if head_sha changed)
+    Note over WH: Developer or auto-trigger calls review
+    WH-&gt;&gt;GH: fetch diff, files, commits
+    WH-&gt;&gt;DB: retrieve top-k repo-rule chunks (pgvector) for changed files
+    WH-&gt;&gt;DB: fetch latest lint output
+    WH-&gt;&gt;LLM: diff + retrieved rules + lint results
+    LLM--&gt;&gt;WH: structured findings (NEW/PERSISTENT/RESOLVED vs prior run)
+    WH-&gt;&gt;DB: save review_run + findings, status=COMPLETED
+</pre>
+<p>Findings are classified against the <strong>previous</strong> review run on the same PR (not just created fresh each time), which is what makes &quot;NEW / PERSISTENT / RESOLVED&quot; meaningful.</p>
+<hr>
+<h2>7. Human Decision → Merge (the part you're expanding)</h2>
+<p>Three decision outcomes, each with a distinct downstream path:</p>
+<pre class="mermaid">sequenceDiagram
+    participant Rv as Reviewer
+    participant API as RepoMind API
+    participant DB as PostgreSQL
+    participant GH as GitHub
+
+    Rv-&gt;&gt;API: POST /review-runs/{id}/decision {decision, comment}
+    alt decision = APPROVE
+        API-&gt;&gt;DB: save human_review (APPROVE), pinned to head_sha
+        API-&gt;&gt;API: evaluate merge_policy (1 human approval + CI green + AI clean?)
+        alt policy satisfied AND auto_merge enabled for repo
+            API-&gt;&gt;GH: POST review (APPROVE) using Rv&#39;s token
+            API-&gt;&gt;GH: PUT /repos/.../pulls/{n}/merge using Rv&#39;s token
+            GH--&gt;&gt;API: merge result
+            API-&gt;&gt;DB: pull_request.status = MERGED, log AutomationAction
+        else policy not satisfied
+            API--&gt;&gt;Rv: &#34;approved, waiting on: [CI / more approvals]&#34;
+        end
+    else decision = REQUEST_CHANGES
+        API-&gt;&gt;GH: POST review (REQUEST_CHANGES) using Rv&#39;s token, with comment
+        API-&gt;&gt;DB: pull_request.status = CHANGES_REQUESTED
+        API--&gt;&gt;Rv: developer notified
+        Note over GH,DB: developer pushes new commit → head_sha changes
+        GH-&gt;&gt;API: webhook: pull_request synchronize
+        API-&gt;&gt;DB: mark review_run STALE, pull_request.status = OPEN
+        API-&gt;&gt;API: re-run AI review automatically → classify NEW/PERSISTENT/RESOLVED
+        API--&gt;&gt;Rv: re-review requested
+    else decision = REJECT
+        API-&gt;&gt;GH: POST review (REQUEST_CHANGES) or close PR, per repo policy
+        API-&gt;&gt;DB: pull_request.status = REJECTED, log final decision
+        API--&gt;&gt;Rv: PR closed, no further auto re-review unless reopened
+    end
+</pre>
+<p><strong>Merge policy</strong> (configurable per project/repo by Org Admin):</p>
+<ul>
+<li>Minimum human approvals (e.g. 1)</li>
+<li>Require CI status = success</li>
+<li>Require latest AI review to have zero HIGH/CRITICAL findings unresolved</li>
+<li>Require head_sha of approval == current head_sha (prevents &quot;stale approval merges&quot;)</li>
+<li>Merge method: merge / squash / rebase</li>
+</ul>
+<p>If any condition fails, <code>PUT /organizations/{org_id}/merge-policy</code> blocks the automatic merge step and the PR sits as &quot;Approved, blocked on policy&quot; until satisfied — the reviewer can still manually call <code>POST /pull-requests/{id}/merge</code> to override, which is itself an audited action.</p>
+<p><strong>Reject vs Request Changes — why they differ:</strong> <code>REQUEST_CHANGES</code> expects the developer to push more commits and loop back into review. <code>REJECT</code> is a terminal decision (e.g. &quot;we're not doing this at all&quot;) — no automatic re-review is scheduled, and reopening requires an explicit <code>POST /pull-requests/{id}/reopen</code>.</p>
+<hr>
+<h2>8. PR Chat — full context + history</h2>
+<ul>
+<li><code>POST /chat/sessions {pull_request_id}</code> — creates a session pinned to the PR's <strong>current head_sha</strong>, findings, lint output, and top-k retrieved repo-rule chunks at creation time.</li>
+<li><code>POST /chat/sessions/{session_id}/messages</code> — every message is answered using: the pinned diff, the findings from the latest review_run, retrieved repo docs, and the conversation history so far.</li>
+<li><code>GET /chat/sessions?pull_request_id=</code> — list all past sessions for a PR (so switching between an &quot;old&quot; and &quot;current&quot; sha's chat context is visible).</li>
+<li><code>GET /chat/sessions/{session_id}/messages</code> — full message history for one session.</li>
+<li>If the PR gets a new head_sha, old sessions are labeled <code>(stale sha)</code> in the UI but remain readable — a new session is recommended, not forced.</li>
+</ul>
+<hr>
+<h2>9. Corrected Full API List by Phase</h2>
+<p><strong>Phase 1 — Auth &amp; Identity</strong></p>
+<ul>
+<li><code>POST /auth/bootstrap</code></li>
+<li><code>POST /auth/login</code></li>
+<li><code>GET /auth/me</code></li>
+<li><code>POST /auth/onboard</code></li>
+<li><code>GET /oauth/github/login</code></li>
+<li><code>GET /oauth/github/callback</code></li>
+<li><code>DELETE /oauth/github/unlink</code></li>
+</ul>
+<p><strong>Phase 2 — Org, Team, Project</strong></p>
+<ul>
+<li><code>POST /organizations</code> <em>(new — was missing)</em></li>
+<li><code>GET /organizations</code> / <code>GET /organizations/{org_id}</code></li>
+<li><code>POST /organizations/{org_id}/members</code></li>
+<li><code>PUT /organizations/{org_id}/members/{user_id}/role</code></li>
+<li><code>POST /organizations/{org_id}/teams</code></li>
+<li><code>POST /organizations/{org_id}/projects</code></li>
+<li><code>GET /organizations/{org_id}/projects</code></li>
+</ul>
+<p><strong>Phase 3 — Repository</strong></p>
+<ul>
+<li><code>GET /organizations/{org_id}/github/repos</code> <em>(list connectable repos via caller's token)</em></li>
+<li><code>POST /repositories/connect</code></li>
+<li><code>GET /projects/{project_id}/repositories</code></li>
+<li><code>GET /repositories/{repository_id}</code> <em>(includes default branch, last synced)</em></li>
+<li><code>GET /repositories/{repository_id}/branches</code> <em>(new)</em></li>
+<li><code>GET /repositories/{repository_id}/commits</code> <em>(new)</em></li>
+<li><code>PUT /repositories/{repository_id}/merge-policy</code> <em>(new)</em></li>
+</ul>
+<p><strong>Phase 4 — PR Ingestion</strong></p>
+<ul>
+<li><code>POST /webhooks/github</code> <em>(receiver, not user-facing)</em></li>
+<li><code>POST /pull-requests/{id}/sync</code> <em>(manual fallback)</em></li>
+<li><code>GET /repositories/{repository_id}/pull-requests</code></li>
+<li><code>GET /pull-requests/{id}</code></li>
+<li><code>GET /pull-requests/{id}/events</code></li>
+<li><code>GET /pull-requests/{id}/commits</code> <em>(new)</em></li>
+<li><code>GET /pull-requests/{id}/files</code> <em>(new)</em></li>
+</ul>
+<p><strong>Phase 5 — AI Review &amp; Human Decision</strong></p>
+<ul>
+<li><code>POST /pull-requests/{id}/review</code></li>
+<li><code>GET /review-runs/{review_run_id}</code></li>
+<li><code>POST /review-runs/{review_run_id}/decision</code> <em>(replaces plain &quot;approve&quot; — takes APPROVE / REQUEST_CHANGES / REJECT)</em></li>
+<li><code>POST /pull-requests/{id}/merge</code> <em>(new, manual/override merge)</em></li>
+<li><code>POST /pull-requests/{id}/reopen</code> <em>(new)</em></li>
+<li><code>GET /pull-requests/{id}/conflicts</code> <em>(cross-PR conflict engine)</em></li>
+</ul>
+<p><strong>Phase 6 — Chat</strong></p>
+<ul>
+<li><code>POST /chat/sessions</code></li>
+<li><code>GET /chat/sessions?pull_request_id=</code></li>
+<li><code>POST /chat/sessions/{session_id}/messages</code></li>
+<li><code>GET /chat/sessions/{session_id}/messages</code></li>
+</ul>
+<p><strong>Phase 7 — Security &amp; Analytics</strong></p>
+<ul>
+<li><code>GET /analytics/organization/{org_id}</code></li>
+<li><code>GET /ml/prediction/pr/{pr_id}</code></li>
+<li><code>GET /security/findings?org_id=</code> <em>(Global Security Browser, new)</em></li>
+<li><code>PUT /security/findings/{finding_id}/status</code> <em>(accept/reject/ignore, new)</em></li>
+</ul>
+<hr>
+<h2>10. What Each UI Page Should Show</h2>
+<p><strong>Repository page</strong>: name, default branch, connected date, last synced timestamp, open PR count, branch list (name, ahead/behind, last commit), recent commits (sha, author, message, date), repo-level risk trend (not per-developer).</p>
+<p><strong>PR detail page</strong>: title, author, head/base branch, status badge (OPEN / CHANGES_REQUESTED / APPROVED-BLOCKED / MERGED / REJECTED), commit list on this PR, files changed with diff stats, CI check status, AI review panel (findings grouped by severity, each tagged NEW/PERSISTENT/RESOLVED), conflict warnings against other open PRs, approval history (who, when, which sha), &quot;Chat about this PR&quot; panel, full event timeline.</p>
+<p><strong>Security page (org-wide)</strong>: all open findings across repos, filter by severity/repo/status, accept/reject/ignore action per finding — this is a security-finding tracker, explicitly <strong>not</strong> a developer scoreboard (per your anti-goals).</p>
+<p><strong>Settings page</strong>: merge policy config, GitHub identity link status, webhook health, member/role management (Org Admin only).</p>
+<hr>
+<h2>11. High-Level Data Flow</h2>
+<pre class="mermaid">graph LR
+    GH[GitHub] -- webhooks --&gt; API[RepoMind API]
+    API -- OAuth token per user --&gt; GH
+    API -- store/read --&gt; DB[(PostgreSQL + pgvector)]
+    API -- diff + rules + lint --&gt; LLM[Gemini]
+    LLM -- structured findings --&gt; API
+    Dev[Developer] -- HTTP --&gt; API
+    Rev[Reviewer] -- HTTP --&gt; API
+    Admin[Org Admin] -- HTTP --&gt; API
+    API -- audit log --&gt; DB
+</pre>
+<hr>
+<h2>Summary of the key corrections to implement</h2>
+<ol>
+<li>Add <code>POST /organizations</code> — don't fold org creation into bootstrap.</li>
+<li>Replace <code>approve</code> with a <code>decision</code> endpoint supporting three outcomes.</li>
+<li>Add a separate <code>merge</code> endpoint + configurable merge policy; auto-invoke it only after policy checks pass.</li>
+<li>Drop any GitHub App plan — use per-user OAuth tokens for every GitHub-side action, so RepoMind never acts as an impersonal bot.</li>
+<li>Add branch/commit/file-level endpoints for the PR and Repository UI.</li>
+<li>Add chat session listing + history endpoints, pinned to head_sha.</li>
+<li>Add a real Security Findings endpoint set, explicitly distinct from any per-developer scoring (which stays prohibited).</li>
+</ol>
+
+
+<!--claude-mermaid-runtime-begin:3477-->
+<style>.mermaid-diagram{margin-block:4px}.mermaid-diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}</style>
+<script src="/_runtime/mermaid-11.16.1.min.js"></script>
+<script>(function(){
+var CFG={"palettes":{"light":{"surface":"#f4efe4","text":"#42392e","line":"#8a7f6d","border":"#7a6c52","bg":"#fffdf8"},"dark":{"surface":"#262b34","text":"#f2f3f5","line":"#a8adb8","border":"#9aa4b8","bg":"#1f232b"}}};
+if(typeof mermaid==='undefined')return;
+var pres=Array.prototype.slice.call(document.querySelectorAll('pre.mermaid')).filter(function(p){if(p.hasAttribute('data-claude-mermaid-claimed'))return false;p.setAttribute('data-claude-mermaid-claimed','1');return true;});
+if(!pres.length)return;
+var mq=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
+var root=document.documentElement;
+var items=pres.map(function(pre){
+var mount=document.createElement('div');mount.className='mermaid-diagram';
+return {pre:pre,mount:mount,src:pre.textContent||''};
+});
+var seq=0;
+var renderGen=0;
+var lastKey='';
+function pageBg(fallback){
+var els=[document.body,document.documentElement];
+for(var i=0;i<els.length;i++){
+var c=els[i]&&getComputedStyle(els[i]).backgroundColor;
+if(c&&c!=='transparent'&&c!=='rgba(0, 0, 0, 0)')return c;
+}
+return fallback;
+}
+function render(){
+var theme=root.getAttribute('data-theme');
+var dark=theme==='dark'||(!!(mq&&mq.matches)&&theme!=='light');
+var pal=dark?CFG.palettes.dark:CFG.palettes.light;
+var bg=pageBg(pal.bg);
+var key=(dark?'d':'l')+'|'+bg;
+if(key===lastKey)return;
+lastKey=key;
+var gen=++renderGen;
+var font=getComputedStyle(document.body).fontFamily||'sans-serif';
+var nat={useMaxWidth:false};
+mermaid.initialize({
+startOnLoad:false,securityLevel:'strict',theme:'base',
+flowchart:nat,sequence:nat,er:nat,state:nat,class:nat,pie:nat,
+gantt:nat,journey:nat,timeline:nat,gitGraph:nat,mindmap:nat,xyChart:nat,
+quadrantChart:nat,sankey:nat,c4:nat,requirement:nat,block:nat,
+packet:nat,kanban:nat,architecture:nat,radar:nat,
+themeVariables:{background:bg,mainBkg:pal.surface,primaryColor:pal.surface,
+primaryTextColor:pal.text,lineColor:pal.line,primaryBorderColor:pal.border,
+nodeBorder:pal.border,clusterBorder:pal.border,edgeLabelBackground:bg,
+clusterBkg:'rgba(127,127,127,0.07)',titleColor:pal.text,
+darkMode:dark,rowOdd:bg,rowEven:'rgba(127,127,127,0.07)',
+attributeBackgroundColorOdd:bg,attributeBackgroundColorEven:'rgba(127,127,127,0.07)',
+fontSize:'16px',fontFamily:font},
+themeCSS:'.node rect, .node circle, .node polygon, .node path, .cluster rect { stroke-width: 2px; }'
+});
+items.forEach(function(it){
+var id='claude-mermaid-'+seq++;
+mermaid.render(id,it.src).then(function(r){
+if(gen!==renderGen)return;
+var prev=it.pre.previousElementSibling;
+if(prev&&prev.className==='mermaid-diagram'&&prev!==it.mount)return;
+it.mount.innerHTML=r.svg;
+if(!it.mount.parentNode)it.pre.parentNode.insertBefore(it.mount,it.pre);
+it.pre.style.display='none';
+},function(){
+var scratch=document.getElementById(id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+scratch=document.getElementById('d'+id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+if(gen!==renderGen)return;
+if(it.mount.parentNode)it.mount.parentNode.removeChild(it.mount);
+it.pre.style.display='';
+});
+});
+}
+render();
+if(mq&&mq.addEventListener)mq.addEventListener('change',render);
+if(typeof MutationObserver!=='undefined')new MutationObserver(render).observe(root,{attributes:true,attributeFilter:['data-theme']});
+})();</script>
+<!--claude-mermaid-runtime-end-->
+</body></html>

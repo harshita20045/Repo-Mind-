@@ -127,6 +127,10 @@ class PullRequestCommit(Base):
 
     pull_request = relationship("PullRequest", back_populates="commits")
 
+
+# Backward compatibility for older imports and tests.
+Commit = PullRequestCommit
+
 class PullRequestFile(Base):
     __tablename__ = "pull_request_file"
     __table_args__ = {"extend_existing": True}

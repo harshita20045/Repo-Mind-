@@ -149,14 +149,14 @@ class FindingResponse(BaseModel):
 
 class HumanDecisionRequest(BaseModel):
     """Payload to approve or reject a ReviewRun."""
-    action: str = Field(..., description="approve or reject")
+    action: str = Field(..., description="APPROVE, REQUEST_CHANGES, or REJECT")
     note: Optional[str] = None
 
     @field_validator("action")
     @classmethod
     def validate_action(cls, v: str) -> str:
-        if v not in ("approve", "reject"):
-            raise ValueError("action must be 'approve' or 'reject'")
+        if v not in ("APPROVE", "REQUEST_CHANGES", "REJECT"):
+            raise ValueError("action must be 'APPROVE', 'REQUEST_CHANGES', or 'REJECT'")
         return v
 
 class HumanDecisionResponse(BaseModel):

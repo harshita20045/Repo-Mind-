@@ -66,3 +66,30 @@ def get_repository(repository_id: int, db: Session = Depends(get_db), current_us
     project = service.get_project_by_id(db, repo.project_id)
     service.verify_org_member(db, current_user.id, project.organization_id)
     return repo
+
+@router.post("/organizations", response_model=schemas.OrganizationResponse, status_code=status.HTTP_201_CREATED)
+def create_organization(org: schemas.OrganizationCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return service.create_organization(db, org.name, current_user.id)
+
+@router.get("/organizations", response_model=List[schemas.OrganizationResponse])
+def list_organizations(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return service.get_organizations(db, current_user.id)
+
+@router.get("/organizations/{organization_id}", response_model=schemas.OrganizationResponse)
+def get_organization(organization_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    service.verify_org_member(db, current_user.id, organization_id)
+    org = service.get_organization_by_id(db, organization_id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return org
+
+@router.post("/organizations/{organization_id}/teams", response_model=schemas.TeamResponse, status_code=status.HTTP_201_CREATED)
+def create_team(organization_id: int, team: schemas.TeamCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    service.verify_org_admin(db, current_user.id, organization_id)
+    return service.create_team(db, organization_id, team.name)
+
+@router.get("/organizations/{organization_id}/teams", response_model=List[schemas.TeamResponse])
+def list_teams(organization_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    service.verify_org_member(db, current_user.id, organization_id)
+    return service.get_teams(db, organization_id)
+

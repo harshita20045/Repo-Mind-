@@ -95,7 +95,6 @@ def bootstrap(
         db,
         email=data.email,
         password=data.password,
-        org_name=data.organization_name,
         bootstrap_token=data.bootstrap_token,
     )
     token = create_access_token(user_id=user.id, email=user.email)

@@ -52,3 +52,37 @@ class Repository(Base):
     project = relationship("Project", back_populates="repositories")
 
 
+class Team(Base):
+    __tablename__ = "team"
+    __table_args__ = {"extend_existing": True}
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    organization_id = Column(Integer, ForeignKey("organization.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+
+    organization = relationship("Organization", backref="teams")
+    members = relationship("TeamMember", back_populates="team", cascade="all, delete-orphan")
+
+
+class TeamMember(Base):
+    __tablename__ = "team_member"
+    __table_args__ = {"extend_existing": True}
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    team_id = Column(Integer, ForeignKey("team.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    team = relationship("Team", back_populates="members")
+    user = relationship("User", backref="team_memberships")
+
+class GithubConnection(Base):
+    __tablename__ = "github_connection"
+    __table_args__ = {"extend_existing": True}
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    organization_id = Column(Integer, ForeignKey("organization.id", ondelete="CASCADE"), nullable=False, index=True)
+    encrypted_token = Column(String(1024), nullable=False)
+    scope = Column(String(255), default="repo")
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    organization = relationship("Organization", backref="github_connection")

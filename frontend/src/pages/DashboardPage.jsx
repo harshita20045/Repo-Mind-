@@ -1,7 +1,9 @@
 import React from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { analyticsApi } from '../lib/api';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { analyticsApi, orgApi } from '../lib/api';
+import { Button } from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
 import { MetricCard } from '../components/ui/Card';
 import { DashboardSkeleton } from '../components/ui/LoadingSkeleton';
 import EmptyState from '../components/ui/EmptyState';
@@ -104,6 +106,18 @@ function LifecycleCard({ label, value, description, color }) {
 export default function DashboardPage() {
   const { memberships } = useOutletContext();
   const orgId = memberships?.[0]?.organization_id;
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [newOrgName, setNewOrgName] = React.useState('');
+
+  const { mutate: createOrg, isPending: isCreatingOrg } = useMutation({
+    mutationFn: (name) => orgApi.createOrganization(name),
+    onSuccess: () => {
+      setIsCreateModalOpen(false);
+      setNewOrgName('');
+      alert('Organization created successfully. Please refresh.');
+    },
+    onError: (err) => alert(err.message),
+  });
 
   const { data: analytics, isLoading, error } = useQuery({
     queryKey: ['orgAnalytics', orgId],
@@ -149,12 +163,38 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 animate-slide-up">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary tracking-tight">Dashboard</h1>
-        <p className="text-sm text-text-muted mt-1">
-          Engineering intelligence overview · Last 30 days
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Dashboard</h1>
+          <p className="text-sm text-text-muted mt-1">
+            Engineering intelligence overview · Last 30 days
+          </p>
+        </div>
+        <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+          Create Organization
+        </Button>
       </div>
+
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Create Organization"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <input
+            type="text"
+            placeholder="Organization Name"
+            value={newOrgName}
+            onChange={e => setNewOrgName(e.target.value)}
+            className="w-full bg-surfaceHighlight/40 border border-white/[0.09] text-text-primary text-sm rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder-text-muted transition-all"
+          />
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)} disabled={isCreatingOrg}>Cancel</Button>
+            <Button variant="primary" loading={isCreatingOrg} onClick={() => createOrg(newOrgName)}>Create</Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Metric cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

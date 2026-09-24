@@ -77,7 +77,7 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
 
 
 def bootstrap_system(
-    db: Session, email: str, password: str, org_name: str, bootstrap_token: str
+    db: Session, email: str, password: str, bootstrap_token: str
 ) -> User:
     expected_token = settings.BOOTSTRAP_TOKEN
     if not expected_token or bootstrap_token != expected_token:
@@ -93,16 +93,6 @@ def bootstrap_system(
     db.add(user)
     db.flush()
 
-    org = Organization(name=org_name)
-    db.add(org)
-    db.flush()
-
-    membership = OrganizationMembership(
-        user_id=user.id,
-        organization_id=org.id,
-        role=RoleEnum.ORG_ADMIN,
-    )
-    db.add(membership)
     db.commit()
     db.refresh(user)
     return user

@@ -136,7 +136,7 @@ def evaluate_merge_policy(db: Session, pull_request_id: int):
             .filter(
                 HumanReview.pull_request_id == pr.id,
                 HumanReview.commit_sha == pr.head_sha if policy.require_latest_commit_review else True,
-                HumanReview.decision == "approve"
+                HumanReview.decision == "APPROVE"
             ).count()
         )
         if approvals < policy.required_approvals:
@@ -149,7 +149,7 @@ def evaluate_merge_policy(db: Session, pull_request_id: int):
             .filter(
                 HumanReview.pull_request_id == pr.id,
                 HumanReview.commit_sha == pr.head_sha if policy.require_latest_commit_review else True,
-                HumanReview.decision == "request_changes"
+                HumanReview.decision == "REQUEST_CHANGES"
             ).count()
         )
         if rejections > 0:

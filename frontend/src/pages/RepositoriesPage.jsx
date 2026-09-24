@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { orgApi } from '../lib/api';
+import { orgApi, githubApi } from '../lib/api';
 import { usePermissions, Permissions } from '../hooks/usePermissions';
 import Modal from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
@@ -66,6 +66,21 @@ export default function RepositoriesPage() {
   });
   const [errorMsg, setErrorMsg] = useState(null);
   const [indexingRepoId, setIndexingRepoId] = useState(null);
+  const [isLinking, setIsLinking] = useState(false);
+
+  const handleConnectGitHub = async () => {
+    setIsLinking(true);
+    try {
+      const response = await githubApi.getOAuthLoginUrl();
+      if (response.url) {
+        window.location.href = response.url;
+      }
+    } catch (err) {
+      alert('Failed to initiate GitHub login: ' + err.message);
+    } finally {
+      setIsLinking(false);
+    }
+  };
 
   // Queries
   const { data: projects = [], isLoading: loadingProjects, error: projectError } = useQuery({
@@ -343,7 +358,8 @@ export default function RepositoriesPage() {
               <Button
                 variant="primary"
                 size="xs"
-                onClick={() => window.location.href = '/api/github/oauth/login'}
+                onClick={handleConnectGitHub}
+                loading={isLinking}
                 className="self-start mt-1"
               >
                 Connect GitHub Account
@@ -394,7 +410,8 @@ export default function RepositoriesPage() {
               <Button
                 variant="primary"
                 size="xs"
-                onClick={() => window.location.href = '/api/github/oauth/login'}
+                onClick={handleConnectGitHub}
+                loading={isLinking}
                 className="self-start mt-1"
               >
                 Connect GitHub Account

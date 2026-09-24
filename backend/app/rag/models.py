@@ -6,6 +6,7 @@ from pgvector.sqlalchemy import Vector
 
 class Document(Base):
     __tablename__ = "document"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     repository_id = Column(Integer, ForeignKey("repository.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -15,6 +16,7 @@ class Document(Base):
 
 class DocumentChunk(Base):
     __tablename__ = "document_chunk"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     document_id = Column(Integer, ForeignKey("document.id", ondelete="CASCADE"), nullable=False, index=True)

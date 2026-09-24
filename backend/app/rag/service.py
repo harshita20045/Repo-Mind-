@@ -28,14 +28,15 @@ def index_repository(db: Session, repository_id: int) -> None:
         
     organization_id = project.organization_id
     
-    # Fetch connection
-    stmt = select(GithubConnection).where(GithubConnection.organization_id == organization_id)
-    conn = db.execute(stmt).scalars().first()
-    if not conn:
-        raise ValueError(f"No GitHub connection found for organization {organization_id}")
+    # Fetch connection via the modern per-user OAuth logic (uses an org admin's token)
+    from backend.app.github.service import get_decrypted_pat_for_org
+    from fastapi import HTTPException
+    
+    try:
+        pat = get_decrypted_pat_for_org(db, organization_id)
+    except HTTPException as e:
+        raise ValueError(e.detail)
         
-    # Initialize GitHub client without persisting PAT in memory longer than needed
-    pat = decrypt_token(conn.encrypted_token)
     github_client = GitHubClient(pat)
     
     # Initialize RAG components

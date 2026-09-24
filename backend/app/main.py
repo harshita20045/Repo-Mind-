@@ -9,6 +9,7 @@ from backend.app.organizations.routes import router as orgs_router
 from backend.app.github.routes import router as github_router
 from backend.app.webhooks.routes import router as webhooks_router
 from backend.app.analytics.router import router as analytics_router
+from backend.app.security.routes import router as security_router
 
 app = FastAPI(
     title="RepoMind",
@@ -21,7 +22,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
+        "http://localhost:5174",
         "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -39,9 +42,7 @@ app.include_router(review_router)
 app.include_router(webhooks_router)
 app.include_router(chat_router)
 app.include_router(analytics_router)
-from backend.app.ml.routes import router as ml_router
-app.include_router(ml_router)
-
+app.include_router(security_router)
 
 
 if __name__ == "__main__":

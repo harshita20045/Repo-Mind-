@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import MemberManagement from '../components/MemberManagement';
+import { githubApi } from '../lib/api';
+import { Button } from '../components/ui/Button';
 
 // ─── Form helpers ─────────────────────────────────────────────────────────────
 function SettingField({ label, hint, children }) {
@@ -61,7 +63,32 @@ const TABS = [
 // ─── Settings Page ────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const { user, memberships } = useOutletContext();
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState('integrations');
+  const [isLinking, setIsLinking] = useState(false);
+
+  const handleLinkGitHub = async () => {
+    setIsLinking(true);
+    try {
+      const response = await githubApi.getOAuthLoginUrl();
+      if (response.url) {
+        window.location.href = response.url;
+      }
+    } catch (err) {
+      alert('Failed to initiate GitHub login: ' + err.message);
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
+  const handleUnlink = async () => {
+    if (!confirm('Are you sure you want to unlink your GitHub account? You will lose access to interact with repositories.')) return;
+    try {
+      await githubApi.unlinkGitHub();
+      alert('GitHub account unlinked successfully. Refresh to see changes.');
+    } catch (err) {
+      alert('Failed to unlink: ' + err.message);
+    }
+  };
 
   const orgId = memberships?.[0]?.organization_id;
   const orgName = memberships?.[0]?.organization?.name || 'My Organization';
@@ -175,7 +202,7 @@ export default function SettingsPage() {
             <div className="bg-surface border border-white/[0.07] rounded-xl p-6 space-y-6">
               <div>
                 <h2 className="text-base font-bold text-text-primary mb-0.5">GitHub Integration</h2>
-                <p className="text-xs text-text-muted">RepoMind uses Personal Access Tokens per repository for a secure, zero-OAuth setup.</p>
+                <p className="text-xs text-text-muted">RepoMind uses per-user OAuth tokens for a secure, bot-free identity integration.</p>
               </div>
 
               {/* Connection status */}
@@ -187,11 +214,14 @@ export default function SettingsPage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-text-primary">GitHub (PAT-based)</p>
-                    <p className="text-xs text-text-muted mt-0.5">Repositories connected via per-repo Personal Access Tokens</p>
+                    <p className="text-sm font-semibold text-text-primary">GitHub Identity</p>
+                    <p className="text-xs text-text-muted mt-0.5">Link your personal GitHub account via OAuth</p>
                   </div>
                 </div>
-                <span className="text-xs font-bold text-success bg-success/10 border border-success/20 px-2.5 py-1 rounded-full">Active</span>
+                <div className="flex gap-2">
+                  <Button variant="danger" size="sm" onClick={handleUnlink}>Unlink</Button>
+                  <Button variant="primary" size="sm" loading={isLinking} onClick={handleLinkGitHub}>Link Account</Button>
+                </div>
               </div>
 
               {/* Webhook info */}

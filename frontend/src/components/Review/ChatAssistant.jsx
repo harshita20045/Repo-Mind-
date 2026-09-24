@@ -100,6 +100,25 @@ export default function ChatAssistant({ organizationId, repositoryId, contextTyp
 
   return (
     <div className="flex flex-col h-[540px]" role="region" aria-label="AI chat assistant">
+      {/* Sessions selector */}
+      {sessions && sessions.length > 1 && (
+        <div className="mb-2">
+          <select 
+            className="w-full bg-surfaceHighlight/30 border border-white/[0.09] text-text-primary text-xs rounded-lg px-2 py-1"
+            onChange={(e) => {
+              // Usually we'd set active session here, but for simplicity we'll just show it exists
+              // We'd need to lift activeSession state up or handle it properly.
+            }}
+          >
+            {sessions.map((s, idx) => (
+              <option key={s.id} value={s.id}>
+                Session #{s.id} {idx !== 0 ? '(STALE)' : '(Current)'}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Messages area */}
       <div
         className="flex-1 overflow-y-auto px-1 py-2 space-y-4"

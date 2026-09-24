@@ -11,7 +11,6 @@ class UserLogin(BaseModel):
 class BootstrapRequest(BaseModel):
     email: EmailStr
     password: str
-    organization_name: str
     bootstrap_token: str
 
 

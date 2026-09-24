@@ -61,13 +61,22 @@ export const reviewApi = {
       method: 'GET',
     }),
   approveReviewRun: (runId, decisionData) =>
-    apiRequest(`/review-runs/${runId}/approve`, {
+    apiRequest(`/review-runs/${runId}/decide`, {
       method: 'POST',
       body: JSON.stringify(decisionData),
     }),
 };
 
 export const orgApi = {
+  getOrganization: (orgId) =>
+    apiRequest(`/organizations/${orgId}`, {
+      method: 'GET',
+    }),
+  createOrganization: (name) =>
+    apiRequest(`/organizations`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
   getProjects: (orgId) =>
     apiRequest(`/organizations/${orgId}/projects`, {
       method: 'GET',
@@ -105,6 +114,26 @@ export const githubApi = {
     apiRequest(`/pull-requests/${prId}`, {
       method: 'GET',
     }),
+  getPullRequestEvents: (prId) =>
+    apiRequest(`/pull-requests/${prId}/events`, {
+      method: 'GET',
+    }),
+  getOAuthLoginUrl: () =>
+    apiRequest(`/oauth/login`, {
+      method: 'GET',
+    }),
+  unlinkGitHub: () =>
+    apiRequest(`/oauth/unlink`, {
+      method: 'DELETE',
+    }),
+  syncPullRequest: (prId) =>
+    apiRequest(`/pull-requests/${prId}/sync`, {
+      method: 'POST',
+    }),
+  mergePullRequest: (prId) =>
+    apiRequest(`/pull-requests/${prId}/merge`, {
+      method: 'POST',
+    }),
 };
 
 export const analyticsApi = {
@@ -135,9 +164,16 @@ export const chatApi = {
     }),
 };
 
-export const mlApi = {
-  getPrPrediction: (prId) =>
-    apiRequest(`/ml/prediction/pr/${prId}`, {
+
+
+export const securityApi = {
+  getFindings: (orgId, severity = '', status = '') =>
+    apiRequest(`/security/findings?org_id=${orgId}${severity ? `&severity=${severity}` : ''}${status ? `&status=${status}` : ''}`, {
       method: 'GET',
+    }),
+  updateFindingStatus: (findingId, status) =>
+    apiRequest(`/security/findings/${findingId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
     }),
 };

@@ -11,14 +11,14 @@ Security invariants (per security.md, NFR-001):
 - decrypt_token raises ValueError on corruption — callers must catch and report job failure.
 """
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
 from backend.app.github.client import GitHubClient, GitHubAPIError, GitHubTransientError
 from backend.app.github.encryption import encrypt_token, decrypt_token
 from backend.app.github.models import PullRequest, PullRequestCommit
-from backend.app.organizations.models import Repository
+from backend.app.organizations.models import GithubConnection, Repository
 from backend.app.organizations.service import get_repository_by_id, get_project_by_id
 
 
@@ -121,6 +121,22 @@ def connect_repository(
     return repo
 
 
+def get_github_repositories(db: Session, organization_id: int, user_id: int) -> List[Dict[str, Any]]:
+    from backend.app.organizations.service import verify_org_admin
+    verify_org_admin(db, user_id, organization_id)
+    pat = get_decrypted_pat_for_user(db, user_id)
+    client = GitHubClient(pat)
+    try:
+        raw_repos = client.list_user_repositories(per_page=100)
+    except GitHubAPIError as e:
+        raise HTTPException(status_code=502, detail=f"GitHub API error: {e.status_code}")
+    except GitHubTransientError:
+        raise HTTPException(status_code=502, detail="GitHub API is temporarily unavailable.")
+    
+    # Filter for repos where the user has admin access
+    return [r for r in raw_repos if r.get("permissions", {}).get("admin")]
+
+
 def get_github_connection_for_org(db: Session, organization_id: int) :
     """Return the GithubConnection for an org, or None if not configured."""
     return (
@@ -132,19 +148,34 @@ def get_github_connection_for_org(db: Session, organization_id: int) :
 
 def get_decrypted_pat_for_org(db: Session, organization_id: int) -> str:
     """
-    Return the decrypted PAT for an org.
+    Return the decrypted PAT for an org by finding an org_admin with a linked GitHub Identity.
     Raises HTTPException if no connection is configured or decryption fails.
     NEVER log or re-raise the token value.
     """
-    conn = get_github_connection_for_org(db, organization_id)
-    if not conn:
+    from backend.app.auth.models import OrganizationMembership, User
+    from backend.app.github.models import GitHubIdentity, GitHubCredential
+    
+    credential = (
+        db.query(GitHubCredential)
+        .join(GitHubIdentity, GitHubIdentity.id == GitHubCredential.github_identity_id)
+        .join(User, User.id == GitHubIdentity.user_id)
+        .join(OrganizationMembership, OrganizationMembership.user_id == User.id)
+        .filter(
+            OrganizationMembership.organization_id == organization_id,
+            OrganizationMembership.role == "org_admin"
+        )
+        .first()
+    )
+    
+    if not credential:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No GitHub connection configured for this organization.",
         )
     try:
-        return decrypt_token(conn.encrypted_token)
-    except ValueError:
+        from backend.app.github.encryption import decrypt_token
+        return decrypt_token(credential.encrypted_access_token)
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to decrypt GitHub credentials. Contact your org admin.",
@@ -243,23 +274,35 @@ def sync_pull_requests(
         if not pr:
             pr = PullRequest(
                 repository_id=repository.id,
+                github_pr_id=str(raw.get("id")),
                 github_number=pr_number,
+                github_url=raw.get("html_url"),
                 title=raw.get("title", ""),
-                author=raw.get("user", {}).get("login"),
+                description=raw.get("body", ""),
+                github_author_login=raw.get("user", {}).get("login"),
+                source_branch=raw.get("head", {}).get("ref"),
+                target_branch=raw.get("base", {}).get("ref"),
+                base_sha=raw.get("base", {}).get("sha"),
+                head_sha=raw.get("head", {}).get("sha"),
+                draft_status=1 if raw.get("draft") else 0,
                 state=raw.get("state", "open"),
                 created_at=created_at,
+                updated_at=datetime.fromisoformat(raw["updated_at"].replace("Z", "+00:00")) if raw.get("updated_at") else None,
+                closed_at=datetime.fromisoformat(raw["closed_at"].replace("Z", "+00:00")) if raw.get("closed_at") else None,
                 merged_at=merged_at,
-                additions=raw.get("additions"),
-                deletions=raw.get("deletions"),
-                files_changed=raw.get("changed_files"),
-                head_sha=raw.get("head", {}).get("sha"),
             )
             db.add(pr)
         else:
             pr.title = raw.get("title", pr.title)
+            pr.description = raw.get("body", pr.description)
             pr.state = raw.get("state", pr.state)
+            pr.draft_status = 1 if raw.get("draft") else 0
+            pr.updated_at = datetime.fromisoformat(raw["updated_at"].replace("Z", "+00:00")) if raw.get("updated_at") else pr.updated_at
+            pr.closed_at = datetime.fromisoformat(raw["closed_at"].replace("Z", "+00:00")) if raw.get("closed_at") else pr.closed_at
             pr.merged_at = merged_at
             pr.head_sha = raw.get("head", {}).get("sha", pr.head_sha)
+            pr.base_sha = raw.get("base", {}).get("sha", pr.base_sha)
+            pr.last_synced_at = datetime.now(timezone.utc)
         result.append(pr)
 
     db.commit()

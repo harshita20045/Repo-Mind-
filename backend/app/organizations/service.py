@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from backend.app.organizations.models import Project, Repository
+from backend.app.organizations.models import Project, Repository, Team
 from backend.app.auth.models import Organization, OrganizationMembership, RoleEnum, User
 from fastapi import HTTPException, status
 import secrets
@@ -178,4 +178,35 @@ def remove_member(db: Session, user_id: int, organization_id: int, target_user_i
     from backend.app.audit.models import AuditLog
     db.add(AuditLog(user_id=actor_id, action=f"Removed member {email}", target_type="organization", target_id=organization_id))
     db.commit()
+
+def create_organization(db: Session, name: str, user_id: int) -> Organization:
+    org = Organization(name=name)
+    db.add(org)
+    db.flush()
+    membership = OrganizationMembership(
+        user_id=user_id, 
+        organization_id=org.id, 
+        role=RoleEnum.ORG_ADMIN
+    )
+    db.add(membership)
+    db.commit()
+    db.refresh(org)
+    return org
+
+def get_organizations(db: Session, user_id: int) -> List[Organization]:
+    memberships = db.query(OrganizationMembership).filter(OrganizationMembership.user_id == user_id).all()
+    return [m.organization for m in memberships]
+
+def get_organization_by_id(db: Session, org_id: int) -> Optional[Organization]:
+    return db.query(Organization).filter(Organization.id == org_id).first()
+
+def create_team(db: Session, organization_id: int, name: str) -> Team:
+    team = Team(organization_id=organization_id, name=name)
+    db.add(team)
+    db.commit()
+    db.refresh(team)
+    return team
+
+def get_teams(db: Session, organization_id: int) -> List[Team]:
+    return db.query(Team).filter(Team.organization_id == organization_id).all()
 

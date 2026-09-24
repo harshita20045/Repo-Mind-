@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # "local": development/null provider (raises NotImplementedError on real reviews)
     # "gemini": Google Gemini API (requires GEMINI_API_KEY)
     # "groq": Groq API (requires GROQ_API_KEY)
-    LLM_PROVIDER: str = "local"
+    LLM_PROVIDER: str = "groq"
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-2.5-flash"
     GROQ_API_KEY: Optional[str] = None
@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # Set this to the secret configured in GitHub repo webhook settings.
     # If not set, all incoming webhooks will be rejected with 401.
     GITHUB_WEBHOOK_SECRET: Optional[str] = None
+    GITHUB_WEBHOOK_URL: Optional[str] = None
+    GITHUB_CLIENT_ID: Optional[str] = None
+    GITHUB_CLIENT_SECRET: Optional[str] = None
 
     # Context bounding limits
     RAG_MAX_CHUNKS: int = 5

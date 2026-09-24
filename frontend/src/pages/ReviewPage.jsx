@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { reviewApi, githubApi, orgApi, mlApi } from '../lib/api';
+import { reviewApi, githubApi, orgApi } from '../lib/api';
 import { useOutletContext } from 'react-router-dom';
 import { usePermissions, Permissions } from '../hooks/usePermissions';
 import ReviewStateIndicator from '../components/Review/ReviewStateIndicator';
@@ -102,10 +102,10 @@ function ApprovalModal({ isOpen, action, onClose, onSubmit, isLoading }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isApprove ? 'Approve Pull Request' : 'Request Changes'}
+      title={isApprove ? 'Approve Pull Request' : action === 'reject' ? 'Reject Pull Request' : 'Request Changes'}
       subtitle={isApprove
         ? 'Confirm AI risk findings reviewed and PR is safe to merge.'
-        : 'Specify changes needed before this PR can be merged.'}
+        : action === 'reject' ? 'Permanently reject this PR. No further automated re-reviews will occur.' : 'Specify changes needed before this PR can be merged.'}
       size="sm"
     >
       <div className="space-y-4">
@@ -123,7 +123,7 @@ function ApprovalModal({ isOpen, action, onClose, onSubmit, isLoading }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           )}
-          <span>{isApprove ? 'This will mark the PR as approved for merge.' : 'This will request changes and block merging.'}</span>
+          <span>{isApprove ? 'This will mark the PR as approved for merge.' : action === 'reject' ? 'This will reject the PR and stop the review cycle.' : 'This will request changes and block merging.'}</span>
         </div>
 
         <div>
@@ -147,7 +147,7 @@ function ApprovalModal({ isOpen, action, onClose, onSubmit, isLoading }) {
             loading={isLoading}
             onClick={() => onSubmit({ action, note })}
           >
-            {isApprove ? 'Approve PR' : 'Request Changes'}
+            {isApprove ? 'Approve PR' : action === 'reject' ? 'Reject PR' : 'Request Changes'}
           </Button>
         </div>
       </div>
@@ -186,12 +186,7 @@ export default function ReviewPage() {
     onSuccess: (data) => setActiveRunId(data.job_id),
   });
 
-  const { data: mlPrediction } = useQuery({
-    queryKey: ['mlPrediction', prid],
-    queryFn: () => mlApi.getPrPrediction(prid),
-    enabled: !!prid,
-    retry: false,
-  });
+
 
   const { data: prData, isLoading: loadingPr } = useQuery({
     queryKey: ['pullRequest', prid],
@@ -220,6 +215,17 @@ export default function ReviewPage() {
     },
     onError: (err) => {
       console.error('Decision failed:', err.message);
+    },
+  });
+
+  const { mutate: mergePr, isPending: isMerging } = useMutation({
+    mutationFn: () => githubApi.mergePullRequest(prid),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pullRequest', prid] });
+      alert('Merge requested successfully.');
+    },
+    onError: (err) => {
+      alert(`Merge failed: ${err.message}`);
     },
   });
 
@@ -314,19 +320,38 @@ export default function ReviewPage() {
                   variant="danger"
                   size="sm"
                   disabled={!isCompleted || isSubmittingDecision}
-                  onClick={() => setApprovalModal({ isOpen: true, action: 'reject' })}
+                  onClick={() => setApprovalModal({ isOpen: true, action: 'request_changes' })}
                 >
                   Request Changes
                 </Button>
+                <Button
+                  variant="danger-solid"
+                  size="sm"
+                  disabled={!isCompleted || isSubmittingDecision}
+                  onClick={() => setApprovalModal({ isOpen: true, action: 'reject' })}
+                >
+                  Reject PR
+                </Button>
                 {canApprove && (
-                  <Button
-                    variant="success-solid"
-                    size="sm"
-                    disabled={!isCompleted || isSubmittingDecision}
-                    onClick={() => setApprovalModal({ isOpen: true, action: 'approve' })}
-                  >
-                    Approve PR
-                  </Button>
+                  <>
+                    <Button
+                      variant="success-solid"
+                      size="sm"
+                      disabled={!isCompleted || isSubmittingDecision}
+                      onClick={() => setApprovalModal({ isOpen: true, action: 'approve' })}
+                    >
+                      Approve PR
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      loading={isMerging}
+                      disabled={!isCompleted || prData?.state === 'merged'}
+                      onClick={() => mergePr()}
+                    >
+                      Merge PR
+                    </Button>
+                  </>
                 )}
               </>
             )}
@@ -424,28 +449,6 @@ export default function ReviewPage() {
             )}
           </div>
 
-          {/* ML Prediction */}
-          <div className="bg-surface border border-white/[0.07] rounded-xl p-4">
-            <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">ML Delay Prediction</h3>
-            <div className="space-y-2.5 text-sm">
-              <DetailRow label="Category">
-                {mlPrediction ? (
-                  <span className={`font-bold ${mlPrediction.predicted_delay_category === 'SLOW' ? 'text-warning' : 'text-success'}`}>
-                    {mlPrediction.predicted_delay_category}
-                  </span>
-                ) : (
-                  <span className="text-text-muted italic text-xs">Insufficient data</span>
-                )}
-              </DetailRow>
-              {mlPrediction?.confidence_score != null && (
-                <DetailRow label="Confidence">
-                  <span className="text-text-secondary">
-                    {(mlPrediction.confidence_score * 100).toFixed(0)}%
-                  </span>
-                </DetailRow>
-              )}
-            </div>
-          </div>
 
           {/* PR Details */}
           <div className="bg-surface border border-white/[0.07] rounded-xl p-4">

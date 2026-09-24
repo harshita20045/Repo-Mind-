@@ -486,7 +486,7 @@ def run_review(
     _persist_risk(db, run, risk_result)
 
     # --- 10. Persist validated findings + evidence ----------------------------
-    _persist_validated_findings(db, run, validated_findings)
+    created_findings = _persist_validated_findings(db, run, validated_findings)
 
     # --- 11. Mark completed ---------------------------------------------------
     run.status = "completed"
@@ -504,7 +504,7 @@ def run_review(
         ).first()
     )
     import json
-    findings_json = json.dumps([f.id for f in findings])
+    findings_json = json.dumps([f.id for f in created_findings])
     if not ai_analysis:
         ai_analysis = AIAnalysis(
             pull_request_id=run.pull_request_id,

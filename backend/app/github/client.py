@@ -77,8 +77,18 @@ class GitHubClient:
 
 
 
+    def list_user_repositories(self, per_page: int = 100, page: int = 1) -> List[Dict[str, Any]]:
+        """
+        List repositories that the authenticated user has explicit permission to access.
+        """
+        return self._get(
+            "/user/repos",
+            params={"per_page": per_page, "page": page, "affiliation": "owner,collaborator,organization_member"},
+        )
+
     # ------------------------------------------------------------------
     # Automation Actions (Phase 15/16)
+
     # ------------------------------------------------------------------
 
     def submit_pull_request_review(
@@ -210,6 +220,14 @@ class GitHubClient:
             f"/repos/{owner}/{repo}/pulls",
             params={"state": state, "per_page": per_page, "page": page},
         )
+
+    def list_repository_branches(self, owner: str, repo: str) -> List[Dict[str, Any]]:
+        """List branches for a repository."""
+        return self._get(f"/repos/{owner}/{repo}/branches")
+
+    def list_repository_commits(self, owner: str, repo: str, per_page: int = 30) -> List[Dict[str, Any]]:
+        """List recent commits for a repository."""
+        return self._get(f"/repos/{owner}/{repo}/commits", params={"per_page": per_page})
 
     def get_pull_request(
         self,

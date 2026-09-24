@@ -110,6 +110,7 @@ def poll_and_execute() -> None:
         try:
             _process_one_job(provider)
             _process_one_indexing_job()
+            _process_automations()
             consecutive_errors = 0
         except Exception as exc:
             consecutive_errors += 1
@@ -301,6 +302,16 @@ def _process_one_indexing_job() -> None:
                 db.commit()
             except Exception as commit_exc:
                 logger.error("Failed to mark Repository %d as failed: %s", repo_id, commit_exc)
+
+def _process_automations() -> None:
+    """Process pending GitHub automation actions like PR reviews and merges."""
+    from backend.app.db import SessionLocal
+    from backend.app.github.automation import process_automation_actions
+    try:
+        with SessionLocal() as db:
+            process_automation_actions(db)
+    except Exception as exc:
+        logger.error("Error processing automation actions: %s: %s", type(exc).__name__, exc)
 
 if __name__ == "__main__":
     poll_and_execute()
