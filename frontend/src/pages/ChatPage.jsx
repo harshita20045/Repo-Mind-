@@ -52,7 +52,7 @@ export default function ChatPage({ user, memberships }) {
       </div>
 
       {/* Main chat panel */}
-      <div className="flex flex-col bg-surface border border-white/[0.07] rounded-xl overflow-hidden" style={{ minHeight: '640px' }}>
+      <div className="flex flex-col glass-card rounded-xl overflow-hidden" style={{ minHeight: '640px' }}>
 
         {/* Repository selector bar */}
         <div className="px-5 py-3.5 border-b border-white/[0.07] bg-surfaceHighlight/20 flex items-center gap-4 flex-wrap">

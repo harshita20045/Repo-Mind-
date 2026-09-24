@@ -229,7 +229,7 @@ export default function RepositoriesPage() {
       )}
 
       {/* Repository table */}
-      <div className="bg-surface border border-white/[0.07] rounded-xl overflow-hidden">
+      <div className="glass-card rounded-xl overflow-hidden">
         {loadingProjects && projects.length === 0 ? (
           <div className="p-6">
             <div className="space-y-1">

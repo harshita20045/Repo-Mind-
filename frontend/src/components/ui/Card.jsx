@@ -5,7 +5,7 @@ export function Card({ children, className = '', hover = false, padding = true, 
   return (
     <div
       className={`
-        bg-surface border border-white/[0.07] rounded-xl shadow-card
+        glass-card
         ${hover ? 'hover:bg-surfaceHighlight/50 hover:border-white/10 hover:shadow-card-hover cursor-pointer transition-all duration-200' : ''}
         ${padding ? 'p-5' : ''}
         ${className}

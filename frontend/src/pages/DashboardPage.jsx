@@ -231,7 +231,7 @@ export default function DashboardPage() {
       {/* Findings breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Severity distribution */}
-        <div className="bg-surface border border-white/[0.07] rounded-xl p-5">
+        <div className="glass-card p-5">
           <div className="mb-5">
             <h2 className="text-sm font-semibold text-text-primary">Findings by Severity</h2>
             <p className="text-xs text-text-muted mt-0.5">Distribution of identified issues across severity levels</p>

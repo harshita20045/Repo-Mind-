@@ -70,7 +70,7 @@ export default function PullRequestsPage() {
       </div>
 
       {/* PR table */}
-      <div className="bg-surface border border-white/[0.07] rounded-xl overflow-hidden">
+      <div className="glass-card rounded-xl overflow-hidden">
         {isLoading ? (
           <div className="overflow-x-auto">
             <table className="w-full">

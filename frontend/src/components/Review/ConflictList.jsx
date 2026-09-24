@@ -16,7 +16,7 @@ function ConflictCard({ conflict }) {
   const typeLabel = conflict.conflict_type?.replace(/_/g, ' ') || 'Unknown';
 
   return (
-    <div className="relative flex overflow-hidden bg-surfaceHighlight/20 border border-white/[0.07] rounded-xl hover:bg-surfaceHighlight/30 transition-colors">
+    <div className="relative flex overflow-hidden glass-card hover:bg-surfaceHighlight/30 transition-colors">
       {/* Left severity strip */}
       <div className={`w-1 flex-shrink-0 ${leftColor}`} aria-hidden="true" />
 

@@ -261,7 +261,7 @@ export default function ReviewPage() {
     <div className="space-y-5 animate-slide-up">
 
       {/* PR Header */}
-      <div className="bg-surface border border-white/[0.07] rounded-xl p-5">
+      <div className="glass-card">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-xs text-text-muted mb-2">
@@ -426,7 +426,7 @@ export default function ReviewPage() {
         {/* Right: metadata sidebar */}
         <div className="space-y-4">
           {/* Risk profile */}
-          <div className="bg-surface border border-white/[0.07] rounded-xl p-4">
+          <div className="glass-card p-4">
             <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-4">Risk Profile</h3>
             {isCompleted && runData?.risk_assessment ? (
               <>
@@ -451,7 +451,7 @@ export default function ReviewPage() {
 
 
           {/* PR Details */}
-          <div className="bg-surface border border-white/[0.07] rounded-xl p-4">
+          <div className="glass-card p-4">
             <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">PR Details</h3>
             <div className="space-y-3">
               <DetailRow label="Author">
@@ -488,7 +488,7 @@ export default function ReviewPage() {
 
           {/* Run info */}
           {runData && (
-            <div className="bg-surface border border-white/[0.07] rounded-xl p-4">
+            <div className="glass-card p-4">
               <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Review Run</h3>
               <div className="space-y-2.5">
                 <DetailRow label="Status">

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import ThemeToggle from '../ThemeToggle';
 
 // Map route patterns to readable labels
 const ROUTE_LABELS = {
@@ -71,6 +72,7 @@ export default function TopNav({ user }) {
 
       {/* Right: user info */}
       <div className="flex items-center gap-3 flex-shrink-0">
+        <ThemeToggle />
         {/* Status dot */}
         <div
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/10 border border-success/20"
