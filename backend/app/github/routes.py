@@ -308,7 +308,7 @@ async def github_oauth_callback(
         )
         
         frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
-        return RedirectResponse(url=f"{frontend_url}/settings/integrations?status=success")
+        return RedirectResponse(url=f"{frontend_url}/settings?status=success")
 
 # ---------------------------------------------------------------------------
 # DELETE /oauth/unlink

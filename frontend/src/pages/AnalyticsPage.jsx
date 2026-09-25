@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Period selector */}
-        <div className="flex gap-1 bg-surface border border-white/[0.07] rounded-lg p-1 flex-shrink-0">
+        <div className="flex gap-1 bg-surface border border-border rounded-lg shadow-sm p-1 flex-shrink-0">
           {PERIODS.map(p => (
             <button
               key={p.value}
@@ -183,7 +183,7 @@ export default function AnalyticsPage() {
       {/* Breakdown charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Severity */}
-        <div className="bg-surface border border-white/[0.07] rounded-xl p-5">
+        <div className="bg-surface border border-border rounded-lg shadow-sm p-5">
           <div className="mb-4">
             <h2 className="text-sm font-semibold text-text-primary">Severity Distribution</h2>
             <p className="text-xs text-text-muted mt-0.5">Number of findings per severity level</p>
@@ -207,7 +207,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Category */}
-        <div className="bg-surface border border-white/[0.07] rounded-xl p-5">
+        <div className="bg-surface border border-border rounded-lg shadow-sm p-5">
           <div className="mb-4">
             <h2 className="text-sm font-semibold text-text-primary">Category Breakdown</h2>
             <p className="text-xs text-text-muted mt-0.5">Top categories from AI analysis</p>
@@ -231,7 +231,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Lifecycle */}
-      <div className="bg-surface border border-white/[0.07] rounded-xl p-5">
+      <div className="bg-surface border border-border rounded-lg shadow-sm p-5">
         <div className="mb-5">
           <h2 className="text-sm font-semibold text-text-primary">Issue Lifecycle</h2>
           <p className="text-xs text-text-muted mt-0.5">Tracking how issues progress from detection to resolution</p>
@@ -242,7 +242,7 @@ export default function AnalyticsPage() {
             { key: 'persistent', label: 'Persistent Issues', desc: 'Unresolved across multiple reviews', border: 'border-warning/20', text: 'text-warning', bg: 'bg-warning/5' },
             { key: 'resolved',   label: 'Resolved Issues',   desc: 'Addressed and fixed this period', border: 'border-success/20', text: 'text-success', bg: 'bg-success/5' },
           ].map(({ key, label, desc, border, text, bg }) => (
-            <div key={key} className={`${bg} border ${border} rounded-xl p-4 text-center`}>
+            <div key={key} className={`${bg} border ${border} rounded-lg p-4 text-center`}>
               <div className={`text-4xl font-bold tabular-nums leading-none ${text} mb-2`}>
                 {life[key] ?? 0}
               </div>

@@ -14,6 +14,7 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/auth': 'http://localhost:8000',
+      '/oauth': 'http://localhost:8000',
     },
   },
   build: {

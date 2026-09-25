@@ -53,11 +53,21 @@ def format_auth_response(user: User, message: str = "Success") -> AuthResponse:
         )
         for m in user.memberships
     ]
+    github_login = None
+    if getattr(user, "github_identity", None):
+        # github_identity is a list if uselist=True, but looking at the model it is a backref. If it's a list, use the first element.
+        ident = user.github_identity
+        if isinstance(ident, list) and len(ident) > 0:
+            github_login = ident[0].github_login
+        elif not isinstance(ident, list):
+            github_login = ident.github_login
+
     return AuthResponse(
         user=UserResponse(
             id=user.id,
             email=user.email,
             created_at=user.created_at,
+            github_login=github_login,
         ),
         memberships=memberships,
         message=message,

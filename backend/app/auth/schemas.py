@@ -47,6 +47,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     created_at: datetime
+    github_login: Optional[str] = None
 
 
 class AuthResponse(BaseModel):

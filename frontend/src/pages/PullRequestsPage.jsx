@@ -70,14 +70,14 @@ export default function PullRequestsPage() {
       </div>
 
       {/* PR table */}
-      <div className="glass-card rounded-xl overflow-hidden">
+      <div className="border border-border rounded-lg overflow-hidden bg-surface shadow-sm">
         {isLoading ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/[0.06] bg-white/[0.02]">
+                <tr className="border-b border-border bg-surfaceHighlight/30">
                   {['#', 'Title', 'Author', 'SHA', 'Status', ''].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">{h}</th>
+                    <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-text-muted uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -112,28 +112,28 @@ export default function PullRequestsPage() {
           <div className="overflow-x-auto">
             <table className="w-full" role="table" aria-label="Pull requests">
               <thead>
-                <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider w-16">#</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">Title</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider hidden md:table-cell">Author</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider hidden lg:table-cell">Commit</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">Status</th>
+                <tr className="border-b border-border bg-surfaceHighlight/30">
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-text-muted uppercase tracking-wider w-16">#</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-text-muted uppercase tracking-wider">Title</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-text-muted uppercase tracking-wider hidden md:table-cell">Author</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-text-muted uppercase tracking-wider hidden lg:table-cell">Commit</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold text-text-muted uppercase tracking-wider">Status</th>
                   <th className="w-8" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.04]">
+              <tbody className="divide-y divide-border/50">
                 {prs.map(pr => (
                   <tr
                     key={pr.id}
-                    className="hover:bg-white/[0.025] transition-colors group cursor-pointer"
+                    className="hover:bg-surfaceHighlight/30 transition-colors group cursor-pointer"
                     onClick={() => {}}
                   >
-                    <td className="px-4 py-3.5">
-                      <span className="text-xs font-mono text-text-muted font-semibold">
+                    <td className="px-4 py-3">
+                      <span className="text-[13px] font-mono text-text-muted font-medium">
                         #{pr.github_number}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 max-w-[340px]">
+                    <td className="px-4 py-3 max-w-[340px]">
                       <div className="flex items-center gap-3">
                         <PrStateIcon state={pr.state} />
                         <Link
@@ -145,12 +145,12 @@ export default function PullRequestsPage() {
                         </Link>
                       </div>
                     </td>
-                    <td className="px-4 py-3.5 hidden md:table-cell">
+                    <td className="px-4 py-3 hidden md:table-cell">
                       <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-accent/30 to-primary/30 border border-white/10 flex items-center justify-center text-2xs font-bold text-white flex-shrink-0">
+                        <div className="w-5 h-5 rounded border border-border bg-surface flex items-center justify-center text-[10px] font-semibold text-text-secondary flex-shrink-0">
                           {pr.author?.charAt(0).toUpperCase() || 'U'}
                         </div>
-                        <span className="text-sm text-text-muted truncate max-w-[120px]">{pr.author || '—'}</span>
+                        <span className="text-[13px] text-text-secondary truncate max-w-[120px]">{pr.author || '—'}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 hidden lg:table-cell">

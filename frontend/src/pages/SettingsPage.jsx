@@ -24,7 +24,7 @@ function TextInput({ value, onChange, disabled, placeholder, type = 'text', read
       disabled={disabled}
       placeholder={placeholder}
       readOnly={readOnly}
-      className={`w-full bg-surfaceHighlight/40 border border-white/[0.09] text-sm rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 placeholder-text-muted transition-all
+      className={`w-full bg-surfaceHighlight border border-border text-[13px] rounded-md px-3.5 py-2.5 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted transition-all
         ${disabled || readOnly ? 'text-text-muted cursor-not-allowed opacity-60' : 'text-text-primary'}
         ${className}`}
     />
@@ -106,7 +106,7 @@ export default function SettingsPage() {
 
         {/* Sidebar tabs */}
         <div className="lg:w-56 flex-shrink-0">
-          <nav className="bg-surface border border-white/[0.07] rounded-xl p-2 space-y-0.5" role="navigation" aria-label="Settings sections">
+          <nav className="bg-surface border border-border rounded-lg shadow-sm p-2 space-y-0.5" role="navigation" aria-label="Settings sections">
             {TABS.map(tab => (
               <button
                 key={tab.id}
@@ -133,7 +133,7 @@ export default function SettingsPage() {
 
           {/* Profile */}
           {activeTab === 'profile' && (
-            <div className="bg-surface border border-white/[0.07] rounded-xl p-6 space-y-6">
+            <div className="bg-surface border border-border rounded-lg shadow-sm p-6 space-y-6">
               <div>
                 <h2 className="text-base font-bold text-text-primary mb-0.5">Profile Settings</h2>
                 <p className="text-xs text-text-muted">Manage your personal account details.</p>
@@ -169,7 +169,7 @@ export default function SettingsPage() {
 
           {/* Organization */}
           {activeTab === 'organization' && (
-            <div className="bg-surface border border-white/[0.07] rounded-xl p-6 space-y-6">
+            <div className="bg-surface border border-border rounded-lg shadow-sm p-6 space-y-6">
               <div>
                 <h2 className="text-base font-bold text-text-primary mb-0.5">Organization Settings</h2>
                 <p className="text-xs text-text-muted">Details about your engineering organization.</p>
@@ -192,21 +192,21 @@ export default function SettingsPage() {
 
           {/* Members */}
           {activeTab === 'members' && (
-            <div className="bg-surface border border-white/[0.07] rounded-xl overflow-hidden">
+            <div className="bg-surface border border-border rounded-lg shadow-sm overflow-hidden">
               <MemberManagement organizationId={orgId} memberships={memberships || []} />
             </div>
           )}
 
           {/* Integrations */}
           {activeTab === 'integrations' && (
-            <div className="bg-surface border border-white/[0.07] rounded-xl p-6 space-y-6">
+            <div className="bg-surface border border-border rounded-lg shadow-sm p-6 space-y-6">
               <div>
                 <h2 className="text-base font-bold text-text-primary mb-0.5">GitHub Integration</h2>
                 <p className="text-xs text-text-muted">RepoMind uses per-user OAuth tokens for a secure, bot-free identity integration.</p>
               </div>
 
               {/* Connection status */}
-              <div className="flex items-center justify-between p-4 bg-surfaceHighlight/30 border border-white/[0.08] rounded-xl">
+              <div className="flex items-center justify-between p-4 bg-surfaceHighlight border border-border rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0">
                     <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 24 24">
@@ -214,13 +214,27 @@ export default function SettingsPage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-text-primary">GitHub Identity</p>
-                    <p className="text-xs text-text-muted mt-0.5">Link your personal GitHub account via OAuth</p>
+                    <p className="text-sm font-semibold text-text-primary">
+                      GitHub Identity
+                      {user?.github_login && (
+                        <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-success/10 text-success uppercase tracking-wider">
+                          Connected
+                        </span>
+                      )}
+                    </p>
+                    {user?.github_login ? (
+                      <p className="text-xs text-text-muted mt-0.5">Linked to <span className="font-semibold text-text-primary">@{user.github_login}</span></p>
+                    ) : (
+                      <p className="text-xs text-text-muted mt-0.5">Link your personal GitHub account via OAuth</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="danger" size="sm" onClick={handleUnlink}>Unlink</Button>
-                  <Button variant="primary" size="sm" loading={isLinking} onClick={handleLinkGitHub}>Link Account</Button>
+                  {user?.github_login ? (
+                    <Button variant="danger" size="sm" onClick={handleUnlink}>Unlink</Button>
+                  ) : (
+                    <Button variant="primary" size="sm" loading={isLinking} onClick={handleLinkGitHub}>Link Account</Button>
+                  )}
                 </div>
               </div>
 
@@ -234,11 +248,11 @@ export default function SettingsPage() {
                         type="text"
                         readOnly
                         value={`${window.location.protocol}//${window.location.host.replace('5173','8000').replace('3000','8000')}/api/webhooks/github`}
-                        className="flex-1 bg-surfaceHighlight/30 border border-white/[0.09] text-text-muted text-xs font-mono rounded-l-lg px-3.5 py-2.5 focus:outline-none"
+                        className="flex-1 bg-surfaceHighlight border border-border text-text-muted text-[13px] font-mono rounded-l-md px-3.5 py-2.5 focus:outline-none"
                       />
                       <button
                         onClick={() => navigator.clipboard.writeText(`${window.location.protocol}//${window.location.host}/api/webhooks/github`)}
-                        className="px-3.5 bg-surfaceHighlight/60 hover:bg-surfaceElevated border-y border-r border-white/[0.09] text-text-secondary rounded-r-lg text-xs font-medium transition-colors"
+                        className="px-3.5 bg-surfaceHighlight hover:bg-surface border-y border-r border-border text-text-secondary rounded-r-md text-[13px] font-medium transition-colors"
                       >
                         Copy
                       </button>
@@ -254,8 +268,8 @@ export default function SettingsPage() {
 
           {/* Billing */}
           {activeTab === 'billing' && (
-            <div className="bg-surface border border-white/[0.07] rounded-xl p-12 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-surfaceHighlight/60 border border-white/[0.08] flex items-center justify-center text-text-muted mx-auto mb-5">
+            <div className="bg-surface border border-border rounded-lg shadow-sm p-12 text-center">
+              <div className="w-14 h-14 rounded-xl bg-surfaceHighlight border border-border flex items-center justify-center text-text-muted mx-auto mb-5">
                 <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>

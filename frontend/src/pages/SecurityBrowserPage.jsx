@@ -36,7 +36,7 @@ export default function SecurityBrowserPage() {
       </div>
 
       {/* Filters bar */}
-      <div className="bg-surface border border-white/[0.07] rounded-xl p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="bg-surface border border-border rounded-lg shadow-sm p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
         {/* Search */}
         <div className="md:col-span-2 relative">
           <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -46,13 +46,13 @@ export default function SecurityBrowserPage() {
             type="text"
             placeholder="Search by rule, file, or repository…"
             disabled
-            className="w-full bg-surfaceHighlight/20 border border-white/[0.07] text-text-muted text-sm rounded-lg pl-9 pr-4 py-2 cursor-not-allowed opacity-60 focus:outline-none"
+            className="w-full bg-surfaceHighlight border border-border text-text-muted text-[13px] rounded-md pl-9 pr-4 py-2 cursor-not-allowed opacity-60 focus:outline-none"
           />
         </div>
         <select
           value={severityFilter}
           onChange={(e) => setSeverityFilter(e.target.value)}
-          className="bg-surfaceHighlight border border-white/[0.07] text-text-primary text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-primary/50"
+          className="bg-surfaceHighlight border border-border text-text-primary text-[13px] rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
         >
           <option value="">All Severities</option>
           <option value="CRITICAL">Critical</option>
@@ -63,7 +63,7 @@ export default function SecurityBrowserPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-surfaceHighlight border border-white/[0.07] text-text-primary text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-primary/50"
+          className="bg-surfaceHighlight border border-border text-text-primary text-[13px] rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
         >
           <option value="">All States</option>
           <option value="NEW">New</option>
@@ -76,13 +76,13 @@ export default function SecurityBrowserPage() {
       </div>
 
       {/* List */}
-      <div className="bg-surface border border-white/[0.07] rounded-xl overflow-hidden">
+      <div className="bg-surface border border-border rounded-lg shadow-sm overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-text-muted text-sm">Loading findings...</div>
+          <div className="p-8 text-center text-text-muted text-[13px]">Loading findings...</div>
         ) : !findings || findings.length === 0 ? (
-          <div className="p-8 text-center text-text-muted text-sm">No findings match the current filters.</div>
+          <div className="p-8 text-center text-text-muted text-[13px]">No findings match the current filters.</div>
         ) : (
-          <div className="divide-y divide-white/[0.07]">
+          <div className="divide-y divide-border/50">
             {findings.map((f) => (
               <div key={f.id} className="p-4 hover:bg-surfaceHighlight/20 transition-colors flex flex-col md:flex-row md:items-start gap-4 justify-between">
                 <div>

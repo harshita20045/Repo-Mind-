@@ -96,7 +96,7 @@ export default function MemberManagement({ organizationId, memberships }) {
         {loading ? (
           <div className="space-y-2">
             {[0,1,2].map(i => (
-              <div key={i} className="flex items-center justify-between p-3 bg-surfaceHighlight/30 border border-white/[0.07] rounded-lg">
+              <div key={i} className="flex items-center justify-between p-3 bg-surfaceHighlight border border-border rounded-lg">
                 <div className="skeleton h-4 w-40 rounded" />
                 <div className="skeleton h-5 w-16 rounded-full" />
               </div>
@@ -107,7 +107,7 @@ export default function MemberManagement({ organizationId, memberships }) {
         ) : (
           <div className="space-y-1.5">
             {members.map(m => (
-              <div key={m.id} className="flex items-center justify-between p-3 bg-surfaceHighlight/20 border border-white/[0.07] rounded-lg hover:bg-surfaceHighlight/30 transition-colors">
+              <div key={m.id} className="flex items-center justify-between p-3 bg-surface border border-border rounded-lg shadow-sm hover:bg-surfaceHighlight transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 border border-white/10 flex items-center justify-center text-xs font-bold text-white">
                     {m.email?.charAt(0).toUpperCase()}
@@ -152,12 +152,12 @@ export default function MemberManagement({ organizationId, memberships }) {
             onChange={e => setInviteEmail(e.target.value)}
             placeholder="member@company.com"
             required
-            className="flex-1 min-w-[180px] bg-surfaceHighlight/40 border border-white/[0.09] text-text-primary text-sm rounded-lg px-3.5 py-2 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 placeholder-text-muted transition-all"
+            className="flex-1 min-w-[180px] bg-surfaceHighlight border border-border text-text-primary text-[13px] rounded-md px-3.5 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted transition-all"
           />
           <select
             value={inviteRole}
             onChange={e => setInviteRole(e.target.value)}
-            className="bg-surfaceHighlight/40 border border-white/[0.09] text-text-primary text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+            className="bg-surfaceHighlight border border-border text-text-primary text-[13px] rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary transition-all"
           >
             {ROLES.map(r => (
               <option key={r} value={r}>{ROLE_LABELS[r]}</option>
@@ -172,7 +172,7 @@ export default function MemberManagement({ organizationId, memberships }) {
         {loading ? (
           <div className="space-y-1.5">
             {[0,1,2,3].map(i => (
-              <div key={i} className="flex items-center justify-between p-3 bg-surfaceHighlight/30 border border-white/[0.07] rounded-lg">
+              <div key={i} className="flex items-center justify-between p-3 bg-surfaceHighlight border border-border rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="skeleton w-7 h-7 rounded-full" />
                   <div className="skeleton h-4 w-40 rounded" />
@@ -189,7 +189,7 @@ export default function MemberManagement({ organizationId, memberships }) {
         ) : (
           <div className="space-y-1.5">
             {members.map(m => (
-              <div key={m.id} className="flex items-center justify-between p-3 bg-surfaceHighlight/20 border border-white/[0.07] rounded-lg hover:bg-surfaceHighlight/30 transition-colors gap-3">
+              <div key={m.id} className="flex items-center justify-between p-3 bg-surface border border-border rounded-lg shadow-sm hover:bg-surfaceHighlight transition-colors gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 border border-white/10 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
                     {m.email?.charAt(0).toUpperCase()}
@@ -200,7 +200,7 @@ export default function MemberManagement({ organizationId, memberships }) {
                   <select
                     value={m.role}
                     onChange={e => handleUpdateRole(m.user_id, e.target.value)}
-                    className="bg-surfaceHighlight/60 border border-white/[0.09] text-text-secondary text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+                    className="bg-surfaceHighlight border border-border text-text-secondary text-[11px] rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary transition-all"
                   >
                     {ROLES.map(r => (
                       <option key={r} value={r}>{ROLE_LABELS[r]}</option>

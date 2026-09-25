@@ -12,24 +12,24 @@ import ConflictList from '../components/Review/ConflictList';
 import { RiskBadge, StatusBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
+import { SectionCard } from '../components/ui/Card';
 
-// ─── Tab button ────────────────────────────────────────────────────────────────
 function Tab({ id, label, isActive, count, onClick }) {
   return (
     <button
       role="tab"
       aria-selected={isActive}
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-all duration-150 ${
+      className={`flex items-center gap-2 px-4 py-3 text-[13px] font-medium border-b-2 transition-all duration-150 ${
         isActive
           ? 'text-primary border-primary'
-          : 'text-text-muted border-transparent hover:text-text-secondary hover:border-white/20'
+          : 'text-text-muted border-transparent hover:text-text-primary hover:border-white/20'
       }`}
     >
       {label}
       {count !== null && count !== undefined && (
-        <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-          isActive ? 'bg-primary/15 text-primary' : 'bg-white/5 text-text-muted'
+        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
+          isActive ? 'bg-primary/10 text-primary' : 'bg-surfaceHighlight text-text-muted'
         }`}>
           {count}
         </span>
@@ -38,33 +38,31 @@ function Tab({ id, label, isActive, count, onClick }) {
   );
 }
 
-// ─── PR sidebar detail row ─────────────────────────────────────────────────────
 function DetailRow({ label, children }) {
   return (
-    <div>
-      <div className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">{label}</div>
-      <div className="text-sm text-text-secondary">{children}</div>
+    <div className="flex flex-col gap-1">
+      <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">{label}</span>
+      <div className="text-[13px] text-text-primary">{children}</div>
     </div>
   );
 }
 
-// ─── Risk gauge (compact sidebar version) ─────────────────────────────────────
 function RiskGauge({ score, level }) {
   const isHigh = score > 70;
   const isMed = score > 40;
   const color = isHigh ? 'text-danger' : isMed ? 'text-warning' : score > 0 ? 'text-success' : 'text-text-muted';
   const trackColor = isHigh ? 'text-danger' : isMed ? 'text-warning' : score > 0 ? 'text-success' : 'text-text-muted';
-  const r = 30;
+  const r = 32;
   const circ = 2 * Math.PI * r;
   const filled = circ - (circ * (score || 0)) / 100;
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="relative w-20 h-20 flex-shrink-0">
-        <svg className="w-20 h-20 -rotate-90" viewBox="0 0 68 68" aria-hidden="true">
-          <circle cx="34" cy="34" r={r} fill="none" stroke="currentColor" strokeWidth="6" className="text-white/5" />
+    <div className="flex items-center gap-5">
+      <div className="relative w-[72px] h-[72px] flex-shrink-0">
+        <svg className="w-[72px] h-[72px] -rotate-90" viewBox="0 0 72 72" aria-hidden="true">
+          <circle cx="36" cy="36" r={r} fill="none" stroke="currentColor" strokeWidth="6" className="text-surfaceHighlight" />
           <circle
-            cx="34" cy="34" r={r}
+            cx="36" cy="36" r={r}
             fill="none" stroke="currentColor" strokeWidth="6"
             strokeDasharray={circ}
             strokeDashoffset={filled}
@@ -73,23 +71,21 @@ function RiskGauge({ score, level }) {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-xl font-bold tabular-nums leading-none ${color}`}>{score ?? '—'}</span>
-          <span className="text-2xs text-text-muted">/ 100</span>
+          <span className={`text-[20px] font-bold tabular-nums leading-none tracking-tight ${color}`}>{score ?? '—'}</span>
         </div>
       </div>
       <div>
-        <div className={`text-sm font-bold ${color}`}>
+        <div className={`text-sm font-semibold tracking-tight ${color}`}>
           {isHigh ? 'High Risk' : isMed ? 'Medium Risk' : score > 0 ? 'Low Risk' : 'Pending'}
         </div>
         {level && (
-          <div className="text-xs text-text-muted capitalize mt-0.5">{level}</div>
+          <div className="text-[12px] text-text-secondary capitalize mt-0.5">{level}</div>
         )}
       </div>
     </div>
   );
 }
 
-// ─── Approval Modal ────────────────────────────────────────────────────────────
 function ApprovalModal({ isOpen, action, onClose, onSubmit, isLoading }) {
   const [note, setNote] = useState('');
   const isApprove = action === 'approve';
@@ -109,10 +105,10 @@ function ApprovalModal({ isOpen, action, onClose, onSubmit, isLoading }) {
       size="sm"
     >
       <div className="space-y-4">
-        <div className={`flex items-start gap-3 p-3 rounded-lg border text-sm ${
+        <div className={`flex items-start gap-3 p-3 rounded-md border text-[13px] ${
           isApprove
-            ? 'bg-success/8 border-success/20 text-success'
-            : 'bg-danger/8 border-danger/20 text-danger'
+            ? 'bg-success/10 border-success/20 text-success'
+            : 'bg-danger/10 border-danger/20 text-danger'
         }`}>
           {isApprove ? (
             <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -127,7 +123,7 @@ function ApprovalModal({ isOpen, action, onClose, onSubmit, isLoading }) {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
+          <label className="block text-[11px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5">
             Note <span className="text-text-muted font-normal normal-case">(optional)</span>
           </label>
           <textarea
@@ -135,11 +131,11 @@ function ApprovalModal({ isOpen, action, onClose, onSubmit, isLoading }) {
             onChange={e => setNote(e.target.value)}
             placeholder={isApprove ? 'LGTM — reviewed risk findings.' : 'Please address the security vulnerabilities before merging.'}
             rows={3}
-            className="w-full bg-surfaceHighlight/40 border border-white/[0.09] text-text-primary text-sm rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder-text-muted resize-none transition-all"
+            className="w-full bg-surfaceHighlight border border-border text-text-primary text-[13px] rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted resize-none transition-all"
           />
         </div>
 
-        <div className="flex gap-3 justify-end pt-1">
+        <div className="flex gap-2 justify-end pt-2">
           <Button variant="ghost" size="sm" onClick={onClose} disabled={isLoading}>Cancel</Button>
           <Button
             variant={isApprove ? 'success-solid' : 'danger-solid'}
@@ -155,7 +151,6 @@ function ApprovalModal({ isOpen, action, onClose, onSubmit, isLoading }) {
   );
 }
 
-// ─── Main Review Page ─────────────────────────────────────────────────────────
 export default function ReviewPage() {
   const { rid, prid } = useParams();
   const queryClient = useQueryClient();
@@ -169,7 +164,6 @@ export default function ReviewPage() {
   const canApprove = can(Permissions.PRS_APPROVE);
   const canReview = can(Permissions.PRS_REVIEW);
 
-  // ─── Queries ───────────────────────────────────────────────────────────────
   const { data: runData, error: runError } = useQuery({
     queryKey: ['reviewRun', activeRunId],
     queryFn: () => reviewApi.getReviewRun(activeRunId),
@@ -186,14 +180,11 @@ export default function ReviewPage() {
     onSuccess: (data) => setActiveRunId(data.job_id),
   });
 
-
-
   const { data: prData, isLoading: loadingPr } = useQuery({
     queryKey: ['pullRequest', prid],
     queryFn: () => githubApi.getPullRequest(prid),
     enabled: !!prid,
   });
-
 
   const { data: prEvents } = useQuery({
     queryKey: ['pullRequestEvents', prid],
@@ -213,9 +204,7 @@ export default function ReviewPage() {
       queryClient.invalidateQueries({ queryKey: ['reviewRun', activeRunId] });
       setApprovalModal({ isOpen: false, action: null });
     },
-    onError: (err) => {
-      console.error('Decision failed:', err.message);
-    },
+    onError: (err) => console.error('Decision failed:', err.message),
   });
 
   const { mutate: mergePr, isPending: isMerging } = useMutation({
@@ -224,16 +213,13 @@ export default function ReviewPage() {
       queryClient.invalidateQueries({ queryKey: ['pullRequest', prid] });
       alert('Merge requested successfully.');
     },
-    onError: (err) => {
-      alert(`Merge failed: ${err.message}`);
-    },
+    onError: (err) => alert(`Merge failed: ${err.message}`),
   });
 
   React.useEffect(() => {
     if (!activeRunId) triggerReview();
   }, [prid]);
 
-  // ─── Derived state ─────────────────────────────────────────────────────────
   const currentStatus = runData?.status || null;
   const isCompleted = currentStatus === 'completed';
   const error = triggerError || runError;
@@ -245,7 +231,6 @@ export default function ReviewPage() {
   const conflicts = runData?.conflicts || [];
   const riskScore = runData?.risk_assessment?.risk_score;
 
-  // ─── Tab config ────────────────────────────────────────────────────────────
   const tabs = [
     { id: 'findings', label: 'Findings', count: isCompleted ? findings.length : null },
     { id: 'risk', label: 'Risk Assessment', count: null },
@@ -254,62 +239,59 @@ export default function ReviewPage() {
     { id: 'events', label: 'Activity Log', count: null },
   ];
 
-  // ─── Risk summary bar color ────────────────────────────────────────────────
   const riskLevel = riskScore > 70 ? 'high' : riskScore > 40 ? 'medium' : riskScore > 0 ? 'low' : null;
 
   return (
-    <div className="space-y-5 animate-slide-up">
-
+    <div className="space-y-6 animate-slide-up max-w-[1400px]">
       {/* PR Header */}
-      <div className="glass-card">
-        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+      <div className="bg-surface border border-border rounded-lg p-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-xs text-text-muted mb-2">
-              <Link to="/repositories" className="hover:text-text-secondary transition-colors">Repositories</Link>
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-              <Link to={`/repositories/${rid}/pull-requests`} className="hover:text-text-secondary transition-colors font-mono">
+            <div className="flex items-center gap-2 text-[13px] text-text-muted mb-2 font-mono">
+              <Link to={`/repositories/${rid}/pull-requests`} className="hover:text-primary transition-colors">
                 {repoData?.github_name || `repo-${rid}`}
               </Link>
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-              <span className="font-mono">PR #{prData?.github_number || prid}</span>
+              <span className="text-border">/</span>
+              <span className="text-text-secondary">PR #{prData?.github_number || prid}</span>
             </div>
-            <h1 className="text-xl font-bold text-text-primary tracking-tight leading-snug">
+            
+            <h1 className="text-[22px] font-semibold text-text-primary tracking-tight leading-snug mb-3">
               {loadingPr ? (
                 <span className="skeleton inline-block h-7 w-96 rounded" />
               ) : (
                 prData?.title || 'Pull Request'
               )}
             </h1>
+            
             {prData && (
-              <div className="flex items-center gap-3 mt-2">
+              <div className="flex items-center gap-3">
                 <StatusBadge status={prData.state} label={prData.state} />
-                <span className="text-xs text-text-muted">by <span className="text-text-secondary font-medium">{prData.author}</span></span>
+                <div className="w-1 h-1 rounded-full bg-border" />
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-4 rounded bg-surfaceHighlight border border-border flex items-center justify-center text-[9px] font-bold text-text-secondary">
+                    {prData.author?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <span className="text-[13px] font-medium text-text-secondary">{prData.author}</span>
+                </div>
                 {prData.head_sha && (
-                  <span className="font-mono text-xs text-text-muted bg-white/5 border border-white/[0.07] px-2 py-0.5 rounded">
-                    {prData.head_sha.substring(0, 7)}
-                  </span>
+                  <>
+                    <div className="w-1 h-1 rounded-full bg-border" />
+                    <span className="font-mono text-[12px] text-text-muted bg-surfaceHighlight border border-border px-1.5 py-0.5 rounded">
+                      {prData.head_sha.substring(0, 7)}
+                    </span>
+                  </>
                 )}
               </div>
             )}
           </div>
 
-          {/* Decision area */}
-          <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-shrink-0 flex-wrap">
             {existingDecision && (
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold border ${
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] font-medium border ${
                 existingDecision.action === 'approve'
-                  ? 'bg-success/8 text-success border-success/20'
-                  : 'bg-danger/8 text-danger border-danger/20'
+                  ? 'bg-success/10 text-success border-success/20'
+                  : 'bg-danger/10 text-danger border-danger/20'
               }`}>
-                {existingDecision.action === 'approve' ? (
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                )}
                 {existingDecision.action === 'approve' ? 'Approved' : 'Changes Requested'}
               </div>
             )}
@@ -324,14 +306,6 @@ export default function ReviewPage() {
                 >
                   Request Changes
                 </Button>
-                <Button
-                  variant="danger-solid"
-                  size="sm"
-                  disabled={!isCompleted || isSubmittingDecision}
-                  onClick={() => setApprovalModal({ isOpen: true, action: 'reject' })}
-                >
-                  Reject PR
-                </Button>
                 {canApprove && (
                   <>
                     <Button
@@ -340,7 +314,7 @@ export default function ReviewPage() {
                       disabled={!isCompleted || isSubmittingDecision}
                       onClick={() => setApprovalModal({ isOpen: true, action: 'approve' })}
                     >
-                      Approve PR
+                      Approve
                     </Button>
                     <Button
                       variant="primary"
@@ -358,13 +332,12 @@ export default function ReviewPage() {
           </div>
         </div>
 
-        {/* Risk summary bar */}
         {isCompleted && riskLevel && (
-          <div className={`mt-4 pt-4 border-t border-white/[0.06] flex items-center gap-3 text-xs`}>
-            <span className="text-text-muted font-medium">Overall Risk</span>
+          <div className="mt-5 pt-4 border-t border-border flex items-center gap-3">
+            <span className="text-[12px] font-semibold text-text-muted uppercase tracking-wider">Analysis Result</span>
             <RiskBadge level={riskLevel} />
             {runData?.risk_assessment?.explanation && (
-              <span className="text-text-muted truncate hidden lg:block">
+              <span className="text-[13px] text-text-secondary truncate hidden lg:block ml-2">
                 {runData.risk_assessment.explanation.substring(0, 100)}…
               </span>
             )}
@@ -372,17 +345,10 @@ export default function ReviewPage() {
         )}
       </div>
 
-      {/* Main workspace: 3-col-wide + 1-col-sidebar */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-5">
-
-        {/* Left: Tabs + content */}
-        <div className="xl:col-span-3 space-y-0">
-          {/* Tab bar */}
-          <div
-            className="flex gap-0 border-b border-white/[0.07] bg-surface rounded-t-xl px-2 pt-1 overflow-x-auto"
-            role="tablist"
-            aria-label="Review sections"
-          >
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-6">
+        {/* Main Content */}
+        <div className="flex flex-col min-h-0 bg-surface border border-border rounded-lg shadow-sm overflow-hidden">
+          <div className="flex gap-2 border-b border-border bg-surfaceHighlight/20 px-2 pt-2 overflow-x-auto">
             {tabs.map(tab => (
               <Tab
                 key={tab.id}
@@ -395,8 +361,7 @@ export default function ReviewPage() {
             ))}
           </div>
 
-          {/* Tab content */}
-          <div className="bg-surface border border-t-0 border-white/[0.07] rounded-b-xl p-6 min-h-[480px]">
+          <div className="p-6 min-h-[500px]">
             {activeTab === 'chat' ? (
               <ChatAssistant
                 organizationId={runData?.organization_id || memberships?.[0]?.organization_id}
@@ -417,95 +382,60 @@ export default function ReviewPage() {
                 {activeTab === 'risk' && <RiskAssessment riskData={runData?.risk_assessment} />}
                 {activeTab === 'conflicts' && <ConflictList conflicts={conflicts} />}
                 {activeTab === 'events' && <ActivityLog events={prEvents} />}
-
               </div>
             )}
           </div>
         </div>
 
-        {/* Right: metadata sidebar */}
+        {/* Sidebar */}
         <div className="space-y-4">
-          {/* Risk profile */}
-          <div className="glass-card p-4">
-            <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-4">Risk Profile</h3>
+          <SectionCard title="Risk Profile">
             {isCompleted && runData?.risk_assessment ? (
-              <>
+              <div className="flex flex-col gap-4">
                 <RiskGauge
                   score={runData.risk_assessment.risk_score}
                   level={runData.risk_assessment.security_risk_level}
                 />
                 {runData.risk_assessment.explanation && (
-                  <p className="text-xs text-text-muted mt-3 leading-relaxed line-clamp-4">
+                  <p className="text-[13px] text-text-secondary leading-relaxed">
                     {runData.risk_assessment.explanation}
                   </p>
                 )}
-              </>
+              </div>
             ) : (
-              <div className="text-xs text-text-muted italic">
+              <div className="text-[13px] text-text-muted italic">
                 {currentStatus === 'running' || currentStatus === 'pending' || isTriggering
-                  ? 'Analyzing...'
+                  ? 'Analyzing pull request...'
                   : 'Awaiting analysis'}
               </div>
             )}
-          </div>
+          </SectionCard>
 
-
-          {/* PR Details */}
-          <div className="glass-card p-4">
-            <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">PR Details</h3>
-            <div className="space-y-3">
+          <SectionCard title="PR Context">
+            <div className="space-y-4">
               <DetailRow label="Author">
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-accent/30 to-primary/30 border border-white/10 flex items-center justify-center text-2xs font-bold text-white flex-shrink-0">
+                  <div className="w-5 h-5 rounded border border-border bg-surfaceHighlight flex items-center justify-center text-[10px] font-semibold text-text-secondary">
                     {prData?.author?.charAt(0).toUpperCase() || 'U'}
                   </div>
                   {prData?.author || '—'}
                 </div>
               </DetailRow>
               <DetailRow label="State">
-                {prData?.state
-                  ? <StatusBadge status={prData.state} label={prData.state} />
-                  : <span className="text-text-muted">—</span>
-                }
+                {prData?.state ? <StatusBadge status={prData.state} label={prData.state} /> : '—'}
               </DetailRow>
               {prData?.head_sha && (
                 <DetailRow label="Commit">
-                  <span className="font-mono text-xs bg-white/5 border border-white/[0.07] px-2 py-0.5 rounded">
+                  <span className="font-mono text-[12px] bg-surfaceHighlight border border-border px-1.5 py-0.5 rounded">
                     {prData.head_sha.substring(0, 7)}
                   </span>
                 </DetailRow>
               )}
-              {existingDecision && (
-                <DetailRow label="Decision">
-                  <StatusBadge
-                    status={existingDecision.action === 'approve' ? 'approved' : 'rejected'}
-                    label={existingDecision.action === 'approve' ? 'Approved' : 'Rejected'}
-                  />
-                </DetailRow>
-              )}
             </div>
-          </div>
-
-          {/* Run info */}
-          {runData && (
-            <div className="glass-card p-4">
-              <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Review Run</h3>
-              <div className="space-y-2.5">
-                <DetailRow label="Status">
-                  <StatusBadge status={currentStatus} label={currentStatus || '—'} />
-                </DetailRow>
-                {runData.run_number != null && (
-                  <DetailRow label="Run #">
-                    <span className="font-mono text-xs text-text-secondary">#{runData.run_number}</span>
-                  </DetailRow>
-                )}
-              </div>
-            </div>
-          )}
+          </SectionCard>
         </div>
       </div>
 
-      {/* Approval Modal */}
       <ApprovalModal
         isOpen={approvalModal.isOpen}
         action={approvalModal.action}

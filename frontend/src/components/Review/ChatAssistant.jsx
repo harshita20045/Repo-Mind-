@@ -104,7 +104,7 @@ export default function ChatAssistant({ organizationId, repositoryId, contextTyp
       {sessions && sessions.length > 1 && (
         <div className="mb-2">
           <select 
-            className="w-full bg-surfaceHighlight/30 border border-white/[0.09] text-text-primary text-xs rounded-lg px-2 py-1"
+            className="w-full bg-surfaceHighlight border border-border text-text-primary text-[11px] rounded-md px-2 py-1"
             onChange={(e) => {
               // Usually we'd set active session here, but for simplicity we'll just show it exists
               // We'd need to lift activeSession state up or handle it properly.
@@ -146,7 +146,7 @@ export default function ChatAssistant({ organizationId, repositoryId, contextTyp
                 <button
                   key={suggestion}
                   onClick={() => { setInputMessage(suggestion); inputRef.current?.focus(); }}
-                  className="text-xs text-left px-3 py-2 bg-surfaceHighlight/40 hover:bg-surfaceHighlight/60 border border-white/[0.08] rounded-lg text-text-muted hover:text-text-secondary transition-all"
+                  className="text-xs text-left px-3 py-2 bg-surfaceHighlight hover:bg-surface border border-border shadow-sm rounded-lg text-text-muted hover:text-text-secondary transition-all"
                 >
                   {suggestion}
                 </button>
@@ -171,7 +171,7 @@ export default function ChatAssistant({ organizationId, repositoryId, contextTyp
                 className={`max-w-[82%] rounded-2xl px-4 py-3 ${
                   msg.role === 'user'
                     ? 'bg-primary text-white rounded-br-sm shadow-sm shadow-primary/20'
-                    : 'bg-surfaceHighlight/50 border border-white/[0.07] text-text-secondary rounded-bl-sm'
+                    : 'bg-surface border border-border shadow-sm text-text-secondary rounded-bl-sm'
                 }`}
               >
                 {msg.role === 'user' ? (
@@ -204,7 +204,7 @@ export default function ChatAssistant({ organizationId, repositoryId, contextTyp
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <div className="bg-surfaceHighlight/50 border border-white/[0.07] rounded-2xl rounded-bl-sm px-4 py-3.5 flex items-center gap-1.5">
+            <div className="bg-surface border border-border shadow-sm rounded-2xl rounded-bl-sm px-4 py-3.5 flex items-center gap-1.5">
               {[0, 150, 300].map(delay => (
                 <div
                   key={delay}
@@ -235,7 +235,7 @@ export default function ChatAssistant({ organizationId, repositoryId, contextTyp
             disabled={!activeSession || isSending}
             rows={1}
             aria-label="Message input"
-            className="flex-1 bg-surfaceHighlight/30 border border-white/[0.09] text-text-primary text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 placeholder-text-muted disabled:opacity-50 resize-none transition-all leading-relaxed"
+            className="flex-1 bg-surfaceHighlight border border-border text-text-primary text-[13px] rounded-lg px-4 py-3 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted disabled:opacity-50 resize-none transition-all leading-relaxed shadow-sm"
             style={{ minHeight: '44px', maxHeight: '120px' }}
           />
           <button

@@ -16,6 +16,7 @@ const Icons = {
   repositories: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+      <path d="M9 13h6" />
     </svg>
   ),
   pullRequests: (
@@ -33,8 +34,7 @@ const Icons = {
   ),
   analytics: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 19V9m4 10V5m4 14v-7" />
-      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M12 20V10M18 20V4M6 20v-4" />
     </svg>
   ),
   chat: (
@@ -44,8 +44,8 @@ const Icons = {
   ),
   settings: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
       <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
     </svg>
   ),
   logout: (
@@ -62,10 +62,10 @@ function NavItem({ to, icon, label, end = false }) {
       to={to}
       end={end}
       className={({ isActive }) =>
-        `group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+        `group flex items-center gap-3 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${
           isActive
             ? 'bg-primary/10 text-primary'
-            : 'text-text-muted hover:text-text-primary hover:bg-white/[0.05]'
+            : 'text-text-muted hover:text-text-primary hover:bg-surfaceHighlight'
         }`
       }
     >
@@ -84,8 +84,8 @@ function NavItem({ to, icon, label, end = false }) {
 // ─── Sidebar Section ───────────────────────────────────────────────────────────
 function NavSection({ label, children }) {
   return (
-    <div className="mb-1">
-      <p className="px-3 mb-1 text-2xs font-semibold uppercase tracking-widest text-text-muted/60">
+    <div className="mb-4">
+      <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-text-muted/60">
         {label}
       </p>
       <div className="space-y-0.5">{children}</div>
@@ -105,11 +105,11 @@ export default function Sidebar({ user, memberships, onLogout }) {
   else if (isDeveloper) displayRole = 'Developer';
 
   const roleColors = {
-    'Org Admin': 'text-accent bg-accent/10',
-    'Lead':      'text-primary bg-primary/10',
-    'Reviewer':  'text-info bg-info/10',
-    'Developer': 'text-text-muted bg-white/5',
-    'Read Only': 'text-text-muted bg-white/5',
+    'Org Admin': 'text-primary bg-primary/10 border-primary/20',
+    'Lead':      'text-info bg-info/10 border-info/20',
+    'Reviewer':  'text-success bg-success/10 border-success/20',
+    'Developer': 'text-text-muted bg-white/5 border-white/10',
+    'Read Only': 'text-text-muted bg-white/5 border-white/10',
   };
 
   const handleLogout = async () => {
@@ -128,25 +128,24 @@ export default function Sidebar({ user, memberships, onLogout }) {
 
   return (
     <aside
-      className="w-60 flex-shrink-0 flex flex-col h-full bg-surface border-r border-white/[0.07] overflow-hidden"
+      className="w-[240px] flex-shrink-0 flex flex-col h-full bg-background border-r border-border overflow-hidden"
       role="navigation"
       aria-label="Main navigation"
     >
       {/* Logo */}
-      <div className="px-5 py-5 flex items-center gap-3 border-b border-white/[0.07]">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center flex-shrink-0 shadow-glow-primary">
-          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <div className="h-14 px-4 flex items-center gap-2.5 border-b border-border flex-shrink-0">
+        <div className="w-6 h-6 rounded border border-white/10 bg-surface flex items-center justify-center flex-shrink-0">
+          <svg className="w-3.5 h-3.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         </div>
         <div>
-          <span className="text-sm font-bold text-text-primary tracking-tight">RepoMind</span>
-          <p className="text-2xs text-text-muted leading-none mt-0.5">Engineering Intelligence</p>
+          <span className="text-sm font-semibold text-text-primary tracking-tight leading-none">RepoMind</span>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
         {/* Workspace */}
         <NavSection label="Workspace">
           <NavItem to="/" icon="dashboard" label="Dashboard" end />
@@ -160,7 +159,7 @@ export default function Sidebar({ user, memberships, onLogout }) {
           <NavSection label="Intelligence">
             <NavItem to="/analytics" icon="analytics" label="Engineering Intel" />
             {can(Permissions.SECURITY_READ) && (
-              <NavItem to="/security" icon="security" label="Security Browser" />
+              <NavItem to="/security" icon="security" label="Security" />
             )}
           </NavSection>
         )}
@@ -168,27 +167,27 @@ export default function Sidebar({ user, memberships, onLogout }) {
         {/* AI */}
         {can(Permissions.CHAT_USE) && (
           <NavSection label="AI">
-            <NavItem to="/chat" icon="chat" label="Developer Assistant" />
+            <NavItem to="/chat" icon="chat" label="Assistant" />
           </NavSection>
         )}
 
         {/* Admin */}
         {can(Permissions.ORG_UPDATE) && (
-          <NavSection label="Administration">
+          <NavSection label="Configuration">
             <NavItem to="/settings" icon="settings" label="Settings" />
           </NavSection>
         )}
       </nav>
 
       {/* User footer */}
-      <div className="border-t border-white/[0.07] p-3">
-        <div className="flex items-center gap-3 px-2 py-2.5 rounded-lg">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 border border-white/10 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+      <div className="border-t border-border p-3 flex-shrink-0">
+        <div className="flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surfaceHighlight transition-colors cursor-pointer group">
+          <div className="w-7 h-7 rounded bg-surface border border-white/10 flex items-center justify-center text-xs font-semibold text-text-secondary flex-shrink-0 group-hover:text-text-primary group-hover:border-white/20 transition-all">
             {userInitial}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-text-primary truncate">{user?.email || 'User'}</p>
-            <span className={`text-2xs font-semibold px-1.5 py-0.5 rounded ${roleColors[displayRole] || roleColors['Read Only']}`}>
+            <p className="text-xs font-medium text-text-primary truncate leading-tight">{user?.email || 'User'}</p>
+            <span className={`text-[10px] font-medium px-1 rounded border inline-block mt-0.5 ${roleColors[displayRole] || roleColors['Read Only']}`}>
               {displayRole}
             </span>
           </div>
@@ -196,11 +195,11 @@ export default function Sidebar({ user, memberships, onLogout }) {
         <button
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="mt-1 w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-text-muted hover:text-danger hover:bg-danger/5 transition-all duration-150 disabled:opacity-50"
+          className="mt-2 w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] font-medium text-text-muted hover:text-text-primary hover:bg-surface transition-all duration-150 disabled:opacity-50"
           aria-label="Sign out"
         >
-          <span className="w-4 h-4 flex-shrink-0">{Icons.logout}</span>
-          {isLoggingOut ? 'Signing out…' : 'Sign Out'}
+          <span className="w-3.5 h-3.5 flex-shrink-0">{Icons.logout}</span>
+          {isLoggingOut ? 'Signing out…' : 'Sign out'}
         </button>
       </div>
     </aside>

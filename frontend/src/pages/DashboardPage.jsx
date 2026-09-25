@@ -4,7 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { analyticsApi, orgApi } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import { MetricCard } from '../components/ui/Card';
+import { MetricCard, SectionCard } from '../components/ui/Card';
 import { DashboardSkeleton } from '../components/ui/LoadingSkeleton';
 import EmptyState from '../components/ui/EmptyState';
 
@@ -38,16 +38,16 @@ const SEV_CONFIG = {
   high:     { color: 'bg-orange-500',   label: 'High' },
   medium:   { color: 'bg-warning',      label: 'Medium' },
   low:      { color: 'bg-success',      label: 'Low' },
-  info:     { color: 'bg-text-muted',   label: 'Info' },
+  info:     { color: 'bg-info',         label: 'Info' },
 };
 
 function SeverityBar({ severity, count, max }) {
   const config = SEV_CONFIG[severity] || { color: 'bg-text-muted', label: severity };
   const pct = max > 0 ? Math.max(4, Math.round((count / max) * 100)) : 0;
   return (
-    <div className="flex items-center gap-3 group">
-      <div className="w-16 text-xs font-medium text-text-muted capitalize">{config.label}</div>
-      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+    <div className="flex items-center gap-4 group text-[13px]">
+      <div className="w-16 font-medium text-text-secondary capitalize">{config.label}</div>
+      <div className="flex-1 h-1.5 bg-surfaceHighlight rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full ${config.color} transition-all duration-700`}
           style={{ width: `${pct}%` }}
@@ -55,10 +55,9 @@ function SeverityBar({ severity, count, max }) {
           aria-valuenow={count}
           aria-valuemin={0}
           aria-valuemax={max}
-          aria-label={`${config.label}: ${count}`}
         />
       </div>
-      <div className="w-8 text-right text-xs font-bold text-text-primary tabular-nums">{count}</div>
+      <div className="w-8 text-right font-medium text-text-primary tabular-nums">{count}</div>
     </div>
   );
 }
@@ -67,11 +66,11 @@ function SeverityBar({ severity, count, max }) {
 function CategoryRow({ category, count, max }) {
   const pct = max > 0 ? Math.max(4, Math.round((count / max) * 100)) : 0;
   return (
-    <div className="flex items-center gap-3">
-      <div className="w-28 text-xs font-medium text-text-muted capitalize truncate" title={category}>
+    <div className="flex items-center gap-4 text-[13px]">
+      <div className="w-32 font-medium text-text-secondary capitalize truncate" title={category}>
         {category}
       </div>
-      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-surfaceHighlight rounded-full overflow-hidden">
         <div
           className="h-full rounded-full bg-accent transition-all duration-700"
           style={{ width: `${pct}%` }}
@@ -81,7 +80,7 @@ function CategoryRow({ category, count, max }) {
           aria-valuemax={max}
         />
       </div>
-      <div className="w-8 text-right text-xs font-bold text-text-primary tabular-nums">{count}</div>
+      <div className="w-8 text-right font-medium text-text-primary tabular-nums">{count}</div>
     </div>
   );
 }
@@ -89,15 +88,15 @@ function CategoryRow({ category, count, max }) {
 // ─── Lifecycle card ────────────────────────────────────────────────────────────
 function LifecycleCard({ label, value, description, color }) {
   const colors = {
-    primary: 'text-primary border-primary/15 bg-primary/5',
-    warning: 'text-warning border-warning/15 bg-warning/5',
-    success: 'text-success border-success/15 bg-success/5',
+    primary: 'border-primary/20 bg-primary/5',
+    warning: 'border-warning/20 bg-warning/5',
+    success: 'border-success/20 bg-success/5',
   };
   return (
-    <div className={`flex-1 p-4 rounded-xl border text-center ${colors[color] || colors.primary}`}>
-      <div className="text-xs font-semibold uppercase tracking-wider mb-2 opacity-80">{label}</div>
-      <div className="text-3xl font-bold tabular-nums leading-none mb-2">{value ?? 0}</div>
-      <p className="text-xs opacity-70 leading-snug">{description}</p>
+    <div className={`flex-1 p-4 rounded-lg border ${colors[color] || colors.primary}`}>
+      <div className="text-[12px] font-medium text-text-secondary mb-1.5">{label}</div>
+      <div className="text-2xl font-semibold tabular-nums text-text-primary tracking-tight leading-none mb-1.5">{value ?? 0}</div>
+      <p className="text-[12px] text-text-muted leading-tight">{description}</p>
     </div>
   );
 }
@@ -161,16 +160,16 @@ export default function DashboardPage() {
   const riskColor = avgRisk > 70 ? 'danger' : avgRisk > 40 ? 'warning' : 'success';
 
   return (
-    <div className="space-y-6 animate-slide-up">
+    <div className="space-y-6 animate-slide-up max-w-[1200px]">
       {/* Page header */}
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Dashboard</h1>
-          <p className="text-sm text-text-muted mt-1">
-            Engineering intelligence overview · Last 30 days
+          <h1 className="text-[20px] font-semibold text-text-primary tracking-tight">Engineering Intelligence</h1>
+          <p className="text-[13px] text-text-muted mt-1">
+            Repository-aware insights across your connected engineering systems.
           </p>
         </div>
-        <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+        <Button variant="primary" size="sm" onClick={() => setIsCreateModalOpen(true)}>
           Create Organization
         </Button>
       </div>
@@ -187,11 +186,11 @@ export default function DashboardPage() {
             placeholder="Organization Name"
             value={newOrgName}
             onChange={e => setNewOrgName(e.target.value)}
-            className="w-full bg-surfaceHighlight/40 border border-white/[0.09] text-text-primary text-sm rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/40 placeholder-text-muted transition-all"
+            className="w-full bg-surfaceHighlight border border-border text-text-primary text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder-text-muted transition-all"
           />
-          <div className="flex justify-end gap-3">
-            <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)} disabled={isCreatingOrg}>Cancel</Button>
-            <Button variant="primary" loading={isCreatingOrg} onClick={() => createOrg(newOrgName)}>Create</Button>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="ghost" size="sm" onClick={() => setIsCreateModalOpen(false)} disabled={isCreatingOrg}>Cancel</Button>
+            <Button variant="primary" size="sm" loading={isCreatingOrg} onClick={() => createOrg(newOrgName)}>Create</Button>
           </div>
         </div>
       </Modal>
@@ -199,18 +198,25 @@ export default function DashboardPage() {
       {/* Metric cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
+          title="Active Repositories"
+          value={analytics?.total_repositories || 0}
+          icon={IconPRs}
+          color="muted"
+          subtitle="Connected to RepoMind"
+        />
+        <MetricCard
           title="PRs Reviewed"
           value={analytics?.total_reviews ?? 0}
           icon={IconPRs}
           color="primary"
-          subtitle="Pull requests analyzed this period"
+          subtitle="Analyzed in last 30 days"
         />
         <MetricCard
           title="Average Risk Score"
           value={`${avgRisk}`}
           icon={IconRisk}
           color={riskColor}
-          subtitle="0 = low risk · 100 = critical risk"
+          subtitle="0-100 scale across PRs"
         />
         <MetricCard
           title="Critical Findings"
@@ -219,23 +225,11 @@ export default function DashboardPage() {
           color="danger"
           subtitle="Require immediate attention"
         />
-        <MetricCard
-          title="Security Issues"
-          value={analytics?.findings_by_category?.security ?? 0}
-          icon={IconSecurity}
-          color="accent"
-          subtitle="Security-category findings"
-        />
       </div>
 
       {/* Findings breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Severity distribution */}
-        <div className="glass-card p-5">
-          <div className="mb-5">
-            <h2 className="text-sm font-semibold text-text-primary">Findings by Severity</h2>
-            <p className="text-xs text-text-muted mt-0.5">Distribution of identified issues across severity levels</p>
-          </div>
+        <SectionCard title="Findings by Severity" subtitle="Distribution of identified issues across severity levels">
           {severityKeys.every(k => !severityData[k]) ? (
             <EmptyState
               title="No findings"
@@ -245,7 +239,7 @@ export default function DashboardPage() {
               className="py-8"
             />
           ) : (
-            <div className="space-y-3.5">
+            <div className="space-y-4">
               {severityKeys.map(sev => (
                 <SeverityBar
                   key={sev}
@@ -256,14 +250,9 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
-        </div>
+        </SectionCard>
 
-        {/* Category distribution */}
-        <div className="bg-surface border border-white/[0.07] rounded-xl p-5">
-          <div className="mb-5">
-            <h2 className="text-sm font-semibold text-text-primary">Findings by Category</h2>
-            <p className="text-xs text-text-muted mt-0.5">Top categories from AI review findings</p>
-          </div>
+        <SectionCard title="Findings by Category" subtitle="Top categories from AI review findings">
           {categoryEntries.length === 0 ? (
             <EmptyState
               title="No categorized findings"
@@ -272,22 +261,18 @@ export default function DashboardPage() {
               className="py-8"
             />
           ) : (
-            <div className="space-y-3.5">
+            <div className="space-y-4">
               {categoryEntries.map(([cat, count]) => (
                 <CategoryRow key={cat} category={cat} count={count} max={maxCategory} />
               ))}
             </div>
           )}
-        </div>
+        </SectionCard>
       </div>
 
       {/* Resolution lifecycle */}
-      <div className="bg-surface border border-white/[0.07] rounded-xl p-5">
-        <div className="mb-5">
-          <h2 className="text-sm font-semibold text-text-primary">Resolution Lifecycle</h2>
-          <p className="text-xs text-text-muted mt-0.5">Finding lifecycle states across all reviewed PRs this period</p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3">
+      <SectionCard title="Resolution Lifecycle" subtitle="Finding lifecycle states across all reviewed PRs this period">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <LifecycleCard
             label="New"
             value={analytics?.findings_by_lifecycle?.new}
@@ -307,7 +292,7 @@ export default function DashboardPage() {
             color="success"
           />
         </div>
-      </div>
+      </SectionCard>
     </div>
   );
 }

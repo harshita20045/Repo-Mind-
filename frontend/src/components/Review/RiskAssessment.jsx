@@ -15,14 +15,14 @@ function RiskVector({ label, level, description }) {
   const style = styles[normalized] || styles.unknown;
 
   return (
-    <div className="bg-surfaceHighlight/30 border border-white/[0.07] rounded-xl p-4">
+    <div className="bg-surface border border-border rounded-lg shadow-sm p-4">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-semibold text-text-secondary">{label}</span>
-        <span className={`text-xs font-bold px-2 py-0.5 rounded border uppercase tracking-wide ${style.badge}`}>
+        <span className="text-[13px] font-semibold text-text-secondary">{label}</span>
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wide ${style.badge}`}>
           {level || 'Unknown'}
         </span>
       </div>
-      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mb-2">
+      <div className="h-1.5 bg-surfaceHighlight rounded-full overflow-hidden mb-2">
         <div
           className={`h-full rounded-full ${style.bar} transition-all duration-1000`}
           style={{ width: style.width }}
@@ -71,7 +71,7 @@ export default function RiskAssessment({ riskData }) {
     <div className="space-y-6 animate-fade-in">
 
       {/* Overall risk header */}
-      <div className="flex flex-col md:flex-row gap-6 items-center bg-surfaceHighlight/20 border border-white/[0.06] rounded-xl p-6">
+      <div className="flex flex-col md:flex-row gap-6 items-center bg-surface border border-border rounded-lg shadow-sm p-6">
         {/* Ring gauge */}
         <div className="relative flex-shrink-0">
           <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
@@ -127,8 +127,8 @@ export default function RiskAssessment({ riskData }) {
 
       {/* Blast radius */}
       <div>
-        <h3 className="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">Blast Radius</h3>
-        <div className="bg-surfaceHighlight/20 border border-white/[0.06] rounded-xl p-4">
+        <h3 className="text-[11px] font-semibold text-text-muted mb-3 uppercase tracking-wider">Blast Radius</h3>
+        <div className="bg-surface border border-border rounded-lg shadow-sm p-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent flex-shrink-0">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
@@ -146,7 +146,7 @@ export default function RiskAssessment({ riskData }) {
               {blast_radius_modules.map((mod, i) => (
                 <span
                   key={i}
-                  className="font-mono text-xs text-text-secondary bg-white/5 border border-white/[0.08] px-2.5 py-1 rounded-md"
+                  className="font-mono text-[11px] text-text-secondary bg-surfaceHighlight border border-border px-2.5 py-1 rounded-md"
                 >
                   {mod}
                 </span>

@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { SeverityBadge } from '../ui/Badge';
 
-// ─── Evidence status ───────────────────────────────────────────────────────────
 function EvidenceStatus({ status }) {
   const styles = {
-    supported:    'bg-success/10 text-success border-success/20',
-    unverified:   'bg-warning/10 text-warning border-warning/20',
-    contradicted: 'bg-danger/10 text-danger border-danger/20',
+    supported:    'text-success',
+    unverified:   'text-warning',
+    contradicted: 'text-danger',
   };
   const icons = {
     supported:    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />,
@@ -19,16 +18,15 @@ function EvidenceStatus({ status }) {
   const label = normalized.charAt(0).toUpperCase() + normalized.slice(1);
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded border uppercase tracking-wider ${style}`}>
-      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+    <div className={`flex items-center gap-1.5 text-[12px] font-medium ${style}`}>
+      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         {icon}
       </svg>
       {label}
-    </span>
+    </div>
   );
 }
 
-// ─── Finding Card ──────────────────────────────────────────────────────────────
 export default function FindingCard({ finding }) {
   const [expanded, setExpanded] = useState(true);
 
@@ -40,94 +38,109 @@ export default function FindingCard({ finding }) {
     low:      'bg-success',
     info:     'bg-info',
   };
-  const leftColor = leftColors[sev] || 'bg-text-muted';
+  const leftColor = leftColors[sev] || 'bg-border';
 
   const categoryColors = {
-    security:     'text-danger',
-    bug:          'text-warning',
-    performance:  'text-accent',
-    style:        'text-primary',
-    architecture: 'text-info',
+    security:     'text-danger bg-danger/10',
+    bug:          'text-warning bg-warning/10',
+    performance:  'text-accent bg-accent/10',
+    style:        'text-primary bg-primary/10',
+    architecture: 'text-info bg-info/10',
   };
-  const catColor = categoryColors[finding.type?.toLowerCase()] || 'text-text-muted';
+  const catColor = categoryColors[finding.type?.toLowerCase()] || 'text-text-muted bg-surfaceHighlight';
 
   return (
-    <div className="relative flex overflow-hidden bg-surface border border-white/[0.07] rounded-xl shadow-card mb-3 hover:border-white/10 transition-colors">
-      {/* Left severity strip */}
-      <div className={`w-1 flex-shrink-0 ${leftColor}`} aria-hidden="true" />
+    <div className="relative flex flex-col bg-surface border border-border rounded-lg shadow-sm mb-4 transition-colors">
+      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${leftColor}`} aria-hidden="true" />
 
-      <div className="flex-1 p-4 min-w-0">
+      <div className="pl-5 p-4 flex flex-col gap-3">
         {/* Header row */}
-        <div className="flex items-start justify-between gap-3 mb-1">
+        <div className="flex items-start justify-between gap-4">
           <button
             onClick={() => setExpanded(v => !v)}
-            className="flex-1 text-left group"
+            className="flex-1 text-left flex items-start gap-3 group"
             aria-expanded={expanded}
           >
-            <h4 className="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors leading-snug">
-              {finding.title}
-            </h4>
+            <div className={`mt-0.5 transition-transform ${expanded ? 'rotate-90' : ''}`}>
+              <svg className="w-4 h-4 text-text-muted group-hover:text-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-[14px] font-medium text-text-primary group-hover:text-primary transition-colors leading-snug">
+                {finding.title}
+              </h4>
+              {(finding.file || finding.line) && (
+                <div className="font-mono text-[11px] text-text-muted mt-1.5 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  <span>{finding.file}</span>
+                  {finding.line && <span className="px-1 bg-surfaceHighlight border border-border rounded">L{finding.line}</span>}
+                </div>
+              )}
+            </div>
           </button>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <SeverityBadge severity={sev} />
+          <div className="flex items-center gap-2 flex-shrink-0">
             {finding.type && (
-              <span className={`text-2xs font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-white/[0.08] bg-white/5 ${catColor}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-white/5 ${catColor}`}>
                 {finding.type}
               </span>
             )}
+            <SeverityBadge severity={sev} />
           </div>
         </div>
 
-        {/* File + line */}
-        {(finding.file || finding.line) && (
-          <div className="font-mono text-xs text-text-muted bg-surfaceHighlight/50 border border-white/[0.07] px-2.5 py-1 rounded inline-block mb-3">
-            {finding.file || 'Unknown file'}
-            {finding.line && <span className="text-text-muted/60">:{finding.line}</span>}
-          </div>
-        )}
-
-        {/* Collapsible body */}
+        {/* Details Panel */}
         {expanded && (
-          <div className="space-y-3 animate-fade-in">
-            {/* Problem */}
-            <div className="bg-surfaceHighlight/20 border border-white/[0.05] rounded-lg p-3 text-xs">
-              <span className="block font-semibold text-text-secondary mb-1.5 uppercase tracking-wider text-2xs">Problem</span>
-              <p className="text-text-secondary leading-relaxed">{finding.explanation}</p>
+          <div className="mt-2 pl-7 space-y-4 animate-fade-in pr-2">
+            
+            {/* The Problem */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Problem detected</span>
+              <p className="text-[13px] text-text-secondary leading-relaxed bg-surfaceHighlight/50 border border-border/50 rounded-md p-3">
+                {finding.explanation}
+              </p>
             </div>
 
             {/* Recommendation */}
             {finding.recommendation && (
-              <div className="bg-primary/5 border border-primary/15 rounded-lg p-3 text-xs">
-                <span className="block font-semibold text-primary mb-1.5 uppercase tracking-wider text-2xs">Recommendation</span>
-                <p className="text-text-secondary leading-relaxed">{finding.recommendation}</p>
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Suggested Action</span>
+                <p className="text-[13px] text-text-primary leading-relaxed bg-primary/5 border border-primary/20 rounded-md p-3">
+                  {finding.recommendation}
+                </p>
               </div>
             )}
 
-            {/* Footer */}
-            <div className="flex items-center justify-between pt-1">
-              <div className="flex items-center gap-3">
-                {finding.rule_source && (
-                  <span className="text-xs text-text-muted flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {finding.rule_source}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
+            {/* Evidence & Rules - Crucial for RepoMind */}
+            <div className="flex flex-col gap-3 pt-3 border-t border-border">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Analysis Grounding</span>
                 {finding.evidence_status && (
                   <EvidenceStatus status={finding.evidence_status} />
                 )}
-                {finding.is_grounded && (
-                  <span className="inline-flex items-center gap-1 text-success bg-success/10 border border-success/20 px-2 py-0.5 rounded text-2xs font-bold uppercase tracking-wider">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Grounded
-                  </span>
-                )}
               </div>
+              
+              {finding.rule_source ? (
+                <div className="flex items-start gap-3 bg-surface border border-border rounded-md p-3">
+                  <div className="mt-0.5 flex-shrink-0">
+                    <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-[12px] font-medium text-text-primary mb-1">Repository Rule Matches</div>
+                    <div className="text-[12px] text-text-secondary font-mono bg-surfaceHighlight px-2 py-1 rounded inline-block border border-border">
+                      {finding.rule_source}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-[12px] text-text-muted italic">
+                  No specific repository rules found to cite. General best practices applied.
+                </div>
+              )}
             </div>
           </div>
         )}

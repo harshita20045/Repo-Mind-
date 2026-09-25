@@ -16,7 +16,7 @@ function ConflictCard({ conflict }) {
   const typeLabel = conflict.conflict_type?.replace(/_/g, ' ') || 'Unknown';
 
   return (
-    <div className="relative flex overflow-hidden glass-card hover:bg-surfaceHighlight/30 transition-colors">
+    <div className="relative flex overflow-hidden bg-surface border border-border rounded-lg shadow-sm hover:bg-surfaceHighlight transition-colors">
       {/* Left severity strip */}
       <div className={`w-1 flex-shrink-0 ${leftColor}`} aria-hidden="true" />
 
@@ -25,7 +25,7 @@ function ConflictCard({ conflict }) {
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             <SeverityBadge severity={sev} />
-            <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold text-text-muted bg-white/5 border border-white/[0.08] rounded uppercase tracking-wider">
+            <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold text-text-muted bg-surfaceHighlight border border-border rounded uppercase tracking-wider">
               {typeLabel}
             </span>
           </div>
@@ -44,7 +44,7 @@ function ConflictCard({ conflict }) {
               {conflict.related_files.map((file, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-1.5 font-mono text-xs text-text-secondary bg-white/5 border border-white/[0.07] px-2 py-1 rounded"
+                  className="flex items-center gap-1.5 font-mono text-[11px] text-text-secondary bg-surfaceHighlight border border-border px-2 py-1 rounded"
                 >
                   <svg className="w-3 h-3 text-text-muted flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
