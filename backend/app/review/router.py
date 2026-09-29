@@ -102,6 +102,29 @@ def trigger_review(
     return ReviewTriggerResponse(job_id=run.id, status=run.status)
 
 
+@router.get("/pull-requests/{pull_request_id}/review-runs", response_model=list[ReviewRunResponse])
+def list_review_runs(
+    pull_request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List all review runs for a pull request."""
+    pr = db.get(PullRequest, pull_request_id)
+    if not pr:
+        raise HTTPException(status_code=404, detail="Pull request not found")
+
+    try:
+        org_id = _get_org_id_for_pr(db, pr)
+    except ReviewError:
+        raise HTTPException(status_code=404, detail="Pull request not found")
+
+    # Authorize organization access
+    verify_org_member(db, current_user.id, org_id)
+
+    runs = db.query(ReviewRun).filter(ReviewRun.pull_request_id == pull_request_id).order_by(ReviewRun.id.desc()).all()
+    return runs
+
+
 @router.get("/review-runs/{review_run_id}", response_model=ReviewRunResponse)
 def get_review_run(
     review_run_id: int,

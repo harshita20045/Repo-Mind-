@@ -224,16 +224,26 @@ def _persist_risk(
     db: Session, run: ReviewRun, risk_result
 ) -> None:
     """Persist the risk assessment."""
-    db.add(RiskAssessment(
-        review_run_id=run.id,
-        score=risk_result.score,
-        level=risk_result.level,
-        factors=risk_result.factors,
-        blast_radius=risk_result.blast_radius,
-        test_impact=risk_result.test_impact,
-        summary=risk_result.summary,
-        calculated_at=datetime.now(timezone.utc),
-    ))
+    existing_risk = db.query(RiskAssessment).filter_by(review_run_id=run.id).first()
+    if existing_risk:
+        existing_risk.score = risk_result.score
+        existing_risk.level = risk_result.level
+        existing_risk.factors = risk_result.factors
+        existing_risk.blast_radius = risk_result.blast_radius
+        existing_risk.test_impact = risk_result.test_impact
+        existing_risk.summary = risk_result.summary
+        existing_risk.calculated_at = datetime.now(timezone.utc)
+    else:
+        db.add(RiskAssessment(
+            review_run_id=run.id,
+            score=risk_result.score,
+            level=risk_result.level,
+            factors=risk_result.factors,
+            blast_radius=risk_result.blast_radius,
+            test_impact=risk_result.test_impact,
+            summary=risk_result.summary,
+            calculated_at=datetime.now(timezone.utc),
+        ))
     db.flush()
 
 
@@ -243,6 +253,7 @@ def run_review(
     organization_id: int,
     provider: LLMProvider,
     embedder: Optional[LocalEmbedder] = None,
+    existing_review_run_id: Optional[int] = None,
 ) -> ReviewRun:
     """
     Orchestrate the full RepoMind 2.0 review pipeline for a pull request.
@@ -295,21 +306,29 @@ def run_review(
     # repository_id is derived from the DB relationship — never from a client param
     repository_id = pr.repository_id
 
-    # --- 2. Create ReviewRun (pending → running) -------------------------------
-    run = ReviewRun(
-        pull_request_id=pull_request_id,
-        commit_sha=pr.head_sha,
-        status="running",
-        repomind_version=REPOMIND_VERSION,
-        prompt_version=PROMPT_VERSION,
-        llm_model=type(provider).__name__,
-        rag_enabled=True,
-        intelligence_mode="v1",
-        started_at=datetime.now(timezone.utc),
-        progress_message="Fetching PR data from GitHub...",
-    )
-    db.add(run)
-    db.flush()  # Obtain run.id
+    # --- 2. Create or reuse ReviewRun (pending → running) -------------------------------
+    if existing_review_run_id:
+        run = db.get(ReviewRun, existing_review_run_id)
+        if not run:
+            raise ReviewError(f"ReviewRun {existing_review_run_id} not found.")
+        run.status = "running"
+        run.started_at = datetime.now(timezone.utc)
+        run.progress_message = "Fetching PR data from GitHub..."
+    else:
+        run = ReviewRun(
+            pull_request_id=pull_request_id,
+            commit_sha=pr.head_sha,
+            status="running",
+            repomind_version=REPOMIND_VERSION,
+            prompt_version=PROMPT_VERSION,
+            llm_model=type(provider).__name__,
+            rag_enabled=True,
+            intelligence_mode="v1",
+            started_at=datetime.now(timezone.utc),
+            progress_message="Fetching PR data from GitHub...",
+        )
+        db.add(run)
+    db.flush()  # Obtain or synchronize run.id
 
     logger.info(
         "ReviewRun %d: starting pipeline for PR %d (repo %s/%s, org %d).",

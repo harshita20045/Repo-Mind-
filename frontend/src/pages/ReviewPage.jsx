@@ -180,6 +180,13 @@ export default function ReviewPage() {
     onSuccess: (data) => setActiveRunId(data.job_id),
   });
 
+  const { data: runsData } = useQuery({
+    queryKey: ['reviewRuns', prid],
+    queryFn: () => reviewApi.listReviewRuns(prid),
+    enabled: !!prid,
+    refetchInterval: 5000,
+  });
+
   const { data: prData, isLoading: loadingPr } = useQuery({
     queryKey: ['pullRequest', prid],
     queryFn: () => githubApi.getPullRequest(prid),
@@ -255,13 +262,18 @@ export default function ReviewPage() {
               <span className="text-text-secondary">PR #{prData?.github_number || prid}</span>
             </div>
             
-            <h1 className="text-[22px] font-semibold text-text-primary tracking-tight leading-snug mb-3">
+            <h1 className="text-[22px] font-semibold text-text-primary tracking-tight leading-snug mb-2">
               {loadingPr ? (
                 <span className="skeleton inline-block h-7 w-96 rounded" />
               ) : (
                 prData?.title || 'Pull Request'
               )}
             </h1>
+            {prData?.description && (
+              <p className="text-[13px] text-text-secondary mb-3 max-w-3xl whitespace-pre-line">
+                {prData.description}
+              </p>
+            )}
             
             {prData && (
               <div className="flex items-center gap-3">
@@ -424,14 +436,55 @@ export default function ReviewPage() {
               <DetailRow label="State">
                 {prData?.state ? <StatusBadge status={prData.state} label={prData.state} /> : '—'}
               </DetailRow>
+              {prData?.source_branch && prData?.target_branch && (
+                <DetailRow label="Branches">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[12px] bg-surfaceHighlight border border-border px-1.5 py-0.5 rounded text-text-secondary truncate max-w-[120px]" title={prData.source_branch}>{prData.source_branch}</span>
+                    <span className="text-text-muted text-[10px]">→</span>
+                    <span className="font-mono text-[12px] bg-surfaceHighlight border border-border px-1.5 py-0.5 rounded text-text-secondary truncate max-w-[120px]" title={prData.target_branch}>{prData.target_branch}</span>
+                  </div>
+                </DetailRow>
+              )}
+              {(prData?.additions != null || prData?.deletions != null) && (
+                <DetailRow label="Changes">
+                  <div className="flex items-center gap-3 text-[12px] font-medium">
+                    {prData?.additions != null && <span className="text-success">+{prData.additions}</span>}
+                    {prData?.deletions != null && <span className="text-danger">-{prData.deletions}</span>}
+                  </div>
+                </DetailRow>
+              )}
               {prData?.head_sha && (
                 <DetailRow label="Commit">
-                  <span className="font-mono text-[12px] bg-surfaceHighlight border border-border px-1.5 py-0.5 rounded">
+                  <span className="font-mono text-[12px] bg-surfaceHighlight border border-border px-1.5 py-0.5 rounded inline-block">
                     {prData.head_sha.substring(0, 7)}
                   </span>
                 </DetailRow>
               )}
             </div>
+          </SectionCard>
+
+          <SectionCard title="Review History">
+            {runsData && runsData.length > 0 ? (
+              <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1">
+                {runsData.map((run) => (
+                  <button
+                    key={run.id}
+                    onClick={() => setActiveRunId(run.id)}
+                    className={`text-left px-3 py-2 rounded border text-[12px] transition-colors ${activeRunId === run.id ? 'bg-primary/10 border-primary/20 text-primary font-medium' : 'bg-surface border-border text-text-secondary hover:bg-surfaceHighlight'}`}
+                  >
+                    <div className="flex justify-between items-center mb-1">
+                      <span>Run #{run.id}</span>
+                      <span className="capitalize">{run.status}</span>
+                    </div>
+                    <div className="font-mono text-[10px] text-text-muted truncate">
+                      {run.commit_sha ? run.commit_sha.substring(0, 7) : 'Unknown'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[13px] text-text-muted italic">No previous runs</div>
+            )}
           </SectionCard>
         </div>
       </div>

@@ -61,6 +61,8 @@ def setup_test_db():
     command.upgrade(alembic_cfg, "head")
     yield
 
+from sqlalchemy import inspect
+
 @pytest.fixture
 def db_session():
     """Provides a fresh database session, clearing all tables beforehand."""
@@ -68,8 +70,9 @@ def db_session():
     
     session = TestingSessionLocal()
     try:
-        # Clear all tables dynamically safely using TRUNCATE CASCADE
-        table_names = [f'"{table.name}"' for table in reversed(Base.metadata.sorted_tables)]
+        inspector = inspect(session.bind)
+        existing_tables = inspector.get_table_names()
+        table_names = [f'"{table.name}"' for table in reversed(Base.metadata.sorted_tables) if table.name in existing_tables]
         if table_names:
             session.execute(text(f"TRUNCATE TABLE {', '.join(table_names)} CASCADE;"))
         session.commit()

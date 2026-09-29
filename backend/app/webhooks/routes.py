@@ -145,6 +145,9 @@ def _upsert_pr_from_webhook(db: Session, repository_id: int, pr_payload: dict) -
     pr.target_branch = pr_payload.get("base", {}).get("ref")
     pr.head_sha = pr_payload.get("head", {}).get("sha")
     pr.base_sha = pr_payload.get("base", {}).get("sha")
+    pr.additions = pr_payload.get("additions")
+    pr.deletions = pr_payload.get("deletions")
+    pr.files_changed = pr_payload.get("changed_files")
     
     created_at = pr_payload.get("created_at")
     if created_at:
@@ -170,12 +173,33 @@ def _upsert_pr_from_webhook(db: Session, repository_id: int, pr_payload: dict) -
             
     return pr
 
-def _enqueue_review(db: Session, repository_id: int, pr_payload: dict) -> Optional[ReviewRun]:
+def _enqueue_review(db: Session, repository_id: int, pr_payload: dict, is_comment: bool = False) -> Optional[ReviewRun]:
     """
     Upsert the PullRequest from payload and create a pending ReviewRun.
     """
     pr_github_number = pr_payload.get("number")
     pr = _upsert_pr_from_webhook(db, repository_id, pr_payload)
+
+    if is_comment:
+        existing = (
+            db.query(ReviewRun)
+            .filter(ReviewRun.pull_request_id == pr.id)
+            .order_by(ReviewRun.id.desc())
+            .first()
+        )
+        if existing:
+            existing.status = "pending"
+            existing.progress_message = "Re-queued via comment webhook"
+            db.flush()
+            logger.info(
+                "Webhook: ReviewRun %d re-queued (pending) for PR #%d due to comment.",
+                existing.id,
+                pr_github_number,
+            )
+            return existing
+        else:
+            logger.info("Webhook: No ReviewRun found to update for PR #%d comment.", pr_github_number)
+            return None
 
     existing = (
         db.query(ReviewRun)
@@ -299,8 +323,11 @@ async def github_webhook(
         db.commit()
         return {"status": "pong"}
 
-    # --- 7. Handle pull_request events ---
-    if event_type == "pull_request" and action in REVIEW_TRIGGER_ACTIONS:
+    # --- 7. Handle pull_request and pull_request_review_comment events ---
+    is_pr_event = (event_type == "pull_request" and action in REVIEW_TRIGGER_ACTIONS)
+    is_comment_event = (event_type == "pull_request_review_comment" and action == "created")
+
+    if is_pr_event or is_comment_event:
         if not repository:
             logger.warning(
                 "Webhook: repository not found in DB for delivery %s. "
@@ -319,7 +346,7 @@ async def github_webhook(
             db.commit()
             return {"status": "skipped", "reason": "no_pr_number"}
                                                                   
-        review_run = _enqueue_review(db, repository_id, payload.get("pull_request", {}))
+        review_run = _enqueue_review(db, repository_id, payload.get("pull_request", {}), is_comment=is_comment_event)
         if review_run:
             event.status = "processed"
             event.processed_at = datetime.now(timezone.utc)

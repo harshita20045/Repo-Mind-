@@ -5,7 +5,7 @@ All schemas follow NFR-001: encrypted_token is NEVER returned in any response sc
 """
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ---------------------------------------------------------------------------
@@ -30,14 +30,17 @@ class GitHubConnectRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 class PullRequestResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int
     repository_id: int
     github_number: int
     title: str
-    author: Optional[str] = None
+    description: Optional[str] = None
+    author: Optional[str] = Field(default=None, validation_alias="github_author_login")
     state: str
+    source_branch: Optional[str] = None
+    target_branch: Optional[str] = None
     created_at: datetime
     merged_at: Optional[datetime] = None
     additions: Optional[int] = None

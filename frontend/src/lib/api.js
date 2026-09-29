@@ -60,6 +60,10 @@ export const reviewApi = {
     apiRequest(`/review-runs/${runId}`, {
       method: 'GET',
     }),
+  listReviewRuns: (prId) =>
+    apiRequest(`/pull-requests/${prId}/review-runs`, {
+      method: 'GET',
+    }),
   approveReviewRun: (runId, decisionData) =>
     apiRequest(`/review-runs/${runId}/decide`, {
       method: 'POST',

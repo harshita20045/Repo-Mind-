@@ -212,6 +212,7 @@ def _process_one_job(provider) -> None:
                 pull_request_id=run.pull_request_id,
                 organization_id=organization_id,
                 provider=provider,
+                existing_review_run_id=run.id,
             )
 
             if completed_run.status == "completed":
