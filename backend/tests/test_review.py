@@ -521,7 +521,7 @@ def test_i_no_pat_in_provider_call(db_session, seeded_pr):
 
     provider = FakeProvider([EMPTY_JSON_RESPONSE])
 
-    with patch("backend.app.review.service.get_decrypted_pat_for_org",
+    with patch("backend.app.review.service.get_decrypted_github_token_for_org",
                return_value=FAKE_PAT):
         with patch("backend.app.review.service.GitHubClient") as MockClient:
             MockClient.return_value.get_pull_request_diff.return_value = SAMPLE_DIFF

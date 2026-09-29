@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from backend.app.db import get_db
 from backend.app.auth.dependencies import get_current_user
 from backend.app.auth.models import User, RoleEnum
+from backend.app.auth.permissions import Permission, assert_org_permission
 from backend.app.github import schemas, service
 from backend.app.github.models import PullRequest
 from backend.app.organizations.service import (
@@ -211,16 +212,18 @@ def trigger_index(
         message=f"Indexing queued for {repo.github_owner}/{repo.github_name}",
     )
 
-from fastapi import Request
+from fastapi import Request, Response
 from fastapi.responses import RedirectResponse
 import httpx
 from urllib.parse import urlencode
+import secrets
 
 # ---------------------------------------------------------------------------
 # GET /oauth/login
 # ---------------------------------------------------------------------------
 @router.get("/oauth/login", summary="Initiate GitHub OAuth flow")
 def github_oauth_login(
+    response: Response,
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -232,7 +235,14 @@ def github_oauth_login(
     if not client_id:
         raise HTTPException(status_code=500, detail="GITHUB_CLIENT_ID is not configured")
 
-    state = str(current_user.id) 
+    state = secrets.token_urlsafe(32)
+    response.set_cookie(
+        key="oauth_state",
+        value=state,
+        httponly=True,
+        samesite="lax",
+        max_age=600  # 10 minutes
+    )
 
     params = {
         "client_id": client_id,
@@ -258,6 +268,11 @@ async def github_oauth_callback(
     """
     Handles the callback from GitHub, exchanges code for token, and upserts GitHubIdentity.
     """
+    # Validate OAuth state (CSRF protection)
+    cookie_state = request.cookies.get("oauth_state")
+    if not state or not cookie_state or state != cookie_state:
+        raise HTTPException(status_code=400, detail="Invalid OAuth state parameter")
+
     from backend.app.core.config import settings
     client_id = getattr(settings, "GITHUB_CLIENT_ID", None)
     client_secret = getattr(settings, "GITHUB_CLIENT_SECRET", None)
@@ -308,7 +323,9 @@ async def github_oauth_callback(
         )
         
         frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
-        return RedirectResponse(url=f"{frontend_url}/settings?status=success")
+        response = RedirectResponse(url=f"{frontend_url}/settings?status=success")
+        response.delete_cookie("oauth_state")
+        return response
 
 # ---------------------------------------------------------------------------
 # DELETE /oauth/unlink
@@ -404,6 +421,7 @@ def merge_pull_request(
         raise HTTPException(status_code=404, detail="Pull request not found")
     
     repo, project, org_id = _assert_repo_access(db, pr.repository_id, current_user.id)
+    assert_org_permission(db, current_user.id, org_id, Permission.PRS_MERGE)
     
     from backend.app.github.models import AutomationAction, GitHubIdentity
     identity = db.query(GitHubIdentity).filter(GitHubIdentity.user_id == current_user.id).first()
@@ -454,10 +472,10 @@ def get_repository_branches(
 ):
     repo, project, org_id = _assert_repo_access(db, repository_id, current_user.id)
     
-    from backend.app.github.service import get_decrypted_pat_for_org
+    from backend.app.github.service import get_decrypted_github_token_for_org
     from backend.app.github.client import GitHubClient
     
-    pat = get_decrypted_pat_for_org(db, org_id)
+    pat = get_decrypted_github_token_for_org(db, org_id)
     client = GitHubClient(pat)
     branches = client.list_repository_branches(repo.github_owner, repo.github_name)
     return branches
@@ -470,10 +488,10 @@ def get_repository_commits(
 ):
     repo, project, org_id = _assert_repo_access(db, repository_id, current_user.id)
     
-    from backend.app.github.service import get_decrypted_pat_for_org
+    from backend.app.github.service import get_decrypted_github_token_for_org
     from backend.app.github.client import GitHubClient
     
-    pat = get_decrypted_pat_for_org(db, org_id)
+    pat = get_decrypted_github_token_for_org(db, org_id)
     client = GitHubClient(pat)
     commits = client.list_repository_commits(repo.github_owner, repo.github_name)
     return commits

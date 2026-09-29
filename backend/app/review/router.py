@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 import logging
 
+from backend.app.auth.permissions import Permission, assert_org_permission
 from backend.app.db import get_db
 from backend.app.auth.models import User
 from backend.app.auth.dependencies import get_current_user
@@ -17,7 +18,7 @@ from backend.app.review.schemas import (
 from backend.app.review.prompts import REPOMIND_VERSION, PROMPT_VERSION
 from backend.app.organizations.service import verify_org_member
 from backend.app.review.service import _get_org_id_for_pr, ReviewError
-from backend.app.github.service import get_decrypted_pat_for_org
+from backend.app.github.service import get_decrypted_github_token_for_org
 from backend.app.github.client import GitHubClient
 from backend.app.organizations.service import get_repository_by_id
 
@@ -56,7 +57,7 @@ def trigger_review(
         raise HTTPException(status_code=404, detail="Repository not found")
 
     try:
-        pat = get_decrypted_pat_for_org(db, org_id)
+        pat = get_decrypted_github_token_for_org(db, org_id)
         client = GitHubClient(pat)
         pr_data = client.get_pull_request(repo.github_owner, repo.github_name, pr.github_number)
         current_sha = pr_data["head"]["sha"]
@@ -135,9 +136,6 @@ def decide_review_run(
     current_user: User = Depends(get_current_user)
 ):
     """Approve or reject a review run and trigger a GitHub review via AutomationAction."""
-    if current_user.role not in ("reviewer", "team_lead", "org_admin"):
-        raise HTTPException(status_code=403, detail="Not authorized to approve reviews")
-
     run = db.get(ReviewRun, review_run_id)
     if not run:
         raise HTTPException(status_code=404, detail="Review run not found")
@@ -154,7 +152,13 @@ def decide_review_run(
     except ReviewError:
         raise HTTPException(status_code=404, detail="Review run not found")
 
-    verify_org_member(db, current_user.id, org_id)
+    if decision.action == "APPROVE":
+        assert_org_permission(db, current_user.id, org_id, Permission.PRS_APPROVE)
+    elif decision.action == "REQUEST_CHANGES":
+        assert_org_permission(db, current_user.id, org_id, Permission.PRS_REQUEST_CHANGES)
+    else:
+        # Fallback check for arbitrary decisions (like dismiss)
+        assert_org_permission(db, current_user.id, org_id, Permission.PRS_REVIEW)
 
     # 1. Update legacy HumanDecision (if necessary for backwards compatibility)
     existing = db.query(HumanDecision).filter_by(

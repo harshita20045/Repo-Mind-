@@ -10,8 +10,9 @@ from backend.app.core.config import settings
 # For schema creation, ensure all models are known to Base.metadata
 from backend.app.auth.models import User, Organization, OrganizationMembership
 from backend.app.organizations.models import Project, Repository, GithubConnection
-from backend.app.github.models import PullRequest, Commit
-from backend.app.review.models import ReviewRun, Finding, LinterResult  # Phase 8
+from backend.app.github.models import PullRequest, Commit, AutomationAction, GitHubIdentity, GitHubCredential, ProjectMergePolicy
+from backend.app.review.models import ReviewRun, Finding, LinterResult, HumanDecision
+from backend.app.webhooks.models import WebhookEvent
 
 # Explicitly configure the test database URL
 from sqlalchemy.engine.url import make_url
@@ -52,6 +53,9 @@ def setup_test_db():
         conn.execute(text("GRANT ALL ON SCHEMA public TO public;"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     
+    # Ensure Alembic uses the test database URL, not the development URL
+    from backend.app.core.config import settings
+    settings.POSTGRES_URL = TEST_POSTGRES_URL
     alembic_cfg = Config("alembic.ini")
     alembic_cfg.set_main_option("sqlalchemy.url", TEST_POSTGRES_URL.replace("%", "%%"))
     command.upgrade(alembic_cfg, "head")
@@ -64,9 +68,10 @@ def db_session():
     
     session = TestingSessionLocal()
     try:
-        # Clear all tables dynamically safely
-        for table in reversed(Base.metadata.sorted_tables):
-            session.execute(table.delete())
+        # Clear all tables dynamically safely using TRUNCATE CASCADE
+        table_names = [f'"{table.name}"' for table in reversed(Base.metadata.sorted_tables)]
+        if table_names:
+            session.execute(text(f"TRUNCATE TABLE {', '.join(table_names)} CASCADE;"))
         session.commit()
         
         yield session

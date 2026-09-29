@@ -25,7 +25,7 @@ from typing import Optional, List
 from sqlalchemy.orm import Session
 
 from backend.app.github.models import PullRequest
-from backend.app.github.service import get_pull_request_diff, get_decrypted_pat_for_org
+from backend.app.github.service import get_pull_request_diff, get_decrypted_github_token_for_org
 from backend.app.github.client import GitHubClient
 from backend.app.organizations.service import get_repository_by_id
 from backend.app.organizations.models import Repository
@@ -318,7 +318,7 @@ def run_review(
 
     # --- 3. Fetch PR diff + changed files from GitHub -------------------------
     try:
-        pat = get_decrypted_pat_for_org(db, organization_id)
+        pat = get_decrypted_github_token_for_org(db, organization_id)
         client = GitHubClient(pat)
         diff = client.get_pull_request_diff(
             repo.github_owner,

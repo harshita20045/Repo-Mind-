@@ -8,29 +8,12 @@ from backend.app.db import Base
 class RoleEnum(str, enum.Enum):
     """
     Enterprise RBAC roles — ordered by privilege level (ascending).
-
-    Existing values (developer, reviewer, team_lead, org_admin) are preserved
-    exactly so that existing DB rows and tokens remain valid.
-
-    New roles added for RepoMind 2.0:
-      - org_owner:          Highest privilege; can transfer ownership and manage billing.
-      - eng_manager:        Engineering health dashboard; no dev performance scores.
-      - tech_lead:          PR review, finding management; synonym for team_lead.
-      - security_reviewer:  Security finding access; scoped security ops.
-      - read_only:          View-only access across permitted resources.
+    Exactly four roles exist in the RepoMind 2.0 application model.
     """
-    # --- Existing roles (keep values identical for DB compatibility) ---
     DEVELOPER = "developer"
     REVIEWER = "reviewer"
-    TEAM_LEAD = "team_lead"         # Legacy alias; tech_lead is preferred for new assignments
+    TEAM_LEAD = "team_lead"
     ORG_ADMIN = "org_admin"
-
-    # --- New roles (RepoMind 2.0) ---
-    ORG_OWNER = "org_owner"
-    ENG_MANAGER = "eng_manager"
-    TECH_LEAD = "tech_lead"         # NOTE: same value as TEAM_LEAD — they are aliases
-    SECURITY_REVIEWER = "security_reviewer"
-    READ_ONLY = "read_only"
 
 
 class User(Base):

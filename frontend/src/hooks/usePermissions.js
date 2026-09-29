@@ -52,8 +52,6 @@ export const Permissions = {
 };
 
 // Map backend role enum to capabilities (matching the python backend).
-// Notice that we handle legacy roles like tech_lead as LEAD, 
-// but we map based on the backend role strings directly.
 const ROLE_PERMISSIONS = {
   developer: [
     Permissions.ORG_READ, Permissions.MEMBERS_READ, Permissions.PROJECTS_READ,
@@ -70,64 +68,35 @@ const ROLE_PERMISSIONS = {
     Permissions.REVIEWS_RUN, Permissions.FINDINGS_FEEDBACK, Permissions.CHAT_USE,
     Permissions.POLICIES_READ,
     // Plus reviewer specific
-    Permissions.PRS_REVIEW, Permissions.PRS_REQUEST_CHANGES, Permissions.FINDINGS_DISMISS
+    Permissions.PRS_REVIEW, Permissions.PRS_REQUEST_CHANGES, Permissions.FINDINGS_DISMISS, Permissions.SECURITY_REVIEW
   ],
-  tech_lead: [
+  team_lead: [
     // Includes reviewer
     Permissions.ORG_READ, Permissions.MEMBERS_READ, Permissions.PROJECTS_READ,
     Permissions.REPOS_READ, Permissions.PRS_READ, Permissions.FINDINGS_READ,
     Permissions.REVIEWS_READ, Permissions.ANALYTICS_READ, Permissions.SECURITY_READ,
     Permissions.REVIEWS_RUN, Permissions.FINDINGS_FEEDBACK, Permissions.CHAT_USE,
     Permissions.POLICIES_READ, Permissions.PRS_REVIEW, Permissions.PRS_REQUEST_CHANGES, 
-    Permissions.FINDINGS_DISMISS,
-    // Plus tech_lead specific
-    Permissions.PRS_APPROVE, Permissions.REPOS_INDEX
-  ],
-  team_lead: [
-    // Legacy alias to tech_lead
-    Permissions.ORG_READ, Permissions.MEMBERS_READ, Permissions.PROJECTS_READ,
-    Permissions.REPOS_READ, Permissions.PRS_READ, Permissions.FINDINGS_READ,
-    Permissions.REVIEWS_READ, Permissions.ANALYTICS_READ, Permissions.SECURITY_READ,
-    Permissions.REVIEWS_RUN, Permissions.FINDINGS_FEEDBACK, Permissions.CHAT_USE,
-    Permissions.POLICIES_READ, Permissions.PRS_REVIEW, Permissions.PRS_REQUEST_CHANGES, 
-    Permissions.FINDINGS_DISMISS, Permissions.PRS_APPROVE, Permissions.REPOS_INDEX
+    Permissions.FINDINGS_DISMISS, Permissions.SECURITY_REVIEW,
+    // Plus team_lead specific
+    Permissions.PRS_APPROVE, Permissions.PRS_MERGE, Permissions.REPOS_INDEX
   ],
   org_admin: [
-    // Eng manager permissions
+    // Includes team_lead
     Permissions.ORG_READ, Permissions.MEMBERS_READ, Permissions.PROJECTS_READ,
     Permissions.REPOS_READ, Permissions.PRS_READ, Permissions.FINDINGS_READ,
     Permissions.REVIEWS_READ, Permissions.ANALYTICS_READ, Permissions.SECURITY_READ,
     Permissions.REVIEWS_RUN, Permissions.FINDINGS_FEEDBACK, Permissions.CHAT_USE,
     Permissions.POLICIES_READ, Permissions.PRS_REVIEW, Permissions.PRS_REQUEST_CHANGES, 
-    Permissions.FINDINGS_DISMISS, Permissions.PRS_APPROVE, Permissions.REPOS_INDEX,
-    Permissions.PROJECTS_CREATE, Permissions.PROJECTS_UPDATE, Permissions.AUDIT_READ,
+    Permissions.FINDINGS_DISMISS, Permissions.SECURITY_REVIEW, Permissions.PRS_APPROVE, 
+    Permissions.PRS_MERGE, Permissions.REPOS_INDEX,
     // Plus org_admin specific
-    Permissions.ORG_UPDATE, Permissions.MEMBERS_INVITE, Permissions.MEMBERS_UPDATE,
-    Permissions.MEMBERS_REMOVE, Permissions.PROJECTS_DELETE, Permissions.REPOS_CONNECT,
-    Permissions.REPOS_UPDATE, Permissions.REPOS_DELETE, Permissions.POLICIES_UPDATE
+    Permissions.ORG_UPDATE, Permissions.PROJECTS_CREATE, Permissions.PROJECTS_UPDATE, Permissions.PROJECTS_DELETE,
+    Permissions.MEMBERS_INVITE, Permissions.MEMBERS_UPDATE,
+    Permissions.MEMBERS_REMOVE, Permissions.REPOS_CONNECT,
+    Permissions.REPOS_UPDATE, Permissions.REPOS_DELETE, Permissions.POLICIES_UPDATE, Permissions.AUDIT_READ
   ]
 };
-
-// Fallback for roles that are outside the target 4 roles but might exist in DB
-// For example, if someone has security_reviewer or org_owner, we map them to an equivalent
-// capability set for safety, though the UI will only treat them as their base capabilities.
-ROLE_PERMISSIONS.security_reviewer = [
-  ...ROLE_PERMISSIONS.reviewer, 
-  Permissions.PRS_APPROVE,
-];
-ROLE_PERMISSIONS.eng_manager = [
-  ...ROLE_PERMISSIONS.tech_lead,
-  Permissions.PROJECTS_CREATE, Permissions.PROJECTS_UPDATE, Permissions.AUDIT_READ
-];
-ROLE_PERMISSIONS.org_owner = [
-  ...ROLE_PERMISSIONS.org_admin
-];
-ROLE_PERMISSIONS.read_only = [
-    Permissions.ORG_READ, Permissions.MEMBERS_READ, Permissions.PROJECTS_READ,
-    Permissions.REPOS_READ, Permissions.PRS_READ, Permissions.FINDINGS_READ,
-    Permissions.REVIEWS_READ, Permissions.ANALYTICS_READ, Permissions.SECURITY_READ,
-    Permissions.POLICIES_READ
-];
 
 /**
  * usePermissions hook
@@ -164,9 +133,9 @@ export function usePermissions(memberships = [], orgId = null) {
       can,
       hasRole,
       // For convenience to check the 4 target roles, though `can()` is preferred
-      isOrgAdmin: hasRole('org_admin') || hasRole('org_owner'),
-      isLead: hasRole('tech_lead') || hasRole('team_lead') || hasRole('eng_manager'),
-      isReviewer: hasRole('reviewer') || hasRole('security_reviewer'),
+      isOrgAdmin: hasRole('org_admin'),
+      isLead: hasRole('team_lead'),
+      isReviewer: hasRole('reviewer'),
       isDeveloper: hasRole('developer') || activeRoles.size === 0,
     };
   }, [memberships, orgId]);

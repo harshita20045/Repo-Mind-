@@ -443,18 +443,6 @@ export default function RepositoriesPage() {
               placeholder="main"
             />
           </Field>
-          <Field
-            label="Personal Access Token (PAT)"
-            hint="Requires 'repo' scope. Encrypted immediately — never stored in plaintext."
-          >
-            <TextInput
-              type="password"
-              value={repoForm.pat}
-              onChange={(e) => setRepoForm({ ...repoForm, pat: e.target.value })}
-              placeholder="ghp_xxxxxxxxxxxx"
-              autoComplete="new-password"
-            />
-          </Field>
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <Button

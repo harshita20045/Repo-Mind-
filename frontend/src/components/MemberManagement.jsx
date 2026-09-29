@@ -6,8 +6,8 @@ import { Button } from './ui/Button';
 import { StatusBadge } from './ui/Badge';
 import EmptyState from './ui/EmptyState';
 
-const ROLES = ['developer', 'reviewer', 'tech_lead', 'org_admin'];
-const ROLE_LABELS = { developer: 'Developer', reviewer: 'Reviewer', tech_lead: 'Lead', org_admin: 'Org Admin' };
+const ROLES = ['developer', 'reviewer', 'team_lead', 'org_admin'];
+const ROLE_LABELS = { developer: 'Developer', reviewer: 'Reviewer', team_lead: 'Team Lead', org_admin: 'Org Admin' };
 
 export default function MemberManagement({ organizationId, memberships }) {
   const [members, setMembers] = useState([]);

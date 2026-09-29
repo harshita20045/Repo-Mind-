@@ -29,11 +29,11 @@ def index_repository(db: Session, repository_id: int) -> None:
     organization_id = project.organization_id
     
     # Fetch connection via the modern per-user OAuth logic (uses an org admin's token)
-    from backend.app.github.service import get_decrypted_pat_for_org
+    from backend.app.github.service import get_decrypted_github_token_for_org
     from fastapi import HTTPException
     
     try:
-        pat = get_decrypted_pat_for_org(db, organization_id)
+        pat = get_decrypted_github_token_for_org(db, organization_id)
     except HTTPException as e:
         raise ValueError(e.detail)
         

@@ -91,16 +91,18 @@ class Permission(str, enum.Enum):
     # Chat / AI Assistant
     CHAT_USE = "chat.use"
 
+    # Merge
+    PRS_MERGE = "prs.merge"
+
     # Audit
     AUDIT_READ = "audit.read"
-
 
 # ---------------------------------------------------------------------------
 # Role → permission sets
 # ---------------------------------------------------------------------------
 # Build these as frozensets so they are immutable and hashable.
 
-_READ_ONLY_PERMISSIONS: FrozenSet[Permission] = frozenset([
+_DEVELOPER_PERMISSIONS: FrozenSet[Permission] = frozenset([
     Permission.ORG_READ,
     Permission.MEMBERS_READ,
     Permission.PROJECTS_READ,
@@ -111,10 +113,6 @@ _READ_ONLY_PERMISSIONS: FrozenSet[Permission] = frozenset([
     Permission.ANALYTICS_READ,
     Permission.POLICIES_READ,
     Permission.SECURITY_READ,
-])
-
-_DEVELOPER_PERMISSIONS: FrozenSet[Permission] = frozenset([
-    *_READ_ONLY_PERMISSIONS,
     Permission.REVIEWS_RUN,
     Permission.FINDINGS_FEEDBACK,
     Permission.CHAT_USE,
@@ -125,70 +123,46 @@ _REVIEWER_PERMISSIONS: FrozenSet[Permission] = frozenset([
     Permission.PRS_REVIEW,
     Permission.PRS_REQUEST_CHANGES,
     Permission.FINDINGS_DISMISS,
-])
-
-_SECURITY_REVIEWER_PERMISSIONS: FrozenSet[Permission] = frozenset([
-    *_REVIEWER_PERMISSIONS,
     Permission.SECURITY_REVIEW,
-    Permission.PRS_APPROVE,
 ])
 
-_TECH_LEAD_PERMISSIONS: FrozenSet[Permission] = frozenset([
+_TEAM_LEAD_PERMISSIONS: FrozenSet[Permission] = frozenset([
     *_REVIEWER_PERMISSIONS,
     Permission.PRS_APPROVE,
+    Permission.PRS_MERGE,
     Permission.REPOS_INDEX,
 ])
 
-_ENG_MANAGER_PERMISSIONS: FrozenSet[Permission] = frozenset([
-    *_TECH_LEAD_PERMISSIONS,
+_ORG_ADMIN_PERMISSIONS: FrozenSet[Permission] = frozenset([
+    *_TEAM_LEAD_PERMISSIONS,
+    Permission.ORG_UPDATE,
     Permission.PROJECTS_CREATE,
     Permission.PROJECTS_UPDATE,
-    Permission.POLICIES_READ,
-    Permission.AUDIT_READ,
-])
-
-_ORG_ADMIN_PERMISSIONS: FrozenSet[Permission] = frozenset([
-    *_ENG_MANAGER_PERMISSIONS,
-    Permission.ORG_UPDATE,
+    Permission.PROJECTS_DELETE,
     Permission.MEMBERS_INVITE,
     Permission.MEMBERS_UPDATE,
     Permission.MEMBERS_REMOVE,
-    Permission.PROJECTS_DELETE,
     Permission.REPOS_CONNECT,
     Permission.REPOS_UPDATE,
     Permission.REPOS_DELETE,
     Permission.POLICIES_UPDATE,
-])
-
-_ORG_OWNER_PERMISSIONS: FrozenSet[Permission] = frozenset([
-    *_ORG_ADMIN_PERMISSIONS,
-    Permission.ORG_TRANSFER,
+    Permission.AUDIT_READ,
 ])
 
 # Canonical mapping from role → permission set
 ROLE_PERMISSIONS: Dict[str, FrozenSet[Permission]] = {
-    RoleEnum.READ_ONLY.value: _READ_ONLY_PERMISSIONS,
     RoleEnum.DEVELOPER.value: _DEVELOPER_PERMISSIONS,
     RoleEnum.REVIEWER.value: _REVIEWER_PERMISSIONS,
-    RoleEnum.SECURITY_REVIEWER.value: _SECURITY_REVIEWER_PERMISSIONS,
-    RoleEnum.TEAM_LEAD.value: _TECH_LEAD_PERMISSIONS,    # legacy alias
-    RoleEnum.TECH_LEAD.value: _TECH_LEAD_PERMISSIONS,    # same value, kept for clarity
-    RoleEnum.ENG_MANAGER.value: _ENG_MANAGER_PERMISSIONS,
+    RoleEnum.TEAM_LEAD.value: _TEAM_LEAD_PERMISSIONS,
     RoleEnum.ORG_ADMIN.value: _ORG_ADMIN_PERMISSIONS,
-    RoleEnum.ORG_OWNER.value: _ORG_OWNER_PERMISSIONS,
 }
 
 # Numeric hierarchy for legacy role comparisons (kept for backward compatibility)
 ROLE_HIERARCHY: Dict[str, int] = {
-    RoleEnum.READ_ONLY.value: 0,
     RoleEnum.DEVELOPER.value: 1,
     RoleEnum.REVIEWER.value: 2,
-    RoleEnum.SECURITY_REVIEWER.value: 3,
     RoleEnum.TEAM_LEAD.value: 3,
-    RoleEnum.TECH_LEAD.value: 3,
-    RoleEnum.ENG_MANAGER.value: 4,
-    RoleEnum.ORG_ADMIN.value: 5,
-    RoleEnum.ORG_OWNER.value: 6,
+    RoleEnum.ORG_ADMIN.value: 4,
 }
 
 

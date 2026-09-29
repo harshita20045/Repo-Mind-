@@ -34,6 +34,7 @@ def connect_repository(
     github_owner: str,
     github_name: str,
     default_branch: str,
+    register_webhook: bool = False,
 ) -> Repository:
     from backend.app.organizations.models import Project, Repository
     from backend.app.github.models import GitHubIdentity, GitHubCredential
@@ -85,17 +86,18 @@ def connect_repository(
     default_branch_actual = repo_meta.get("default_branch", default_branch)
 
     # Register webhook
-    from backend.app.core.config import settings
-    webhook_url = getattr(settings, "GITHUB_WEBHOOK_URL", None)
-    webhook_secret = getattr(settings, "GITHUB_WEBHOOK_SECRET", None)
-    
-    if webhook_url and webhook_secret:
-        try:
-            client.register_webhook(github_owner, github_name, webhook_url, webhook_secret)
-        except GitHubAPIError as e:
-            # We don't fail the entire repository connection if webhook fails,
-            # but we could log it or set a status
-            pass
+    if register_webhook:
+        from backend.app.core.config import settings
+        webhook_url = getattr(settings, "GITHUB_WEBHOOK_URL", None)
+        webhook_secret = getattr(settings, "GITHUB_WEBHOOK_SECRET", None)
+        
+        if webhook_url and webhook_secret:
+            try:
+                client.register_webhook(github_owner, github_name, webhook_url, webhook_secret)
+            except GitHubAPIError as e:
+                # We don't fail the entire repository connection if webhook fails,
+                # but we could log it or set a status
+                pass
 
 
     if not repo:
@@ -124,8 +126,8 @@ def connect_repository(
 def get_github_repositories(db: Session, organization_id: int, user_id: int) -> List[Dict[str, Any]]:
     from backend.app.organizations.service import verify_org_admin
     verify_org_admin(db, user_id, organization_id)
-    pat = get_decrypted_pat_for_user(db, user_id)
-    client = GitHubClient(pat)
+    token = get_decrypted_github_token_for_user(db, user_id)
+    client = GitHubClient(token)
     try:
         raw_repos = client.list_user_repositories(per_page=100)
     except GitHubAPIError as e:
@@ -146,9 +148,9 @@ def get_github_connection_for_org(db: Session, organization_id: int) :
     )
 
 
-def get_decrypted_pat_for_org(db: Session, organization_id: int) -> str:
+def get_decrypted_github_token_for_org(db: Session, organization_id: int) -> str:
     """
-    Return the decrypted PAT for an org by finding an org_admin with a linked GitHub Identity.
+    Return the decrypted GitHub token for an org by finding an org_admin with a linked GitHub Identity.
     Raises HTTPException if no connection is configured or decryption fails.
     NEVER log or re-raise the token value.
     """
@@ -187,7 +189,7 @@ def get_decrypted_pat_for_org(db: Session, organization_id: int) -> str:
 # ---------------------------------------------------------------------------
 
 
-def get_decrypted_pat_for_user(db: Session, user_id: int) -> str:
+def get_decrypted_github_token_for_user(db: Session, user_id: int) -> str:
     from backend.app.github.models import GitHubIdentity, GitHubCredential
     from backend.app.github.encryption import decrypt_token
     from fastapi import HTTPException, status
@@ -229,8 +231,8 @@ def sync_pull_requests(
     Retry policy: on GitHubTransientError, raise HTTPException 502 (caller
     can retry). Non-retryable errors become 422/404/502 per the error matrix.
     """
-    pat = get_decrypted_pat_for_user(db, user_id)
-    client = GitHubClient(pat)
+    token = get_decrypted_github_token_for_user(db, user_id)
+    client = GitHubClient(token)
 
     try:
         raw_prs = client.list_pull_requests(
@@ -346,8 +348,8 @@ def get_pull_request_diff(
     repo = get_repository_by_id(db, pr.repository_id)
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
-    pat = get_decrypted_pat_for_user(db, user_id)
-    client = GitHubClient(pat)
+    token = get_decrypted_github_token_for_user(db, user_id)
+    client = GitHubClient(token)
     try:
         return client.get_pull_request_diff(
             repo.github_owner,
@@ -418,8 +420,8 @@ def sync_pull_request_details(db: Session, pr_id: int, user_id: int) -> PullRequ
         raise HTTPException(status_code=404, detail="Pull request not found")
         
     repo = pr.repository
-    pat = get_decrypted_pat_for_user(db, user_id)
-    client = GitHubClient(pat)
+    token = get_decrypted_github_token_for_user(db, user_id)
+    client = GitHubClient(token)
     owner = repo.github_owner
     name = repo.github_name
     number = pr.github_number
