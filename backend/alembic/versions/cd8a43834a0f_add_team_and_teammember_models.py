@@ -1,7 +1,7 @@
 """Add Team and TeamMember models
 
 Revision ID: cd8a43834a0f
-Revises: 1f13f692463e
+Revises: 476568fc3a70
 Create Date: 2026-09-24 11:42:19.880076
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'cd8a43834a0f'
-down_revision: Union[str, None] = '1f13f692463e'
+down_revision: Union[str, None] = '476568fc3a70'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

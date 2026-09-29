@@ -29,6 +29,16 @@ def _setup_user_and_org(client: TestClient, db_session, org_name: str = None) ->
 
     membership = OrganizationMembership(user_id=user.id, organization_id=org.id, role=RoleEnum.ORG_ADMIN)
     db_session.add(membership)
+
+    from backend.app.github.models import GitHubIdentity, GitHubCredential
+    from backend.app.github.service import encrypt_token
+
+    identity = GitHubIdentity(user_id=user.id, github_user_id=f"gh_{uuid.uuid4().hex[:8]}", github_login=f"login_{uuid.uuid4().hex[:8]}")
+    db_session.add(identity)
+    db_session.flush()
+
+    cred = GitHubCredential(github_identity_id=identity.id, encrypted_access_token=encrypt_token("fake_pat"))
+    db_session.add(cred)
     db_session.commit()
 
     login = client.post("/auth/login", json={"email": email, "password": "Testpass1!"})
@@ -94,15 +104,15 @@ class TestRepositoryConnect:
         MockGitHubClient.return_value = mock_client_instance
 
         token, org_id, _ = _setup_user_and_org(client, db_session)
-        self._create_project(client, token, org_id)
+        project_id = self._create_project(client, token, org_id)
 
         response = client.post(
             f"/repositories/connect?organization_id={org_id}",
             json={
+                "project_id": project_id,
                 "github_owner": "testowner",
                 "github_name": "testrepo",
                 "default_branch": "main",
-                "pat": "ghp_fake_token_for_test",
             },
             cookies={"access_token": token},
         )
@@ -110,7 +120,6 @@ class TestRepositoryConnect:
         assert response.status_code == 201, response.text
         data = response.json()
         assert "repository_id" in data
-        assert "github_connection_id" in data
         response_text = str(data)
         assert "ghp_fake_token_for_test" not in response_text
         assert "ghp_" not in response_text
@@ -135,12 +144,14 @@ class TestRepositoryConnect:
         login_dev = client.post("/auth/login", json={"email": email_dev, "password": "pass"})
         token_dev = login_dev.cookies.get("access_token")
 
+        project_id = self._create_project(client, token_admin, org_id)
+
         response = client.post(
             f"/repositories/connect?organization_id={org_id}",
             json={
+                "project_id": project_id,
                 "github_owner": "owner",
                 "github_name": "repo",
-                "pat": "ghp_fake",
             },
             cookies={"access_token": token_dev},
         )
@@ -154,15 +165,16 @@ class TestRepositoryConnect:
         MockGitHubClient.return_value = mock_instance
 
         token, org_id, _ = _setup_user_and_org(client, db_session)
-        client.post(
+        r_proj = client.post(
             f"/organizations/{org_id}/projects",
             json={"name": "P"},
             cookies={"access_token": token},
         )
+        project_id = r_proj.json()["id"]
 
         response = client.post(
             f"/repositories/connect?organization_id={org_id}",
-            json={"github_owner": "x", "github_name": "y", "pat": "ghp_bad"},
+            json={"project_id": project_id, "github_owner": "x", "github_name": "y"},
             cookies={"access_token": token},
         )
         assert response.status_code == 422
@@ -184,7 +196,7 @@ class TestPullRequestEndpoints:
         )
         repo_b = client.post(
             f"/projects/{proj_b.json()['id']}/repositories",
-            json={"github_owner": "ob", "github_name": "rb", "default_branch": "main"},
+            json={"github_owner": "ob", "github_name": "rb", "github_repository_id": "111", "default_branch": "main"},
             cookies={"access_token": token_b},
         )
         repo_b_id = repo_b.json()["id"]

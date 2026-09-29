@@ -25,8 +25,8 @@ def setup_test_repos(db_session, embedder):
     db_session.add(project)
     db_session.commit()
     
-    repo_a = Repository(project_id=project.id, github_owner="owner", github_name="repo_a", default_branch="main")
-    repo_b = Repository(project_id=project.id, github_owner="owner", github_name="repo_b", default_branch="main")
+    repo_a = Repository(project_id=project.id, github_owner="owner", github_name="repo_a", github_repository_id="10105", default_branch="main")
+    repo_b = Repository(project_id=project.id, github_owner="owner", github_name="repo_b", github_repository_id="10106", default_branch="main")
     db_session.add_all([repo_a, repo_b])
     db_session.commit()
     
@@ -123,7 +123,7 @@ def test_empty_repository(db_session, setup_test_repos, embedder):
     project = Project(organization_id=org.id, name="Empty Repo Proj")
     db_session.add(project)
     db_session.commit()
-    repo_empty = Repository(project_id=project.id, github_owner="owner", github_name="empty", default_branch="main")
+    repo_empty = Repository(project_id=project.id, github_owner="owner", github_name="empty", github_repository_id="10107", default_branch="main")
     db_session.add(repo_empty)
     db_session.commit()
     

@@ -32,7 +32,7 @@ def create_repository(project_id: int, repo: schemas.RepositoryCreate, db: Sessi
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     service.verify_org_admin(db, current_user.id, project.organization_id)
-    return service.create_repository(db, project_id, repo.github_owner, repo.github_name, repo.default_branch)
+    return service.create_repository(db, project_id, repo.github_owner, repo.github_name, repo.github_repository_id, repo.default_branch)
 
 @router.get("/organizations/{organization_id}/members", response_model=List[schemas.OrganizationMemberResponse])
 def list_members(organization_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

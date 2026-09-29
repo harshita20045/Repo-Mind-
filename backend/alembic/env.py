@@ -46,7 +46,16 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
-    with engine.connect() as connection:
+    from sqlalchemy import create_engine
+    
+    url = config.get_main_option("sqlalchemy.url")
+    print("ALEMBIC URL FROM CONFIG:", url)
+    if not url:
+        url = str(settings.POSTGRES_URL)
+        
+    connectable = create_engine(url)
+
+    with connectable.connect() as connection:
         context.configure(
             connection=connection, target_metadata=target_metadata
         )

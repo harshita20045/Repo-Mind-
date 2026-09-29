@@ -17,6 +17,7 @@ class ProjectResponse(ProjectBase):
 class RepositoryBase(BaseModel):
     github_owner: str
     github_name: str
+    github_repository_id: str
     default_branch: str = "main"
 
 class RepositoryCreate(RepositoryBase):

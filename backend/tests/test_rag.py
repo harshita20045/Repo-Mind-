@@ -24,8 +24,8 @@ def test_loader_exclusions():
     assert loader._should_exclude_path("secret.pem") is True
     assert loader._should_exclude_path("key.key") is True
     
-    # Must only include markdown
-    assert loader._should_exclude_path("src/main.py") is True
+    # Must include python and markdown
+    assert loader._should_exclude_path("src/main.py") is False
     assert loader._should_exclude_path("README.md") is False
     assert loader._should_exclude_path("docs/setup.md") is False
 
@@ -68,8 +68,8 @@ def test_persistence_and_idempotency(db_session):
     db_session.add(project)
     db_session.commit()
     
-    repo1 = Repository(project_id=project.id, github_owner="owner", github_name="repo1", default_branch="main")
-    repo2 = Repository(project_id=project.id, github_owner="owner", github_name="repo2", default_branch="main")
+    repo1 = Repository(project_id=project.id, github_owner="owner", github_name="repo1", github_repository_id="10108", default_branch="main")
+    repo2 = Repository(project_id=project.id, github_owner="owner", github_name="repo2", github_repository_id="10109", default_branch="main")
     db_session.add_all([repo1, repo2])
     db_session.commit()
     
@@ -113,13 +113,27 @@ def test_service_integration(db_session, monkeypatch):
     assert db_session.execute(text("SELECT current_database()")).scalar() == "repomind_test"
 
     # Setup parent records
+    from backend.app.auth.models import User, OrganizationMembership, RoleEnum
+    from backend.app.github.models import GitHubIdentity, GitHubCredential
+    
     org = Organization(name="Test Org RAG")
     db_session.add(org)
     db_session.commit()
     
-    conn = GithubConnection(organization_id=org.id, encrypted_token=encrypt_token("fake_pat"))
+    user = User(email="rag_test@example.com", password_hash="hash")
+    db_session.add(user)
+    db_session.commit()
+    
+    membership = OrganizationMembership(user_id=user.id, organization_id=org.id, role=RoleEnum.ORG_ADMIN)
+    identity = GitHubIdentity(user_id=user.id, github_user_id="123", github_login="rag_test")
+    db_session.add(membership)
+    db_session.add(identity)
+    db_session.commit()
+    
+    cred = GitHubCredential(github_identity_id=identity.id, encrypted_access_token=encrypt_token("fake_pat"))
+    db_session.add(cred)
+    
     project = Project(organization_id=org.id, name="Test Proj RAG")
-    db_session.add(conn)
     db_session.add(project)
     db_session.commit()
     
@@ -127,6 +141,7 @@ def test_service_integration(db_session, monkeypatch):
         project_id=project.id, 
         github_owner="test_owner", 
         github_name="test_repo",
+        github_repository_id="10111",
         default_branch="main"
     )
     db_session.add(repo)

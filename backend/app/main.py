@@ -3,6 +3,9 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from backend.app.routes.health import router as health_router
 from backend.app.auth.routes import router as auth_router
 from backend.app.organizations.routes import router as orgs_router
@@ -17,15 +20,16 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# CORS middleware for local frontend development
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+from backend.app.core.config import settings
+
+# CORS middleware for local and production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-    ],
+    allow_origins=settings.FRONTEND_URLS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

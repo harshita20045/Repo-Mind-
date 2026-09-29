@@ -91,11 +91,11 @@ def _setup_pr(db_session):
     proj = Project(organization_id=org.id, name="test")
     db_session.add(proj)
     db_session.commit()
-    repo = Repository(project_id=proj.id, github_owner="test", github_name="test")
+    repo = Repository(project_id=proj.id, github_owner="test", github_name="test", github_repository_id="10102")
     db_session.add(repo)
     db_session.commit()
     from datetime import datetime, timezone
-    pr = PullRequest(repository_id=repo.id, github_number=1, title="test", state="open", head_sha="abcd", created_at=datetime.now(timezone.utc))
+    pr = PullRequest(repository_id=repo.id, github_pr_id=1, github_number=1, title="test", state="open", head_sha="abcd", created_at=datetime.now(timezone.utc))
     db_session.add(pr)
     db_session.commit()
     return pr.id

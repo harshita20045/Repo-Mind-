@@ -21,17 +21,19 @@ def api_test_data(db_session):
     db_session.add(user)
     db_session.commit()
 
-    membership = OrganizationMembership(user_id=user.id, organization_id=org.id, role="developer")
+    membership = OrganizationMembership(user_id=user.id, organization_id=org.id, role="org_admin")
     db_session.add(membership)
     db_session.commit()
 
-    from backend.app.organizations.models import GithubConnection
+    from backend.app.github.models import GitHubIdentity, GitHubCredential
     from backend.app.github.service import encrypt_token
-    github_conn = GithubConnection(
-        organization_id=org.id,
-        encrypted_token=encrypt_token("dummy_pat")
-    )
-    db_session.add(github_conn)
+
+    identity = GitHubIdentity(user_id=user.id, github_user_id="12345", github_login="api_user")
+    db_session.add(identity)
+    db_session.commit()
+
+    cred = GitHubCredential(github_identity_id=identity.id, encrypted_access_token=encrypt_token("dummy_pat"))
+    db_session.add(cred)
     db_session.commit()
 
     user2 = User(email="other_user@test.com", password_hash=hash_password("password123"))
@@ -46,6 +48,7 @@ def api_test_data(db_session):
         project_id=project.id,
         github_owner="test_owner",
         github_name="test_repo",
+        github_repository_id="10101",
         default_branch="main"
     )
     db_session.add(repo)
@@ -53,10 +56,11 @@ def api_test_data(db_session):
 
     pr = PullRequest(
         repository_id=repo.id,
+        github_pr_id="1",
         github_number=1,
         title="Test PR",
         state="open",
-        author="author1",
+        github_author_login="author1",
         head_sha="sha1",
         created_at=datetime.utcnow()
     )

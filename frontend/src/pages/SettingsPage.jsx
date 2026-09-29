@@ -247,11 +247,11 @@ export default function SettingsPage() {
                       <input
                         type="text"
                         readOnly
-                        value={`${window.location.protocol}//${window.location.host.replace('5173','8000').replace('3000','8000')}/api/webhooks/github`}
+                        value={`${import.meta.env.VITE_API_URL || window.location.origin}/api/webhooks/github`}
                         className="flex-1 bg-surfaceHighlight border border-border text-text-muted text-[13px] font-mono rounded-l-md px-3.5 py-2.5 focus:outline-none"
                       />
                       <button
-                        onClick={() => navigator.clipboard.writeText(`${window.location.protocol}//${window.location.host}/api/webhooks/github`)}
+                        onClick={() => navigator.clipboard.writeText(`${import.meta.env.VITE_API_URL || window.location.origin}/api/webhooks/github`)}
                         className="px-3.5 bg-surfaceHighlight hover:bg-surface border-y border-r border-border text-text-secondary rounded-r-md text-[13px] font-medium transition-colors"
                       >
                         Copy

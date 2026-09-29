@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
     EMBEDDING_MODEL: str = "sentence-transformers/all-mpnet-base-v2"
     BOOTSTRAP_TOKEN: Optional[str] = "fkjerngiorneognrengioirw0rrrrrth348h3fin3gnw3480"
+    # Allowed CORS origins
+    FRONTEND_URLS: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ]
 
     # LLM provider — Phase 8
     # "local": development/null provider (raises NotImplementedError on real reviews)

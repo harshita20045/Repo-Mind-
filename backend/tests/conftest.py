@@ -39,13 +39,22 @@ def _verify_test_db_identity():
 # Perform identity verification before anything else
 _verify_test_db_identity()
 
+from alembic.config import Config
+from alembic import command
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
-    """Create all tables in the test database once per session."""
+    """Create all tables in the test database once per session using Alembic migrations."""
     _verify_test_db_identity()
     with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE;"))
+        conn.execute(text("CREATE SCHEMA public;"))
+        conn.execute(text("GRANT ALL ON SCHEMA public TO public;"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-    Base.metadata.create_all(bind=engine)
+    
+    alembic_cfg = Config("alembic.ini")
+    alembic_cfg.set_main_option("sqlalchemy.url", TEST_POSTGRES_URL.replace("%", "%%"))
+    command.upgrade(alembic_cfg, "head")
     yield
 
 @pytest.fixture

@@ -49,7 +49,7 @@ def test_organization_isolation(client: TestClient, db_session):
     # User B creates a repository
     res_repo_b = client.post(
         f"/projects/{project_b_id}/repositories",
-        json={"github_owner": "owner", "github_name": "repo"},
+        json={"github_owner": "owner", "github_name": "repo", "github_repository_id": "12345"},
         cookies={"access_token": token_b}
     )
     assert res_repo_b.status_code == 201

@@ -32,7 +32,7 @@ from backend.app.github.models import PullRequest
 from backend.app.github.encryption import encrypt_token
 from backend.app.review.models import ReviewRun, Finding
 from backend.app.review.provider import (
-    LLMProvider, LLMProviderError, LocalProvider, ClaudeProvider,
+    LLMProvider, LLMProviderError, LocalProvider, GeminiProvider, GroqProvider,
     get_llm_provider,
 )
 from backend.app.review.schemas import (
@@ -107,18 +107,31 @@ def seeded_pr(db_session):
     db_session.add(org)
     db_session.commit()
 
-    conn = GithubConnection(
-        organization_id=org.id,
-        encrypted_token=encrypt_token("fake_pat_for_review_test"),
-    )
+    from backend.app.auth.models import User, OrganizationMembership, RoleEnum
+    from backend.app.github.models import GitHubIdentity, GitHubCredential
+
+    user = User(email="review_test@example.com", password_hash="hash")
+    db_session.add(user)
+    db_session.commit()
+
+    membership = OrganizationMembership(user_id=user.id, organization_id=org.id, role=RoleEnum.ORG_ADMIN)
+    identity = GitHubIdentity(user_id=user.id, github_user_id="123", github_login="review_test")
+    db_session.add(membership)
+    db_session.add(identity)
+    db_session.commit()
+
+    cred = GitHubCredential(github_identity_id=identity.id, encrypted_access_token=encrypt_token("fake_pat_for_review_test"))
+    db_session.add(cred)
+
     project = Project(organization_id=org.id, name="Review Test Project")
-    db_session.add_all([conn, project])
+    db_session.add(project)
     db_session.commit()
 
     repo = Repository(
         project_id=project.id,
         github_owner="test_owner",
         github_name="test_repo",
+        github_repository_id="10103",
         default_branch="main",
     )
     db_session.add(repo)
@@ -126,6 +139,7 @@ def seeded_pr(db_session):
 
     pr = PullRequest(
         repository_id=repo.id,
+        github_pr_id="1",
         github_number=1,
         title="Add user authentication endpoint",
         state="open",
@@ -140,7 +154,6 @@ def seeded_pr(db_session):
         "project": project,
         "repo": repo,
         "pr": pr,
-        "conn": conn,
     }
 
 
@@ -336,6 +349,7 @@ def test_e_repository_isolation(db_session, seeded_pr):
         project_id=project.id,
         github_owner="test_owner",
         github_name="repo_b",
+        github_repository_id="10104",
         default_branch="main",
     )
     db_session.add(repo_b)
@@ -486,7 +500,8 @@ def test_h_persistence_fields(db_session, seeded_pr):
     assert f.explanation == VALID_FINDING["problem"]
     assert f.rule_source == VALID_FINDING["evidence"]
     assert f.recommendation == VALID_FINDING["recommendation"]
-    assert abs(f.confidence - VALID_FINDING["confidence"]) < 0.001
+    # Confidence is penalized to 0.5 because it's a standards violation with no chunk evidence
+    assert abs(f.confidence - 0.5) < 0.001
     assert f.status == "open"
 
 
@@ -605,10 +620,10 @@ def test_derive_query_max_length():
 # Additional: provider abstraction tests
 # ---------------------------------------------------------------------------
 
-def test_local_provider_raises_not_implemented():
+def test_local_provider_returns_mock_response():
     provider = LocalProvider()
-    with pytest.raises(NotImplementedError):
-        provider.complete("system", "user")
+    response = provider.complete("system", "user")
+    assert "Mock LLM Response" in response
 
 
 def test_local_provider_satisfies_protocol():
@@ -616,9 +631,9 @@ def test_local_provider_satisfies_protocol():
     assert isinstance(LocalProvider(), LLMProvider)
 
 
-def test_claude_provider_satisfies_protocol():
-    """ClaudeProvider satisfies the LLMProvider protocol (no live API call)."""
-    assert isinstance(ClaudeProvider(api_key="dummy"), LLMProvider)
+def test_gemini_provider_satisfies_protocol():
+    """GeminiProvider satisfies the LLMProvider protocol (no live API call)."""
+    assert isinstance(GeminiProvider(api_key="dummy"), LLMProvider)
 
 
 def test_get_llm_provider_local_returns_local_provider():
@@ -628,20 +643,20 @@ def test_get_llm_provider_local_returns_local_provider():
     assert isinstance(provider, LocalProvider)
 
 
-def test_get_llm_provider_claude_without_key_raises():
+def test_get_llm_provider_gemini_without_key_raises():
     class FakeSettings:
-        LLM_PROVIDER = "claude"
-        ANTHROPIC_API_KEY = None
+        LLM_PROVIDER = "gemini"
+        GEMINI_API_KEY = None
     from backend.app.review.provider import LLMProviderError
     with pytest.raises(LLMProviderError):
         get_llm_provider(FakeSettings())
 
 
-def test_get_llm_provider_unknown_raises():
+def test_get_llm_provider_unknown_returns_local():
     class FakeSettings:
         LLM_PROVIDER = "unknown_llm_xyz"
-    with pytest.raises(ValueError):
-        get_llm_provider(FakeSettings())
+    provider = get_llm_provider(FakeSettings())
+    assert isinstance(provider, LocalProvider)
 
 
 def test_review_service_does_not_import_anthropic_directly():

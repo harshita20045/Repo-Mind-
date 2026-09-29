@@ -72,11 +72,12 @@ def get_repositories(db: Session, project_id: int) -> List[Repository]:
 def get_repository_by_id(db: Session, repository_id: int) -> Optional[Repository]:
     return db.query(Repository).filter(Repository.id == repository_id).first()
 
-def create_repository(db: Session, project_id: int, github_owner: str, github_name: str, default_branch: str) -> Repository:
+def create_repository(db: Session, project_id: int, github_owner: str, github_name: str, github_repository_id: str, default_branch: str) -> Repository:
     repo = Repository(
         project_id=project_id,
         github_owner=github_owner,
         github_name=github_name,
+        github_repository_id=github_repository_id,
         default_branch=default_branch
     )
     db.add(repo)
