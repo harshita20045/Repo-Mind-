@@ -16,6 +16,7 @@ export default function MemberManagement({ organizationId, memberships }) {
   const [inviteRole, setInviteRole] = useState('developer');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [invitationLink, setInvitationLink] = useState(null);
   const [removeTarget, setRemoveTarget] = useState(null); // { id, email }
   const [removeLoading, setRemoveLoading] = useState(false);
 
@@ -40,14 +41,18 @@ export default function MemberManagement({ organizationId, memberships }) {
   async function handleInvite(e) {
     e.preventDefault();
     setError(null);
+    setInvitationLink(null);
     if (!organizationId) return;
     setInviteLoading(true);
     try {
-      await apiRequest(`/organizations/${organizationId}/members`, {
+      const data = await apiRequest(`/organizations/${organizationId}/members`, {
         method: 'POST',
         body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
       });
       setInviteEmail('');
+      if (data.invitation_token) {
+        setInvitationLink(`${window.location.origin}/onboard?token=${data.invitation_token}`);
+      }
       fetchMembers();
     } catch (e) {
       setError(e.message || 'Failed to add member.');
@@ -141,6 +146,23 @@ export default function MemberManagement({ organizationId, memberships }) {
             </svg>
             {error}
             <button onClick={() => setError(null)} className="ml-auto text-danger/60 hover:text-danger">×</button>
+          </div>
+        )}
+
+        {/* Invitation Link Success */}
+        {invitationLink && (
+          <div className="mb-6 p-4 bg-success/10 border border-success/20 rounded-lg animate-fade-in">
+            <h4 className="text-sm font-bold text-success mb-2">Invitation Created</h4>
+            <p className="text-xs text-text-primary mb-3">Copy the following link and send it to the new member to complete onboarding:</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={invitationLink}
+                className="flex-1 bg-surfaceHighlight border border-border text-text-primary text-[12px] rounded-md px-3 py-1.5 focus:outline-none"
+              />
+              <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(invitationLink)}>Copy</Button>
+            </div>
           </div>
         )}
 

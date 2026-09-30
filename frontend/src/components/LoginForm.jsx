@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 import { authApi } from '../lib/api';
 
 export default function LoginForm({ onLoginSuccess }) {
-  const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [orgName, setOrgName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -31,12 +29,7 @@ export default function LoginForm({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      let data;
-      if (isRegister) {
-        data = await authApi.register(email, password, orgName || 'Default Org');
-      } else {
-        data = await authApi.login(email, password);
-      }
+      const data = await authApi.login(email, password);
       onLoginSuccess(data);
     } catch (err) {
       setError(err.message || 'Authentication failed');
@@ -52,12 +45,10 @@ export default function LoginForm({ onLoginSuccess }) {
           RM
         </div>
         <h2 className="text-2xl font-bold tracking-tight text-white">
-          {isRegister ? 'Create your account' : 'Welcome back'}
+          Welcome back
         </h2>
         <p className="text-sm text-gray-400 mt-2">
-          {isRegister
-            ? 'Start reviewing code with grounded AI intelligence'
-            : 'Enter your credentials to access your dashboard'}
+          Enter your credentials to access your dashboard
         </p>
       </div>
 
@@ -86,21 +77,6 @@ export default function LoginForm({ onLoginSuccess }) {
           />
         </div>
 
-        {isRegister && (
-          <div className="animate-fade-in">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
-              Organization Name
-            </label>
-            <input
-              id="org-input"
-              type="text"
-              value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
-              placeholder="Engineering / Core Team"
-              className="w-full px-4 py-2.5 bg-surfaceHighlight/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent text-sm transition-all"
-            />
-          </div>
-        )}
 
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
@@ -128,35 +104,11 @@ export default function LoginForm({ onLoginSuccess }) {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
             </svg>
           )}
-          {isRegister ? (loading ? 'Creating account...' : 'Create Account') : (loading ? 'Signing in...' : 'Sign In')}
+          {loading ? 'Signing in...' : 'Sign In'}
         </button>
       </form>
 
-      <div className="mt-8 text-center text-sm text-gray-400">
-        {isRegister ? (
-          <>
-            Already have an account?{' '}
-            <button
-              type="button"
-              onClick={() => { setIsRegister(false); setError(null); }}
-              className="text-primary hover:text-primary-hover font-medium transition-colors"
-            >
-              Sign in
-            </button>
-          </>
-        ) : (
-          <>
-            New organization or team?{' '}
-            <button
-              type="button"
-              onClick={() => { setIsRegister(true); setError(null); }}
-              className="text-primary hover:text-primary-hover font-medium transition-colors"
-            >
-              Register organization
-            </button>
-          </>
-        )}
-      </div>
+
     </div>
   );
 }

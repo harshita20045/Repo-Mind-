@@ -103,17 +103,25 @@ function LifecycleCard({ label, value, description, color }) {
 
 // ─── Dashboard Page ────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const { memberships } = useOutletContext();
-  const orgId = memberships?.[0]?.organization_id;
+  const { memberships, currentOrgId, setCurrentOrgId } = useOutletContext();
+  const orgId = currentOrgId || memberships?.[0]?.organization_id;
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [newOrgName, setNewOrgName] = React.useState('');
 
   const { mutate: createOrg, isPending: isCreatingOrg } = useMutation({
     mutationFn: (name) => orgApi.createOrganization(name),
-    onSuccess: () => {
+    onSuccess: (data) => {
       setIsCreateModalOpen(false);
       setNewOrgName('');
-      alert('Organization created successfully. Please refresh.');
+      
+      // If the API returns the new org ID, we switch to it
+      if (data && data.id) {
+        setCurrentOrgId(data.id.toString());
+        localStorage.setItem('repomind_current_org_id', data.id.toString());
+      }
+      
+      // Reload to fetch new memberships and set state
+      window.location.reload();
     },
     onError: (err) => alert(err.message),
   });

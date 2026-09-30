@@ -13,6 +13,7 @@ import PullRequestsPage from './pages/PullRequestsPage';
 import SecurityBrowserPage from './pages/SecurityBrowserPage';
 import SettingsPage from './pages/SettingsPage';
 import ChatPage from './pages/ChatPage';
+import OnboardPage from './pages/OnboardPage';
 import AppLayout from './components/Layout/AppLayout';
 
 const queryClient = new QueryClient();
@@ -44,6 +45,9 @@ function ProtectedRoute({ memberships, requiredPermission }) {
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [memberships, setMemberships] = useState([]);
+  const [currentOrgId, setCurrentOrgId] = useState(() => {
+    return localStorage.getItem('repomind_current_org_id') || null;
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,6 +62,16 @@ export default function App() {
       if (data && data.user) {
         setCurrentUser(data.user);
         setMemberships(data.memberships || []);
+        
+        if (data.memberships && data.memberships.length > 0) {
+          const storedOrg = localStorage.getItem('repomind_current_org_id');
+          const isValidOrg = data.memberships.some(m => m.organization.id.toString() === storedOrg);
+          if (!isValidOrg) {
+            const firstOrgId = data.memberships[0].organization.id.toString();
+            setCurrentOrgId(firstOrgId);
+            localStorage.setItem('repomind_current_org_id', firstOrgId);
+          }
+        }
       }
     } catch (err) {
       console.log("checkSession error:", err);
@@ -72,11 +86,18 @@ export default function App() {
   function handleLoginSuccess(authData) {
     setCurrentUser(authData.user);
     setMemberships(authData.memberships || []);
+    if (authData.memberships && authData.memberships.length > 0) {
+      const firstOrgId = authData.memberships[0].organization.id.toString();
+      setCurrentOrgId(firstOrgId);
+      localStorage.setItem('repomind_current_org_id', firstOrgId);
+    }
   }
 
   function handleLogout() {
     setCurrentUser(null);
     setMemberships([]);
+    setCurrentOrgId(null);
+    localStorage.removeItem('repomind_current_org_id');
   }
 
   if (loading) {
@@ -102,20 +123,27 @@ export default function App() {
   }
 
   if (!currentUser) {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/onboard" element={<OnboardPage onLoginSuccess={handleLoginSuccess} />} />
+          <Route path="*" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
+        </Routes>
+      </BrowserRouter>
+    );
   }
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route element={<AppLayout user={currentUser} memberships={memberships} onLogout={handleLogout} />}>
+          <Route element={<AppLayout user={currentUser} memberships={memberships} onLogout={handleLogout} currentOrgId={currentOrgId} setCurrentOrgId={setCurrentOrgId} />}>
             <Route path="/" element={<DashboardPage />} />
             
             <Route element={<ProtectedRoute memberships={memberships} requiredPermission={Permissions.REPOS_READ} />}>
-              <Route path="/repositories" element={<RepositoriesPage />} />
-              <Route path="/repositories/:rid/pull-requests" element={<PullRequestsPage />} />
-              <Route path="/repositories/:rid/pull-requests/:prid" element={<ReviewPage user={currentUser} memberships={memberships} onLogout={handleLogout} />} />
+              <Route path="/repositories" element={<RepositoriesPage currentOrgId={currentOrgId} />} />
+              <Route path="/repositories/:rid/pull-requests" element={<PullRequestsPage currentOrgId={currentOrgId} />} />
+              <Route path="/repositories/:rid/pull-requests/:prid" element={<ReviewPage user={currentUser} memberships={memberships} onLogout={handleLogout} currentOrgId={currentOrgId} />} />
             </Route>
 
             <Route element={<ProtectedRoute memberships={memberships} requiredPermission={Permissions.SECURITY_READ} />}>
@@ -123,18 +151,19 @@ export default function App() {
             </Route>
 
             <Route element={<ProtectedRoute memberships={memberships} requiredPermission={Permissions.ANALYTICS_READ} />}>
-              <Route path="/analytics" element={<AnalyticsPage user={currentUser} memberships={memberships} />} />
+              <Route path="/analytics" element={<AnalyticsPage user={currentUser} memberships={memberships} currentOrgId={currentOrgId} />} />
             </Route>
 
             <Route element={<ProtectedRoute memberships={memberships} requiredPermission={Permissions.CHAT_USE} />}>
-              <Route path="/chat" element={<ChatPage user={currentUser} memberships={memberships} />} />
+              <Route path="/chat" element={<ChatPage user={currentUser} memberships={memberships} currentOrgId={currentOrgId} />} />
             </Route>
 
-            <Route element={<ProtectedRoute memberships={memberships} requiredPermission={Permissions.ORG_UPDATE} />}>
-              <Route path="/settings" element={<SettingsPage user={currentUser} />} />
+            <Route element={<ProtectedRoute memberships={memberships} requiredPermission={Permissions.ORG_READ} />}>
+              <Route path="/settings" element={<SettingsPage user={currentUser} currentOrgId={currentOrgId} />} />
             </Route>
             
           </Route>
+          <Route path="/onboard" element={<OnboardPage onLoginSuccess={handleLoginSuccess} />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>

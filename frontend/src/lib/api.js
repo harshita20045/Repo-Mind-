@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
@@ -49,6 +49,11 @@ export const authApi = {
     apiRequest('/auth/me', {
       method: 'GET',
     }),
+  onboard: (invitation_token, new_password) =>
+    apiRequest('/auth/onboard', {
+      method: 'POST',
+      body: JSON.stringify({ invitation_token, new_password }),
+    }),
 };
 
 export const reviewApi = {
@@ -98,6 +103,20 @@ export const orgApi = {
       method: 'POST',
       body: JSON.stringify({ name }),
     }),
+  inviteMember: (orgId, email, role) =>
+    apiRequest(`/organizations/${orgId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    }),
+  updateMemberRole: (orgId, targetUserId, role) =>
+    apiRequest(`/organizations/${orgId}/members/${targetUserId}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    }),
+  removeMember: (orgId, targetUserId) =>
+    apiRequest(`/organizations/${orgId}/members/${targetUserId}`, {
+      method: 'DELETE',
+    }),
   connectRepository: (orgId, payload) =>
     apiRequest(`/repositories/connect?organization_id=${orgId}`, {
       method: 'POST',
@@ -112,6 +131,10 @@ export const orgApi = {
 export const githubApi = {
   getPullRequests: (repoId) =>
     apiRequest(`/repositories/${repoId}/pull-requests`, {
+      method: 'GET',
+    }),
+  syncRepositoryPullRequests: (repoId) =>
+    apiRequest(`/repositories/${repoId}/pull-requests?sync=true`, {
       method: 'GET',
     }),
   getPullRequest: (prId) =>

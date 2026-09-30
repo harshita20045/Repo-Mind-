@@ -373,23 +373,44 @@ def upsert_github_identity(
     from backend.app.github.models import GitHubIdentity, GitHubCredential
     from backend.app.github.encryption import encrypt_token
 
-    identity = db.query(GitHubIdentity).filter(GitHubIdentity.user_id == user_id).first()
-    
-    if not identity:
+    # Determine existing identity by user or by GitHub ID
+    identity_by_user = db.query(GitHubIdentity).filter(GitHubIdentity.user_id == user_id).first()
+    identity_by_github = db.query(GitHubIdentity).filter(GitHubIdentity.github_user_id == github_user_id).first()
+
+    if identity_by_user:
+        # User already has an identity (could be same or different GitHub account)
+        identity = identity_by_user
+        if identity_by_github and identity_by_github.id != identity.id:
+            # Another user has this GitHub account linked
+            raise HTTPException(
+                status_code=400,
+                detail="GitHub account already linked to another user",
+            )
+    elif identity_by_github:
+        # No identity for this user, but GitHub account exists (must belong to this user)
+        if identity_by_github.user_id != user_id:
+            raise HTTPException(
+                status_code=400,
+                detail="GitHub account already linked to another user",
+            )
+        identity = identity_by_github
+    else:
+        # No existing records, create a fresh identity
         identity = GitHubIdentity(
             user_id=user_id,
             github_user_id=github_user_id,
             github_login=github_login,
             connection_status="CONNECTED",
-            verified_at=datetime.now(timezone.utc)
+            verified_at=datetime.now(timezone.utc),
         )
         db.add(identity)
         db.flush()
-    else:
-        identity.github_user_id = github_user_id
-        identity.github_login = github_login
-        identity.connection_status = "CONNECTED"
-        identity.verified_at = datetime.now(timezone.utc)
+
+    # Update identity fields (covers both new and existing cases)
+    identity.github_user_id = github_user_id
+    identity.github_login = github_login
+    identity.connection_status = "CONNECTED"
+    identity.verified_at = datetime.now(timezone.utc)
 
     credential = db.query(GitHubCredential).filter(GitHubCredential.github_identity_id == identity.id).first()
     encrypted_access = encrypt_token(access_token)

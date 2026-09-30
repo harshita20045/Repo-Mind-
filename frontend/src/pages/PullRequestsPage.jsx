@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { githubApi, orgApi } from '../lib/api';
 import { StatusBadge } from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import { TableRowSkeleton } from '../components/ui/LoadingSkeleton';
+import { Button } from '../components/ui/Button';
 
 // ─── PR state icon ─────────────────────────────────────────────────────────────
 function PrStateIcon({ state }) {
@@ -40,6 +41,8 @@ function PrStateIcon({ state }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function PullRequestsPage() {
   const { rid } = useParams();
+  const queryClient = useQueryClient();
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const { data: repo, isLoading: loadingRepo } = useQuery({
     queryKey: ['repository', rid],
@@ -53,20 +56,40 @@ export default function PullRequestsPage() {
     enabled: !!rid,
   });
 
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      await githubApi.syncRepositoryPullRequests(rid);
+      queryClient.invalidateQueries({ queryKey: ['pullRequests', rid] });
+    } catch (err) {
+      alert('Failed to sync pull requests: ' + err.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const isLoading = loadingRepo || loadingPRs;
 
   return (
     <div className="space-y-5 animate-slide-up">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary tracking-tight">Pull Requests</h1>
-        <p className="text-sm text-text-muted mt-1">
-          {repo ? (
-            <>Tracking AI review status for <span className="font-mono text-text-secondary text-xs font-semibold">{repo.github_owner}/{repo.github_name}</span></>
-          ) : (
-            'Track the AI review status of active pull requests.'
-          )}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">Pull Requests</h1>
+          <p className="text-sm text-text-muted mt-1">
+            {repo ? (
+              <>Tracking AI review status for <span className="font-mono text-text-secondary text-xs font-semibold">{repo.github_owner}/{repo.github_name}</span></>
+            ) : (
+              'Track the AI review status of active pull requests.'
+            )}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleSync} loading={isSyncing}>
+          <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Sync from GitHub
+        </Button>
       </div>
 
       {/* PR table */}

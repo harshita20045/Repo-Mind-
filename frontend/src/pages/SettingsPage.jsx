@@ -62,7 +62,7 @@ const TABS = [
 
 // ─── Settings Page ────────────────────────────────────────────────────────────
 export default function SettingsPage() {
-  const { user, memberships } = useOutletContext();
+  const { user, memberships, currentOrgId } = useOutletContext();
   const [activeTab, setActiveTab] = useState('integrations');
   const [isLinking, setIsLinking] = useState(false);
 
@@ -90,8 +90,9 @@ export default function SettingsPage() {
     }
   };
 
-  const orgId = memberships?.[0]?.organization_id;
-  const orgName = memberships?.[0]?.organization?.name || 'My Organization';
+  const activeMembership = memberships?.find(m => m.organization_id.toString() === currentOrgId) || memberships?.[0];
+  const orgId = activeMembership?.organization_id;
+  const orgName = activeMembership?.organization?.name || 'My Organization';
 
   return (
     <div className="space-y-5 animate-slide-up">

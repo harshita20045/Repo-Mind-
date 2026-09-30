@@ -51,8 +51,8 @@ function IndexStatusBadge({ status }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function RepositoriesPage() {
-  const { memberships } = useOutletContext();
-  const orgId = memberships?.[0]?.organization_id;
+  const { memberships, currentOrgId } = useOutletContext();
+  const orgId = currentOrgId || memberships?.[0]?.organization_id;
   const queryClient = useQueryClient();
   const { can, isOrgAdmin } = usePermissions(memberships, orgId);
   const canManageOrg = isOrgAdmin || can(Permissions.PROJECTS_CREATE);

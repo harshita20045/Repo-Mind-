@@ -175,7 +175,7 @@ export default function ChatAssistant({ organizationId, repositoryId, contextTyp
                 }`}
               >
                 {msg.role === 'user' ? (
-                  <p className="text-sm leading-relaxed">{msg.content}</p>
+                  <p className="text-sm leading-relaxed text-white">{msg.content}</p>
                 ) : (
                   <div className="prose-chat">
                     <ReactMarkdown>{msg.content}</ReactMarkdown>

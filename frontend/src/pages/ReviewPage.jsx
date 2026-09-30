@@ -493,7 +493,7 @@ export default function ReviewPage() {
         isOpen={approvalModal.isOpen}
         action={approvalModal.action}
         onClose={() => setApprovalModal({ isOpen: false, action: null })}
-        onSubmit={submitDecision}
+        onSubmit={(data) => submitDecision({ action: data.action.toUpperCase(), note: data.note })}
         isLoading={isSubmittingDecision}
       />
     </div>

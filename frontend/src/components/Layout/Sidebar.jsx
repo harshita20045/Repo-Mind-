@@ -172,7 +172,7 @@ export default function Sidebar({ user, memberships, onLogout }) {
         )}
 
         {/* Admin */}
-        {can(Permissions.ORG_UPDATE) && (
+        {can(Permissions.ORG_READ) && (
           <NavSection label="Configuration">
             <NavItem to="/settings" icon="settings" label="Settings" />
           </NavSection>

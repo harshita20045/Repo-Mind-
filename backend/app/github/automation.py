@@ -66,13 +66,50 @@ def process_automation_actions(db: Session):
             if action.action_type in ("APPROVE", "REQUEST_CHANGES"):
                 if not action.commit_sha:
                     raise ValueError("commit_sha is required for APPROVE/REQUEST_CHANGES.")
+                
+                # Fetch the associated comment from HumanReview so GitHub doesn't reject REQUEST_CHANGES
+                from backend.app.github.models import HumanReview
+                hr = db.query(HumanReview).filter_by(
+                    pull_request_id=action.pull_request_id,
+                    commit_sha=action.commit_sha,
+                    reviewer_id=action.requested_by_user_id
+                ).first()
+                
+                body = ""
+                if hr and hr.comment:
+                    body = hr.comment
+                elif action.action_type == "REQUEST_CHANGES":
+                    # GitHub strictly requires a body for REQUEST_CHANGES
+                    body = "Changes requested via RepoMind."
                     
+                # Fetch and append AI Findings to the review comment
+                from backend.app.review.models import ReviewRun, Finding
+                run = db.query(ReviewRun).filter_by(
+                    pull_request_id=action.pull_request_id,
+                    commit_sha=action.commit_sha
+                ).order_by(ReviewRun.id.desc()).first()
+                
+                if run:
+                    findings = db.query(Finding).filter_by(review_run_id=run.id).all()
+                    if findings:
+                        body += "\n\n### 🤖 RepoMind AI Findings\n"
+                        for f in findings:
+                            sev_emoji = "🔴" if f.severity == "critical" else "🟠" if f.severity == "high" else "🟡" if f.severity == "medium" else "🔵"
+                            body += f"- {sev_emoji} **{f.severity.upper()}**: {f.title}"
+                            if f.file:
+                                body += f" (`{f.file}`"
+                                if f.line:
+                                    body += f":{f.line}"
+                                body += ")"
+                            body += "\n"
+                            
                 res = client.submit_pull_request_review(
                     owner=repo.github_owner,
                     repo=repo.github_name,
                     pr_number=pr.github_number,
                     commit_id=action.commit_sha,
-                    event=action.action_type
+                    event=action.action_type,
+                    body=body
                 )
                 action.github_resource_id = str(res.get("id"))
                 

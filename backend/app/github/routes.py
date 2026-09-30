@@ -248,6 +248,7 @@ def github_oauth_login(
         "client_id": client_id,
         "scope": "repo read:user", # repo for access, read:user for identity
         "state": state,
+        "prompt": "consent" # Force GitHub to ask the user to authorize/select account
     }
     
     url = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
@@ -289,7 +290,10 @@ async def github_oauth_callback(
     }
 
     async with httpx.AsyncClient() as client:
-        token_response = await client.post(token_url, headers=headers, data=data)
+        try:
+            token_response = await client.post(token_url, headers=headers, data=data)
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=502, detail=f"Network error during token exchange: {e}")
         if token_response.status_code != 200:
             raise HTTPException(status_code=400, detail="Failed to exchange code for token")
             
@@ -305,7 +309,10 @@ async def github_oauth_callback(
             "Authorization": f"Bearer {access_token}",
             "Accept": "application/vnd.github.v3+json",
         }
-        user_response = await client.get(user_url, headers=auth_headers)
+        try:
+            user_response = await client.get(user_url, headers=auth_headers)
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=502, detail=f"Network error during fetching GitHub user data: {e}")
         if user_response.status_code != 200:
             raise HTTPException(status_code=400, detail="Failed to fetch GitHub user data")
             
@@ -313,17 +320,25 @@ async def github_oauth_callback(
         github_user_id = str(github_user["id"])
         github_login = github_user["login"]
 
-        identity = service.upsert_github_identity(
-            db, 
-            user_id=current_user.id, 
-            github_user_id=github_user_id, 
-            github_login=github_login,
-            access_token=access_token,
-            refresh_token=refresh_token
-        )
+        try:
+            identity = service.upsert_github_identity(
+                db,
+                user_id=current_user.id,
+                github_user_id=github_user_id,
+                github_login=github_login,
+                access_token=access_token,
+                refresh_token=refresh_token,
+            )
+            link_status = "success"
+        except HTTPException as exc:
+            # If the GitHub account is already linked to another user, surface a friendly status
+            if exc.status_code == 400 and "already linked" in exc.detail:
+                link_status = "already_linked"
+            else:
+                raise
         
         frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
-        response = RedirectResponse(url=f"{frontend_url}/settings?status=success")
+        response = RedirectResponse(url=f"{frontend_url}/settings?status={link_status}")
         response.delete_cookie("oauth_state")
         return response
 

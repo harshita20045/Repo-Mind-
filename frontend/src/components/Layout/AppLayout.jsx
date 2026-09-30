@@ -3,15 +3,15 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopNav from './TopNav';
 
-const AppLayout = ({ user, memberships, onLogout }) => {
+const AppLayout = ({ user, memberships, onLogout, currentOrgId, setCurrentOrgId }) => {
   return (
     <div className="flex h-screen overflow-hidden bg-background text-text-primary font-sans antialiased">
       {/* Sidebar */}
-      <Sidebar user={user} memberships={memberships} onLogout={onLogout} />
+      <Sidebar user={user} memberships={memberships} onLogout={onLogout} currentOrgId={currentOrgId} />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0 bg-background relative">
-        <TopNav user={user} />
+        <TopNav user={user} memberships={memberships} currentOrgId={currentOrgId} setCurrentOrgId={setCurrentOrgId} />
         
         <main
           className="flex-1 overflow-y-auto"
@@ -20,7 +20,7 @@ const AppLayout = ({ user, memberships, onLogout }) => {
           aria-label="Main content"
         >
           <div className="p-6 lg:p-8 max-w-screen-2xl mx-auto animate-fade-in pb-16">
-            <Outlet context={{ user, memberships }} />
+            <Outlet context={{ user, memberships, currentOrgId, setCurrentOrgId }} />
           </div>
         </main>
       </div>

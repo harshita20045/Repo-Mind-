@@ -1,20 +1,11 @@
 import os
 import sys
+import subprocess
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from sqlalchemy import text
-from backend.app.db import Base, engine
-
-# Import all models
-from backend.app.auth.models import *
-from backend.app.organizations.models import *
-from backend.app.github.models import *
-from backend.app.review.models import *
-from backend.app.rag.models import *
-from backend.app.chat.models import *
-from backend.app.audit.models import *
-from backend.app.webhooks.models import *
+from backend.app.db import engine
 
 def reset_db():
     print("Dropping schema public cascade...")
@@ -28,19 +19,14 @@ def reset_db():
     except Exception as e:
         print(f"Schema drop error (might be okay if empty): {e}")
     
-    print("Cleaning up duplicate indexes in metadata...")
-    for table in Base.metadata.tables.values():
-        unique_indexes = []
-        seen_index_names = set()
-        for idx in table.indexes:
-            if idx.name not in seen_index_names:
-                unique_indexes.append(idx)
-                seen_index_names.add(idx.name)
-        table.indexes = set(unique_indexes)
-
-    print("Recreating all tables from models...")
-    Base.metadata.create_all(bind=engine)
-    print("All tables created successfully.")
+    print("Running alembic upgrade head to recreate schema...")
+    try:
+        subprocess.run(["alembic", "-c", "alembic.ini", "upgrade", "head"], check=True)
+        print("Alembic upgrade completed successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"Alembic upgrade failed: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     reset_db()
+
