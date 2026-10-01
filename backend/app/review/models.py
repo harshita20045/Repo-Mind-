@@ -104,15 +104,20 @@ class Finding(Base):
     #                architecture | testing | compatibility | documentation |
     #                standards_violation | style | general
     type = Column(String(100), nullable=False)
+    review_dimension = Column(String(100), nullable=True)
     # severity: critical | high | medium | low | info
     severity = Column(String(50), nullable=False)
     file = Column(String(1024), nullable=True)
     line = Column(Integer, nullable=True)
     title = Column(String(512), nullable=False)
     explanation = Column(Text, nullable=False)
+    reasoning = Column(Text, nullable=True)
+    impact = Column(Text, nullable=True)
     rule_source = Column(Text, nullable=True)
     recommendation = Column(Text, nullable=True)
+    evidence_sources = Column(JSONB, nullable=True)
     confidence = Column(Float, nullable=False)
+    finding_fingerprint = Column(String(255), nullable=True)
     # status: open | accepted | rejected | resolved | dismissed
     status = Column(String(50), nullable=False, default="open")
     # Evidence grounding status (RepoMind 2.0)

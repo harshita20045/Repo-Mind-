@@ -23,15 +23,20 @@ class FindingSchema(BaseModel):
     in the persistence layer.
     """
     severity: str
+    confidence: float = Field(..., description="0.0–1.0 confidence score")
     category: str          # maps to finding.type in the DB
-    file: Optional[str] = None
-    line: Optional[int] = None
+    review_dimension: str
     title: str
     problem: str           # maps to finding.explanation in the DB
-    evidence: Optional[str] = None   # maps to finding.rule_source
-    repository_rule: Optional[str] = None
+    affected_file: Optional[str] = None
+    line_start: Optional[int] = None
+    line_end: Optional[int] = None
+    changed_code_evidence: Optional[str] = None
+    repository_evidence: Optional[str] = None
+    reasoning: str
+    impact: str
     recommendation: Optional[str] = None
-    confidence: float = Field(..., description="0.0–1.0 confidence score")
+    evidence_sources: List[str] = []
 
     @field_validator("severity")
     @classmethod
@@ -135,14 +140,20 @@ class FindingResponse(BaseModel):
     id: int
     severity: str
     type: str
+    review_dimension: Optional[str] = None
     file: Optional[str] = None
     line: Optional[int] = None
     title: str
     explanation: str
+    reasoning: Optional[str] = None
+    impact: Optional[str] = None
     rule_source: Optional[str] = None
     recommendation: Optional[str] = None
+    evidence_sources: Optional[List[str]] = None
     confidence: float
     status: str
+    evidence_status: Optional[str] = None
+    lifecycle_status: Optional[str] = None
 
     class Config:
         from_attributes = True

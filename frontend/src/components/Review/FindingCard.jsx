@@ -103,6 +103,28 @@ export default function FindingCard({ finding }) {
               </p>
             </div>
 
+            {/* Reasoning & Impact */}
+            {(finding.reasoning || finding.impact) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {finding.reasoning && (
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Reasoning</span>
+                    <p className="text-[13px] text-text-secondary leading-relaxed bg-surfaceHighlight/50 border border-border/50 rounded-md p-3">
+                      {finding.reasoning}
+                    </p>
+                  </div>
+                )}
+                {finding.impact && (
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-semibold text-danger uppercase tracking-wider">Potential Impact</span>
+                    <p className="text-[13px] text-text-secondary leading-relaxed bg-danger/5 border border-danger/20 rounded-md p-3">
+                      {finding.impact}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Recommendation */}
             {finding.recommendation && (
               <div className="space-y-1.5">
@@ -117,9 +139,16 @@ export default function FindingCard({ finding }) {
             <div className="flex flex-col gap-3 pt-3 border-t border-border">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Analysis Grounding</span>
-                {finding.evidence_status && (
-                  <EvidenceStatus status={finding.evidence_status} />
-                )}
+                <div className="flex items-center gap-4">
+                  {finding.confidence !== undefined && (
+                    <span className="text-[11px] font-mono text-text-muted">
+                      Confidence: {(finding.confidence * 100).toFixed(0)}%
+                    </span>
+                  )}
+                  {finding.evidence_status && (
+                    <EvidenceStatus status={finding.evidence_status} />
+                  )}
+                </div>
               </div>
               
               {finding.rule_source ? (
@@ -139,6 +168,17 @@ export default function FindingCard({ finding }) {
               ) : (
                 <div className="text-[12px] text-text-muted italic">
                   No specific repository rules found to cite. General best practices applied.
+                </div>
+              )}
+              
+              {finding.evidence_sources && finding.evidence_sources.length > 0 && (
+                <div className="flex gap-2 items-center mt-2">
+                  <span className="text-[10px] text-text-muted uppercase font-bold">Sources:</span>
+                  {finding.evidence_sources.map(src => (
+                    <span key={src} className="text-[10px] px-1.5 py-0.5 bg-surfaceHighlight border border-border rounded text-text-secondary">
+                      {src}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>

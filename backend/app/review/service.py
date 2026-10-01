@@ -115,18 +115,20 @@ def _persist_validated_findings(
         
         # Determine lifecycle status
         lifecycle = "new"
+        fingerprint = f"{f.affected_file}:{f.line_start}:{f.category}:{hash(f.problem) % 10000}"
+        
         for pf in prev_findings:
             if pf.id in matched_prev_finding_ids:
                 continue
             # Simple heuristic for finding match: same file and category, and line is close (or None)
-            file_match = (f.file == pf.file)
+            file_match = (f.affected_file == pf.file)
             type_match = (f.category == pf.type)
             # Check line proximity (within 3 lines) to account for minor shifts
             line_match = False
-            if f.line is None and pf.line is None:
+            if f.line_start is None and pf.line is None:
                 line_match = True
-            elif f.line is not None and pf.line is not None:
-                line_match = abs(f.line - pf.line) <= 3
+            elif f.line_start is not None and pf.line is not None:
+                line_match = abs(f.line_start - pf.line) <= 3
                 
             if file_match and type_match and line_match:
                 lifecycle = "persistent"
@@ -136,14 +138,19 @@ def _persist_validated_findings(
         finding = Finding(
             review_run_id=run.id,
             type=f.category,
+            review_dimension=f.review_dimension,
             severity=f.severity,
-            file=f.file,
-            line=f.line,
+            file=f.affected_file,
+            line=f.line_start,
             title=f.title,
             explanation=f.problem,
-            rule_source=f.evidence,
+            reasoning=f.reasoning,
+            impact=f.impact,
+            rule_source=f.repository_evidence,
             recommendation=f.recommendation,
+            evidence_sources=f.evidence_sources,
             confidence=vf.adjusted_confidence,
+            finding_fingerprint=fingerprint,
             status="open",
             evidence_status=vf.evidence_status,
             lifecycle_status=lifecycle,
@@ -182,14 +189,19 @@ def _persist_validated_findings(
             resolved_finding = Finding(
                 review_run_id=run.id,
                 type=pf.type,
+                review_dimension=pf.review_dimension,
                 severity=pf.severity,
                 file=pf.file,
                 line=pf.line,
                 title=pf.title,
                 explanation=pf.explanation,
+                reasoning=pf.reasoning,
+                impact=pf.impact,
                 rule_source=pf.rule_source,
                 recommendation=pf.recommendation,
+                evidence_sources=pf.evidence_sources,
                 confidence=pf.confidence,
+                finding_fingerprint=pf.finding_fingerprint,
                 status="resolved",
                 evidence_status=pf.evidence_status,
                 lifecycle_status="resolved",
@@ -421,12 +433,28 @@ def run_review(
     _persist_conflicts(db, run, detected_conflicts)
 
     # --- 7. Build prompt + call LLM (with one retry on parse failure) ---------
+    _update_progress(db, run, "Analyzing change intent...")
+    from backend.app.review.prompts import CHANGE_ANALYSIS_PROMPT
+    
+    change_analysis_content = ""
+    try:
+        t0 = time.time()
+        change_analysis_content = provider.complete(
+            system_prompt=CHANGE_ANALYSIS_PROMPT,
+            user_content=f"Title: {pr.title}\n\nDiff:\n{bounded_diff}"
+        )
+        t1 = time.time()
+        logger.info("Change Analysis HTTP Request SUCCESS - Duration: %.2fs", t1 - t0)
+    except Exception as exc:
+        logger.warning("Change Analysis failed: %s", exc)
+
     _update_progress(db, run, "Generating AI review...")
     user_content = build_user_content(
         pr_title=pr.title,
         diff=bounded_diff,
         retrieved_chunks=retrieved_chunks,
         linter_results_text=linter_results_text,
+        change_analysis=change_analysis_content,
     )
 
     uc_len = len(user_content)
@@ -504,8 +532,26 @@ def run_review(
     )
     _persist_risk(db, run, risk_result)
 
+    # --- 9.5 Finding Quality Gate (Phase 20) ----------------------------------
+    _update_progress(db, run, "Applying quality gate...")
+    final_findings = []
+    for vf in validated_findings:
+        # Reject contradicted findings with very low confidence
+        if vf.evidence_status == "contradicted" and vf.adjusted_confidence < 0.4:
+            logger.info("Quality Gate: Rejected finding '%s' (contradicted & low confidence)", vf.finding.title)
+            continue
+        # Reject purely stylistic findings without a repository rule
+        if vf.finding.category == "style" and not vf.finding.repository_evidence:
+            logger.info("Quality Gate: Rejected finding '%s' (style without repository rule)", vf.finding.title)
+            continue
+        # Reject if problem is too short/vague
+        if len(vf.finding.problem) < 20:
+            logger.info("Quality Gate: Rejected finding '%s' (vague problem description)", vf.finding.title)
+            continue
+        final_findings.append(vf)
+
     # --- 10. Persist validated findings + evidence ----------------------------
-    created_findings = _persist_validated_findings(db, run, validated_findings)
+    created_findings = _persist_validated_findings(db, run, final_findings)
 
     # --- 11. Mark completed ---------------------------------------------------
     run.status = "completed"

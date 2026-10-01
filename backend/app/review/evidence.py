@@ -131,13 +131,13 @@ def _validate_single_finding(
         else:
             vf.evidence_status = "supported"
             vf.adjusted_confidence = finding.confidence
-    elif not diff_confirmed and finding.file:
+    elif not diff_confirmed and finding.affected_file:
         # The cited file doesn't appear in the diff — likely a hallucination
         vf.evidence_status = "contradicted"
         vf.adjusted_confidence = min(finding.confidence * 0.3, 0.3)
         vf.contradicting_evidence.append({
             "type": "diff_check",
-            "message": f"File '{finding.file}' not found in PR diff",
+            "message": f"File '{finding.affected_file}' not found in PR diff",
         })
     else:
         # No strong evidence either way — unverified
@@ -196,13 +196,13 @@ def _find_linter_confirmation(
 
     for issue in linter_issues:
         # Match by file and approximate line
-        if finding.file and issue.get("file"):
-            finding_file_base = finding.file.split("/")[-1]
+        if finding.affected_file and issue.get("file"):
+            finding_file_base = finding.affected_file.split("/")[-1]
             issue_file_base = issue.get("file", "").split("/")[-1]
             if finding_file_base == issue_file_base:
                 # File matches — check if line is close (within 5 lines)
-                if finding.line and issue.get("line"):
-                    if abs(finding.line - issue.get("line", 0)) <= 5:
+                if finding.line_start and issue.get("line"):
+                    if abs(finding.line_start - issue.get("line", 0)) <= 5:
                         confirmations.append({
                             "type": "linter",
                             "tool": issue.get("tool", "unknown"),
@@ -218,10 +218,10 @@ def _find_linter_confirmation(
 
 def _verify_file_in_diff(finding: FindingSchema, diff: str) -> bool:
     """Verify the finding's cited file appears in the PR diff."""
-    if not finding.file:
+    if not finding.affected_file:
         return True  # No file cited — can't contradict
-    file_name = finding.file.split("/")[-1]
-    return file_name in diff or finding.file in diff
+    file_name = finding.affected_file.split("/")[-1]
+    return file_name in diff or finding.affected_file in diff
 
 
 def _extract_linter_issues(linter_results: List[dict]) -> List[dict]:
