@@ -126,6 +126,15 @@ export const orgApi = {
     apiRequest(`/repositories/${repoId}/index`, {
       method: 'POST',
     }),
+  getTeams: (orgId) =>
+    apiRequest(`/organizations/${orgId}/teams`, {
+      method: 'GET',
+    }),
+  createTeam: (orgId, name, description) =>
+    apiRequest(`/organizations/${orgId}/teams`, {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    }),
 };
 
 export const githubApi = {
@@ -160,6 +169,19 @@ export const githubApi = {
   mergePullRequest: (prId) =>
     apiRequest(`/pull-requests/${prId}/merge`, {
       method: 'POST',
+    }),
+  reopenPullRequest: (prId) =>
+    apiRequest(`/pull-requests/${prId}/reopen`, {
+      method: 'POST',
+    }),
+  getMergePolicy: (repoId) =>
+    apiRequest(`/repositories/${repoId}/merge-policy`, {
+      method: 'GET',
+    }),
+  updateMergePolicy: (repoId, policyData) =>
+    apiRequest(`/repositories/${repoId}/merge-policy`, {
+      method: 'PUT',
+      body: JSON.stringify(policyData),
     }),
 };
 

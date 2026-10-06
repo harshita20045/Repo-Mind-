@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { githubApi, orgApi } from '../lib/api';
 import { StatusBadge } from '../components/ui/Badge';
@@ -41,6 +41,7 @@ function PrStateIcon({ state }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function PullRequestsPage() {
   const { rid } = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -71,7 +72,17 @@ export default function PullRequestsPage() {
   const isLoading = loadingRepo || loadingPRs;
 
   return (
-    <div className="space-y-5 animate-slide-up">
+    <div className="space-y-4 animate-slide-up">
+      <button 
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-1.5 text-[12px] font-medium text-text-muted hover:text-text-primary transition-colors w-fit"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back
+      </button>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

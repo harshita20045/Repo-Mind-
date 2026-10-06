@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { reviewApi, githubApi, orgApi } from '../lib/api';
 import { useOutletContext } from 'react-router-dom';
@@ -20,17 +20,15 @@ function Tab({ id, label, isActive, count, onClick }) {
       role="tab"
       aria-selected={isActive}
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-3 text-[13px] font-medium border-b-2 transition-all duration-150 ${
-        isActive
+      className={`flex items-center gap-2 px-4 py-3 text-[13px] font-medium border-b-2 transition-all duration-150 ${isActive
           ? 'text-primary border-primary'
           : 'text-text-muted border-transparent hover:text-text-primary hover:border-white/20'
-      }`}
+        }`}
     >
       {label}
       {count !== null && count !== undefined && (
-        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${
-          isActive ? 'bg-primary/10 text-primary' : 'bg-surfaceHighlight text-text-muted'
-        }`}>
+        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? 'bg-primary/10 text-primary' : 'bg-surfaceHighlight text-text-muted'
+          }`}>
           {count}
         </span>
       )}
@@ -105,11 +103,10 @@ function ApprovalModal({ isOpen, action, onClose, onSubmit, isLoading }) {
       size="sm"
     >
       <div className="space-y-4">
-        <div className={`flex items-start gap-3 p-3 rounded-md border text-[13px] ${
-          isApprove
+        <div className={`flex items-start gap-3 p-3 rounded-md border text-[13px] ${isApprove
             ? 'bg-success/10 border-success/20 text-success'
             : 'bg-danger/10 border-danger/20 text-danger'
-        }`}>
+          }`}>
           {isApprove ? (
             <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -153,6 +150,7 @@ function ApprovalModal({ isOpen, action, onClose, onSubmit, isLoading }) {
 
 export default function ReviewPage() {
   const { rid, prid } = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { memberships } = useOutletContext();
   const { can } = usePermissions(memberships);
@@ -223,6 +221,15 @@ export default function ReviewPage() {
     onError: (err) => alert(`Merge failed: ${err.message}`),
   });
 
+  const { mutate: reopenPr, isPending: isReopening } = useMutation({
+    mutationFn: () => githubApi.reopenPullRequest(prid),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pullRequest', prid] });
+      alert('Pull request reopened successfully.');
+    },
+    onError: (err) => alert(`Reopen failed: ${err.message}`),
+  });
+
   React.useEffect(() => {
     if (!activeRunId) triggerReview();
   }, [prid]);
@@ -236,7 +243,8 @@ export default function ReviewPage() {
 
   const findings = runData?.findings || [];
   const conflicts = runData?.conflicts || [];
-  const riskScore = runData?.risk_assessment?.risk_score;
+  const riskScore = runData?.risk_assessment?.score;
+  const riskLevel = riskScore > 70 ? 'high' : riskScore > 40 ? 'medium' : riskScore > 0 ? 'low' : null;
 
   const tabs = [
     { id: 'findings', label: 'Findings', count: isCompleted ? findings.length : null },
@@ -246,10 +254,18 @@ export default function ReviewPage() {
     { id: 'events', label: 'Activity Log', count: null },
   ];
 
-  const riskLevel = riskScore > 70 ? 'high' : riskScore > 40 ? 'medium' : riskScore > 0 ? 'low' : null;
-
   return (
-    <div className="space-y-6 animate-slide-up max-w-[1400px]">
+    <div className="space-y-4 animate-slide-up max-w-[1400px]">
+      <button 
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-1.5 text-[12px] font-medium text-text-muted hover:text-text-primary transition-colors w-fit"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back
+      </button>
+
       {/* PR Header */}
       <div className="bg-surface border border-border rounded-lg p-6 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
@@ -261,7 +277,7 @@ export default function ReviewPage() {
               <span className="text-border">/</span>
               <span className="text-text-secondary">PR #{prData?.github_number || prid}</span>
             </div>
-            
+
             <h1 className="text-[22px] font-semibold text-text-primary tracking-tight leading-snug mb-2">
               {loadingPr ? (
                 <span className="skeleton inline-block h-7 w-96 rounded" />
@@ -274,7 +290,7 @@ export default function ReviewPage() {
                 {prData.description}
               </p>
             )}
-            
+
             {prData && (
               <div className="flex items-center gap-3">
                 <StatusBadge status={prData.state} label={prData.state} />
@@ -299,26 +315,37 @@ export default function ReviewPage() {
 
           <div className="flex items-center gap-2.5 flex-shrink-0 flex-wrap">
             {existingDecision && (
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] font-medium border ${
-                existingDecision.action === 'approve'
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] font-medium border ${existingDecision.action === 'approve'
                   ? 'bg-success/10 text-success border-success/20'
                   : 'bg-danger/10 text-danger border-danger/20'
-              }`}>
+                }`}>
                 {existingDecision.action === 'approve' ? 'Approved' : 'Changes Requested'}
               </div>
             )}
 
             {(canReview || canApprove) && (
               <>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  disabled={!isCompleted || isSubmittingDecision}
-                  onClick={() => setApprovalModal({ isOpen: true, action: 'request_changes' })}
-                >
-                  Request Changes
-                </Button>
-                {canApprove && (
+                {prData?.state === 'closed' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    loading={isReopening}
+                    onClick={() => reopenPr()}
+                  >
+                    Reopen PR
+                  </Button>
+                )}
+                {prData?.state !== 'closed' && (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    disabled={!isCompleted || isSubmittingDecision}
+                    onClick={() => setApprovalModal({ isOpen: true, action: 'request_changes' })}
+                  >
+                    Request Changes
+                  </Button>
+                )}
+                {canApprove && prData?.state !== 'closed' && (
                   <>
                     <Button
                       variant="success-solid"
@@ -405,12 +432,12 @@ export default function ReviewPage() {
             {isCompleted && runData?.risk_assessment ? (
               <div className="flex flex-col gap-4">
                 <RiskGauge
-                  score={runData.risk_assessment.risk_score}
-                  level={runData.risk_assessment.security_risk_level}
+                  score={runData.risk_assessment.score}
+                  level={runData.risk_assessment.level}
                 />
-                {runData.risk_assessment.explanation && (
+                {runData.risk_assessment.summary && (
                   <p className="text-[13px] text-text-secondary leading-relaxed">
-                    {runData.risk_assessment.explanation}
+                    {runData.risk_assessment.summary}
                   </p>
                 )}
               </div>
@@ -422,6 +449,37 @@ export default function ReviewPage() {
               </div>
             )}
           </SectionCard>
+
+          {isCompleted && runData && (
+            <SectionCard title="Analysis Metadata">
+              <div className="flex flex-col gap-3 text-[13px]">
+                <div className="flex justify-between border-b border-white/[0.04] pb-2">
+                  <span className="text-text-muted">Target Commit</span>
+                  <span className="font-mono text-text-primary">{runData.commit_sha?.substring(0, 7) || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between border-b border-white/[0.04] pb-2">
+                  <span className="text-text-muted">Started</span>
+                  <span className="text-text-primary text-right">
+                    {runData.started_at ? new Date(runData.started_at).toLocaleString() : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-white/[0.04] pb-2">
+                  <span className="text-text-muted">Completed</span>
+                  <span className="text-text-primary text-right">
+                    {runData.completed_at ? new Date(runData.completed_at).toLocaleString() : 'N/A'}
+                  </span>
+                </div>
+                {runData.started_at && runData.completed_at && (
+                  <div className="flex justify-between">
+                    <span className="text-text-muted">Duration</span>
+                    <span className="text-text-primary">
+                      {((new Date(runData.completed_at) - new Date(runData.started_at)) / 1000).toFixed(1)}s
+                    </span>
+                  </div>
+                )}
+              </div>
+            </SectionCard>
+          )}
 
           <SectionCard title="PR Context">
             <div className="space-y-4">

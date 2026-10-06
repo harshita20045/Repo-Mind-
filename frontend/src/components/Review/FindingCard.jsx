@@ -3,13 +3,13 @@ import { SeverityBadge } from '../ui/Badge';
 
 function EvidenceStatus({ status }) {
   const styles = {
-    supported:    'text-success',
-    unverified:   'text-warning',
+    supported: 'text-success',
+    unverified: 'text-warning',
     contradicted: 'text-danger',
   };
   const icons = {
-    supported:    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />,
-    unverified:   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
+    supported: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />,
+    unverified: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
     contradicted: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />,
   };
   const normalized = status?.toLowerCase() || 'unverified';
@@ -33,18 +33,18 @@ export default function FindingCard({ finding }) {
   const sev = finding.severity?.toLowerCase() || 'info';
   const leftColors = {
     critical: 'bg-danger',
-    high:     'bg-orange-500',
-    medium:   'bg-warning',
-    low:      'bg-success',
-    info:     'bg-info',
+    high: 'bg-orange-500',
+    medium: 'bg-warning',
+    low: 'bg-success',
+    info: 'bg-info',
   };
   const leftColor = leftColors[sev] || 'bg-border';
 
   const categoryColors = {
-    security:     'text-danger bg-danger/10',
-    bug:          'text-warning bg-warning/10',
-    performance:  'text-accent bg-accent/10',
-    style:        'text-primary bg-primary/10',
+    security: 'text-danger bg-danger/10',
+    bug: 'text-warning bg-warning/10',
+    performance: 'text-accent bg-accent/10',
+    style: 'text-primary bg-primary/10',
     architecture: 'text-info bg-info/10',
   };
   const catColor = categoryColors[finding.type?.toLowerCase()] || 'text-text-muted bg-surfaceHighlight';
@@ -94,7 +94,7 @@ export default function FindingCard({ finding }) {
         {/* Details Panel */}
         {expanded && (
           <div className="mt-2 pl-7 space-y-4 animate-fade-in pr-2">
-            
+
             {/* The Problem */}
             <div className="space-y-1.5">
               <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Problem detected</span>
@@ -121,7 +121,7 @@ export default function FindingCard({ finding }) {
                   <EvidenceStatus status={finding.evidence_status} />
                 )}
               </div>
-              
+
               {finding.rule_source ? (
                 <div className="flex items-start gap-3 bg-surface border border-border rounded-md p-3">
                   <div className="mt-0.5 flex-shrink-0">
@@ -148,3 +148,4 @@ export default function FindingCard({ finding }) {
     </div>
   );
 }
+

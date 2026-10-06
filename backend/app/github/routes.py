@@ -479,6 +479,38 @@ def update_merge_policy(
     db.commit()
     return {"message": "Merge policy updated"}
 
+@router.get("/repositories/{repository_id}/merge-policy")
+def get_merge_policy(
+    repository_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    repo, project, org_id = _assert_repo_access(db, repository_id, current_user.id)
+    
+    from backend.app.github.models import ProjectMergePolicy
+    policy = db.query(ProjectMergePolicy).filter(ProjectMergePolicy.project_id == repo.project_id).first()
+    
+    if not policy:
+        return {
+            "require_human_approval": 1,
+            "required_approvals": 1,
+            "require_ai_analysis": 1,
+            "require_ci_success": 1,
+            "auto_merge_enabled": 0,
+            "approval_validity": "LATEST_COMMIT_ONLY",
+            "require_latest_commit_review": 1
+        }
+        
+    return {
+        "require_human_approval": policy.require_human_approval,
+        "required_approvals": policy.required_approvals,
+        "require_ai_analysis": policy.require_ai_analysis,
+        "require_ci_success": policy.require_ci_success,
+        "auto_merge_enabled": policy.auto_merge_enabled,
+        "approval_validity": policy.approval_validity,
+        "require_latest_commit_review": policy.require_latest_commit_review
+    }
+
 @router.get("/repositories/{repository_id}/branches")
 def get_repository_branches(
     repository_id: int,

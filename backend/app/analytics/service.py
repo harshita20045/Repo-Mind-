@@ -87,8 +87,12 @@ def get_organization_analytics(db: Session, organization_id: int, days: int = 30
     )
     lifecycle_distribution = {row[0]: row[1] for row in db.execute(lifecycle_query)}
 
+    # 6. Total Repositories
+    total_repositories = db.query(Repository).join(Project).filter(Project.organization_id == organization_id).count()
+
     return {
         "period_days": days,
+        "total_repositories": total_repositories,
         "total_reviews": total_reviews,
         "average_risk_score": round(avg_risk_score, 1),
         "findings_by_severity": severity_distribution,

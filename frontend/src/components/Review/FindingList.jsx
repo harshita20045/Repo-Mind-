@@ -33,10 +33,10 @@ export default function FindingList({ findings }) {
 
   const SEV_COLORS = {
     critical: 'text-danger bg-danger/10 border-danger/20',
-    high:     'text-orange-400 bg-orange-500/10 border-orange-400/20',
-    medium:   'text-warning bg-warning/10 border-warning/20',
-    low:      'text-success bg-success/10 border-success/20',
-    info:     'text-text-muted bg-white/5 border-white/10',
+    high: 'text-orange-400 bg-orange-500/10 border-orange-400/20',
+    medium: 'text-warning bg-warning/10 border-warning/20',
+    low: 'text-success bg-success/10 border-success/20',
+    info: 'text-text-muted bg-white/5 border-white/10',
   };
 
   return (

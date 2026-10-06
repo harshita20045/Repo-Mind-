@@ -8,6 +8,7 @@ import { Button } from '../components/ui/Button';
 import { StatusBadge } from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import { TableRowSkeleton } from '../components/ui/LoadingSkeleton';
+import MergePolicyModal from './components/MergePolicyModal';
 
 // ─── Form Field ────────────────────────────────────────────────────────────────
 function Field({ label, hint, error, children }) {
@@ -66,6 +67,7 @@ export default function RepositoriesPage() {
   });
   const [errorMsg, setErrorMsg] = useState(null);
   const [indexingRepoId, setIndexingRepoId] = useState(null);
+  const [policyRepoId, setPolicyRepoId] = useState(null);
   const [isLinking, setIsLinking] = useState(false);
 
   const handleConnectGitHub = async () => {
@@ -334,6 +336,17 @@ export default function RepositoriesPage() {
                           {repo.index_status === 'unindexed' ? 'Index' : 'Re-index'}
                         </Button>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        className="ml-2"
+                        onClick={() => setPolicyRepoId(repo)}
+                      >
+                        <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -463,6 +476,15 @@ export default function RepositoriesPage() {
           </Button>
         </div>
       </Modal>
+
+      {policyRepoId && (
+        <MergePolicyModal
+          isOpen={!!policyRepoId}
+          onClose={() => setPolicyRepoId(null)}
+          repoId={policyRepoId.id}
+          repoName={policyRepoId.github_name}
+        />
+      )}
     </div>
   );
 }

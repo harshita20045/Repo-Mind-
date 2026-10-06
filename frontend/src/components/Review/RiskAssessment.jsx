@@ -47,14 +47,12 @@ export default function RiskAssessment({ riskData }) {
     );
   }
 
-  const {
-    risk_score,
-    security_risk_level,
-    architecture_risk_level,
-    test_gap_level,
-    blast_radius_modules,
-    explanation,
-  } = riskData;
+  const risk_score = riskData.score;
+  const security_risk_level = riskData.level;
+  const architecture_risk_level = riskData.factors?.architecture || 'low';
+  const test_gap_level = riskData.factors?.test_gap || 'low';
+  const blast_radius_modules = riskData.blast_radius?.directly_affected || [];
+  const explanation = riskData.summary;
 
   const isHigh = risk_score > 70;
   const isMed = risk_score > 40;
@@ -104,26 +102,33 @@ export default function RiskAssessment({ riskData }) {
       </div>
 
       {/* Risk vectors */}
-      <div>
-        <h3 className="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">Risk Vectors</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <RiskVector
-            label="Security"
-            level={security_risk_level}
-            description="Derived from secrets exposure, authentication changes, and injection vulnerabilities."
-          />
-          <RiskVector
-            label="Architecture"
-            level={architecture_risk_level}
-            description="Assessed from core structural modifications or changes to deep dependencies."
-          />
-          <RiskVector
-            label="Test Coverage"
-            level={test_gap_level}
-            description="Measures the absence of tests accompanying new critical logic changes."
-          />
+      {riskData.factors && Object.keys(riskData.factors).length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">Detailed Risk Factors</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {Object.entries(riskData.factors).map(([key, factor]) => {
+              // Convert keys like "security_exposure" to "Security Exposure"
+              const label = key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+              const score = factor.score || 0;
+              const level = score > 70 ? 'high' : score > 40 ? 'medium' : 'low';
+              
+              // Extract reasons or description
+              const description = factor.reasons && factor.reasons.length > 0 
+                ? factor.reasons.join(', ')
+                : factor.details || `Assessed score: ${score}/100`;
+
+              return (
+                <RiskVector
+                  key={key}
+                  label={label}
+                  level={level}
+                  description={description}
+                />
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Blast radius */}
       <div>

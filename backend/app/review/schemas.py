@@ -6,7 +6,7 @@ Per ADR-011: invalid JSON triggers one retry; second failure → ReviewRun FAILE
 Confidence values outside [0.0, 1.0] are rejected (not silently clamped).
 """
 import json
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -172,6 +172,51 @@ class HumanDecisionResponse(BaseModel):
         from_attributes = True
 
 
+class RiskAssessmentResponse(BaseModel):
+    """API view of RiskAssessment."""
+    id: int
+    score: int
+    level: str
+    summary: Optional[str] = None
+    factors: Optional[Dict[str, Any]] = None
+    blast_radius: Optional[Dict[str, Any]] = None
+    test_impact: Optional[Dict[str, Any]] = None
+
+    @property
+    def risk_score(self) -> int:
+        return self.score
+
+    @property
+    def security_risk_level(self) -> str:
+        return self.level
+
+    @property
+    def explanation(self) -> Optional[str]:
+        return self.summary
+
+    @property
+    def architecture_risk_level(self) -> str:
+        if not self.factors or "architecture_risk" not in self.factors:
+            return "low"
+        score = self.factors["architecture_risk"].get("score", 0)
+        return "high" if score > 70 else "medium" if score > 40 else "low"
+
+    @property
+    def test_gap_level(self) -> str:
+        if not self.factors or "test_risk" not in self.factors:
+            return "low"
+        score = self.factors["test_risk"].get("score", 0)
+        return "high" if score > 70 else "medium" if score > 40 else "low"
+
+    @property
+    def blast_radius_modules(self) -> List[str]:
+        if self.blast_radius and "directly_affected" in self.blast_radius:
+            return self.blast_radius.get("directly_affected", [])
+        return []
+
+    class Config:
+        from_attributes = True
+
 class ReviewRunResponse(BaseModel):
     """Returned by GET /review-runs/{id} to provide run details and findings."""
     id: int
@@ -182,6 +227,7 @@ class ReviewRunResponse(BaseModel):
     completed_at: Optional[datetime] = None
     findings: List[FindingResponse] = []
     human_decisions: List[HumanDecisionResponse] = []
+    risk_assessment: Optional[RiskAssessmentResponse] = None
 
     class Config:
         from_attributes = True
