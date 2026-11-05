@@ -141,7 +141,7 @@ export default function FindingCard({ finding }) {
                   No specific repository rules found to cite. General best practices applied.
                 </div>
               )}
-            </div>
+            </div> 
           </div>
         )}
       </div>
