@@ -9,6 +9,7 @@ import FindingList from '../components/Review/FindingList';
 import ChatAssistant from '../components/Review/ChatAssistant';
 import RiskAssessment from '../components/Review/RiskAssessment';
 import ConflictList from '../components/Review/ConflictList';
+import ActivityLog from '../components/Review/ActivityLog';
 import { RiskBadge, StatusBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
