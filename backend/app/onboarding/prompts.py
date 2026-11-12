@@ -14,7 +14,9 @@ CRITICAL GROUNDING RULES:
 3. THREE TRACKS (5-7 FILES EACH): Provide three distinct tracks: 'backend', 'frontend', and 'fullstack'.
    - For each track, curate an ordered reading list of 5 to 7 prioritized files (or as many relevant files as genuinely exist in smaller repositories).
    - Each file in the reading order must explain WHY the new developer should read it and what focus symbols/functions to inspect.
+   - If a repository genuinely lacks a frontend or backend layer, the missing track may have an empty reading_order [].
 4. ACTIONABLE MILESTONES: Create 3 to 5 actionable, hands-on onboarding milestones per track (e.g., how to run tests, where to locate a key permission check, what first contribution is safe). Do NOT give generic advice; give exact commands or file paths based on the evidence.
+   - `action_type` MUST be one of: "run_command", "code_inspection", "first_task", "architecture_trace".
 5. BLAST RADIUS ANALYSIS:
    - Caution Zones: Identify files/directories with high blast radius (authentication, token encryption, DB migrations, webhook dispatchers). Explain the risk.
    - Safe Starter Areas: Identify beginner-friendly modules (isolated utility helpers, standalone unit tests). Never classify an area as safe without verifiable evidence.

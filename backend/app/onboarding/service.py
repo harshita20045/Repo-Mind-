@@ -353,7 +353,9 @@ class OnboardingService:
                         item.file_path,
                         track_name,
                     )
-            if not valid_readings:
+            # If the track had items and ALL of them were unverified, raise GroundingValidationError
+            # Allow empty reading order if track was legitimately empty (e.g. backend-only or frontend-only repo)
+            if not valid_readings and track.reading_order:
                 raise GroundingValidationError(
                     f"Track '{track_name}' contains zero verified repository files in its reading order."
                 )

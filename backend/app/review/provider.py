@@ -27,7 +27,7 @@ from typing import Protocol, runtime_checkable
 logger = logging.getLogger(__name__)
 
 # Constants for Gemini provider
-GEMINI_DEFAULT_MODEL = "gemini-2.5-flash"
+GEMINI_DEFAULT_MODEL = "gemini-3.5-flash-lite"
 
 
 @runtime_checkable
@@ -218,6 +218,7 @@ class GroqProvider:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
                 ],
+                max_tokens=8192,
                 temperature=0.2,
             )
             return response.choices[0].message.content

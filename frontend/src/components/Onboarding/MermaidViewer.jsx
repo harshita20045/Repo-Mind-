@@ -37,7 +37,18 @@ export default function MermaidViewer({ chart }) {
         setError(null);
         // Unique container ID per render
         const id = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
-        const cleanChart = chart.trim().replace(/^```mermaid\s*/i, '').replace(/```\s*$/, '').trim();
+        let cleanChart = chart.trim().replace(/^```mermaid\s*/i, '').replace(/```\s*$/, '').trim();
+        
+        // Sanitize unquoted node labels with parentheses or special characters:
+        // e.g. Router[API Router (app/api/*.py)] -> Router["API Router (app/api/*.py)"]
+        cleanChart = cleanChart.replace(/(\b[a-zA-Z0-9_\-]+\[)([^\]\r\n]+)(\])/g, (match, prefix, content, suffix) => {
+          const trimmed = content.trim();
+          if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+            return match;
+          }
+          const safeContent = trimmed.replace(/"/g, "'");
+          return `${prefix}"${safeContent}"${suffix}`;
+        });
         
         const { svg: renderedSvg } = await mermaid.render(id, cleanChart);
         if (isMounted) {

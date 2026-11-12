@@ -60,20 +60,53 @@ class MilestoneItem(BaseModel):
     )
     action_hint: str = Field(..., min_length=5, max_length=500, description="Exact command or search string to verify completion")
 
+    @field_validator("id", mode="before")
+    @classmethod
+    def normalize_id(cls, v: str) -> str:
+        if not isinstance(v, str):
+            return "milestone_1"
+        cleaned = re.sub(r"[^a-zA-Z0-9_\-]", "_", v.strip())
+        return cleaned[:50] or "milestone_1"
+
+    @field_validator("action_type", mode="before")
+    @classmethod
+    def normalize_action_type(cls, v: str) -> str:
+        if not isinstance(v, str):
+            return "code_inspection"
+        val = v.lower().strip()
+        valid = {"run_command", "code_inspection", "first_task", "architecture_trace"}
+        if val in valid:
+            return val
+        mapping = {
+            "code_change": "first_task",
+            "code_review": "code_inspection",
+            "read_file": "code_inspection",
+            "reading": "code_inspection",
+            "inspection": "code_inspection",
+            "inspect": "code_inspection",
+            "info": "code_inspection",
+            "trace": "architecture_trace",
+            "arch_trace": "architecture_trace",
+            "command": "run_command",
+            "run": "run_command",
+            "test": "run_command",
+        }
+        return mapping.get(val, "code_inspection")
+
 
 class TrackPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     track_name: Literal["backend", "frontend", "fullstack"] = Field(..., description="Role track name")
     reading_order: List[ReadingOrderItem] = Field(
-        ...,
-        min_length=1,
+        default_factory=list,
+        min_length=0,
         max_length=10,
         description="Prioritized files to read (5-7 recommended where evidence exists)"
     )
     milestones: List[MilestoneItem] = Field(
-        ...,
-        min_length=1,
+        default_factory=list,
+        min_length=0,
         max_length=10,
         description="Actionable onboarding milestones for this track"
     )
@@ -139,6 +172,17 @@ class LLMBlueprintPayload(BaseModel):
         valid_starters = ("graph ", "flowchart ", "sequenceDiagram", "classDiagram", "stateDiagram")
         if not any(clean.startswith(starter) for starter in valid_starters):
             raise ValueError("Mermaid diagram must begin with a recognized diagram type (e.g. 'flowchart TD' or 'graph TD')")
+
+        # Sanitize unquoted node labels with parentheses/special characters:
+        # e.g. Router[API Router (app/api/*.py)] -> Router["API Router (app/api/*.py)"]
+        def quote_bracket_label(match):
+            prefix, content, suffix = match.group(1), match.group(2).strip(), match.group(3)
+            if (content.startswith('"') and content.endswith('"')) or (content.startswith("'") and content.endswith("'")):
+                return f"{prefix}{content}{suffix}"
+            safe_content = content.replace('"', "'")
+            return f'{prefix}"{safe_content}"{suffix}'
+
+        clean = re.sub(r'(\b[a-zA-Z0-9_\-]+\[)([^\]\r\n]+)(\])', quote_bracket_label, clean)
         return clean
 
 

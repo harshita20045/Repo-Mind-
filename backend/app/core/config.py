@@ -36,9 +36,9 @@ class Settings(BaseSettings):
     # "groq": Groq API (requires GROQ_API_KEY)
     LLM_PROVIDER: str = "groq"
     GEMINI_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
     GROQ_API_KEY: Optional[str] = None
-    GROQ_MODEL: str = "qwen/qwen3.8-27b"
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
 
     # GitHub Webhook — RepoMind 2.0
     # Set this to the secret configured in GitHub repo webhook settings.
