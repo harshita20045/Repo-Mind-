@@ -50,6 +50,69 @@ logger = logging.getLogger("repomind.worker")
 # ---------------------------------------------------------------------------
 POLL_INTERVAL_SECONDS = 5
 MAX_CONSECUTIVE_ERRORS = 10  # Stop worker if DB is unreachable repeatedly
+WORKER_LEASE_TIMEOUT_SECONDS = 300  # 5 minutes without heartbeat implies abandoned worker
+MAX_REVIEW_RUN_RETRIES = 3
+
+
+def recover_stale_running_jobs(db) -> int:
+    """
+    GAP-09: Identify and recover orphaned or abandoned worker jobs safely.
+
+    Rules:
+    1. If a job has been in status='running' for longer than WORKER_LEASE_TIMEOUT_SECONDS
+       without a heartbeat, it is considered abandoned.
+    2. Check if the job's PR has moved to a newer head SHA; if so, transition to 'superseded'
+       rather than re-queuing (GAP-08).
+    3. If retry_count >= MAX_REVIEW_RUN_RETRIES, transition to 'failed' with observable error.
+    4. Otherwise, increment retry_count and safely re-queue to 'pending'.
+    5. Concurrency safety: Uses SELECT ... FOR UPDATE SKIP LOCKED to prevent duplicate recovery.
+    """
+    from datetime import datetime, timezone, timedelta
+    from backend.app.review.models import ReviewRun
+    from backend.app.github.models import PullRequest
+
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=WORKER_LEASE_TIMEOUT_SECONDS)
+
+    # Claim stale running jobs atomically
+    stale_runs = (
+        db.query(ReviewRun)
+        .filter(ReviewRun.status == "running")
+        .filter(
+            (ReviewRun.heartbeat_at != None) & (ReviewRun.heartbeat_at < cutoff) |
+            (ReviewRun.heartbeat_at == None) & (ReviewRun.started_at < cutoff)
+        )
+        .with_for_update(skip_locked=True)
+        .all()
+    )
+
+    recovered_count = 0
+    for run in stale_runs:
+        pr = db.get(PullRequest, run.pull_request_id)
+        if pr and pr.head_sha and run.commit_sha and pr.head_sha != run.commit_sha:
+            run.status = "superseded"
+            run.progress_message = f"Superseded by newer commit {pr.head_sha} during abandoned worker recovery"
+            run.completed_at = datetime.now(timezone.utc)
+            run.claim_token = None
+            logger.info("GAP-09: Abandoned ReviewRun %d superseded by newer commit %s", run.id, pr.head_sha)
+        elif (run.retry_count or 0) >= MAX_REVIEW_RUN_RETRIES:
+            run.status = "failed"
+            run.error_message = f"Job abandoned by worker and exceeded maximum retries ({MAX_REVIEW_RUN_RETRIES})"
+            run.completed_at = datetime.now(timezone.utc)
+            run.progress_message = None
+            run.claim_token = None
+            logger.warning("GAP-09: Abandoned ReviewRun %d failed after %d retries", run.id, run.retry_count)
+        else:
+            run.retry_count = (run.retry_count or 0) + 1
+            run.status = "pending"
+            run.progress_message = f"Re-queued after worker lease timeout (attempt {run.retry_count})"
+            run.claim_token = None
+            logger.info("GAP-09: Recovered abandoned ReviewRun %d (retry %d/%d)", run.id, run.retry_count, MAX_REVIEW_RUN_RETRIES)
+        recovered_count += 1
+
+    if recovered_count:
+        db.commit()
+
+    return recovered_count
 
 
 def poll_and_execute() -> None:
@@ -71,26 +134,10 @@ def poll_and_execute() -> None:
         POLL_INTERVAL_SECONDS,
     )
 
-    # --- Crash recovery: reset stale 'running' jobs to 'pending' ---
+    # --- Crash recovery: recover stale 'running' jobs safely ---
     with SessionLocal() as db:
-        stale_count = (
-            db.query(ReviewRun)
-            .filter(ReviewRun.status == "running")
-            .update(
-                {
-                    "status": "pending",
-                    "progress_message": "Reset by worker startup (crash recovery)",
-                },
-                synchronize_session=False,
-            )
-        )
-        if stale_count:
-            db.commit()
-            logger.warning(
-                "Crash recovery: reset %d stale 'running' job(s) to 'pending'.",
-                stale_count,
-            )
-            
+        recover_stale_running_jobs(db)
+
         from backend.app.organizations.models import Repository
         stale_repo_count = (
             db.query(Repository)
@@ -108,6 +155,9 @@ def poll_and_execute() -> None:
 
     while True:
         try:
+            with SessionLocal() as db:
+                recover_stale_running_jobs(db)
+
             _process_one_job(provider)
             _process_one_indexing_job()
             _process_automations()
@@ -159,14 +209,20 @@ def _process_one_job(provider) -> None:
         if run is None:
             return  # Nothing to process
 
+        # Generate unique claim token for worker fencing (GAP-08/GAP-09)
+        import secrets
+        claim_token = secrets.token_hex(16)
+        run.claim_token = claim_token
+
         # Mark as running immediately (within the same transaction)
         run.status = "running"
         run.started_at = datetime.now(timezone.utc)
+        run.heartbeat_at = datetime.now(timezone.utc)
         run.progress_message = "Fetching PR data..."
         db.commit()
         run_id = run.id
 
-        logger.info("Worker picked up ReviewRun %d (PR #%s)", run_id, run.pull_request_id)
+        logger.info("Worker picked up ReviewRun %d (PR #%s, token=%s)", run_id, run.pull_request_id, claim_token)
 
     # Execute review pipeline in a fresh session (long-running — don't hold the lock session)
     with SessionLocal() as db:
@@ -213,6 +269,7 @@ def _process_one_job(provider) -> None:
                 organization_id=organization_id,
                 provider=provider,
                 existing_review_run_id=run.id,
+                claim_token=claim_token,
             )
 
             if completed_run.status == "completed":

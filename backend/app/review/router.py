@@ -71,17 +71,41 @@ def trigger_review(
         if not current_sha:
             raise HTTPException(status_code=502, detail="Failed to retrieve PR head SHA from GitHub")
 
-    # Enforce duplicate-review invariant: check for existing ReviewRun with same PR and SHA
-    existing_run = db.query(ReviewRun).filter(
+    # Lock the PullRequest row to serialize concurrent trigger calls
+    pr = db.query(PullRequest).filter(PullRequest.id == pull_request_id).with_for_update().first()
+
+    # Enforce duplicate-review invariant and handle stale active runs
+    existing_runs = db.query(ReviewRun).filter(
         ReviewRun.pull_request_id == pull_request_id,
-        ReviewRun.commit_sha == current_sha
+        ReviewRun.status.in_(["pending", "running"]),
+    ).with_for_update().all()
+
+    for active_run in existing_runs:
+        if active_run.commit_sha == current_sha:
+            return ReviewTriggerResponse(
+                job_id=active_run.id,
+                status=active_run.status
+            )
+        else:
+            # GAP-08: Supersede obsolete active runs on older commits
+            active_run.status = "superseded"
+            active_run.progress_message = f"Superseded by newer commit {current_sha}"
+            active_run.completed_at = datetime.now(timezone.utc)
+            active_run.claim_token = None
+
+    db.flush()
+
+    # Also check if a completed run already exists for this exact commit
+    completed_same_sha = db.query(ReviewRun).filter(
+        ReviewRun.pull_request_id == pull_request_id,
+        ReviewRun.commit_sha == current_sha,
+        ReviewRun.status == "completed",
     ).order_by(ReviewRun.id.desc()).first()
 
-    if existing_run:
-        # Idempotently return the existing run if found
+    if completed_same_sha:
         return ReviewTriggerResponse(
-            job_id=existing_run.id,
-            status=existing_run.status
+            job_id=completed_same_sha.id,
+            status=completed_same_sha.status
         )
 
     # Create new ReviewRun (status="pending")
