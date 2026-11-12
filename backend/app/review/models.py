@@ -52,6 +52,10 @@ class ReviewRun(Base):
     intelligence_mode = Column(String(20), nullable=True, default="v1")  # v1 | v2 | auto
     started_at = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
+    # Worker lease, fencing & retry tracking (GAP-08, GAP-09)
+    heartbeat_at = Column(DateTime(timezone=True), nullable=True)
+    retry_count = Column(Integer, nullable=False, default=0)
+    claim_token = Column(String(64), nullable=True)
     # Worker progress message shown in UI
     progress_message = Column(String(255), nullable=True)
     # Raw LLM output (for debugging — never exposed to UI)

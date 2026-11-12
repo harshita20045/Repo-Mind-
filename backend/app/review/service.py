@@ -78,10 +78,35 @@ def _mark_failed(db: Session, run: ReviewRun, reason: str = "") -> None:
     db.commit()
 
 
-def _update_progress(db: Session, run: ReviewRun, message: str) -> None:
-    """Update the progress message on a running ReviewRun for UI polling."""
+def _update_progress(db: Session, run: ReviewRun, message: str, claim_token: Optional[str] = None) -> bool:
+    """
+    Update the progress message and heartbeat on a running ReviewRun for UI polling and lease management.
+    Fencing check (GAP-08/GAP-09): If claim_token is provided, ensures this worker still owns the run.
+    Returns True if heartbeat was recorded, or False if ownership was invalidated.
+    """
+    try:
+        db.refresh(run)
+    except Exception:
+        pass
+
+    if claim_token and run.claim_token != claim_token:
+        logger.warning(
+            "Worker ownership invalidated for ReviewRun %d (expected token %s, DB has %s). Heartbeat rejected.",
+            run.id, claim_token, run.claim_token
+        )
+        return False
+
+    if run.status in ("superseded", "cancelled", "failed"):
+        logger.warning(
+            "ReviewRun %d has terminal status %s. Heartbeat rejected.",
+            run.id, run.status
+        )
+        return False
+
     run.progress_message = message
+    run.heartbeat_at = datetime.now(timezone.utc)
     db.commit()
+    return True
 
 
 def _persist_validated_findings(
@@ -288,6 +313,7 @@ def run_review(
     provider: LLMProvider,
     embedder: Optional[LocalEmbedder] = None,
     existing_review_run_id: Optional[int] = None,
+    claim_token: Optional[str] = None,
 ) -> ReviewRun:
     """
     Orchestrate the full RepoMind 2.0 review pipeline for a pull request.
@@ -345,8 +371,18 @@ def run_review(
         run = db.get(ReviewRun, existing_review_run_id)
         if not run:
             raise ReviewError(f"ReviewRun {existing_review_run_id} not found.")
+        # GAP-08/GAP-09: Fencing check on claim token and status
+        if claim_token and run.claim_token and run.claim_token != claim_token:
+            logger.info("ReviewRun %d has different claim_token (%s vs %s). Aborting execution safely.", run.id, run.claim_token, claim_token)
+            return run
+        if run.status in ("superseded", "cancelled", "completed", "failed"):
+            logger.info("ReviewRun %d is already %s. Aborting execution safely.", run.id, run.status)
+            return run
         run.status = "running"
+        if claim_token:
+            run.claim_token = claim_token
         run.started_at = datetime.now(timezone.utc)
+        run.heartbeat_at = datetime.now(timezone.utc)
         run.progress_message = "Fetching PR data from GitHub..."
     else:
         run = ReviewRun(
@@ -358,7 +394,9 @@ def run_review(
             llm_model=type(provider).__name__,
             rag_enabled=True,
             intelligence_mode="v1",
+            claim_token=claim_token,
             started_at=datetime.now(timezone.utc),
+            heartbeat_at=datetime.now(timezone.utc),
             progress_message="Fetching PR data from GitHub...",
         )
         db.add(run)
@@ -399,7 +437,8 @@ def run_review(
         return run
 
     # --- 4. Retrieve RAG context (repository-isolated) ------------------------
-    _update_progress(db, run, "Analyzing repository knowledge...")
+    if not _update_progress(db, run, "Analyzing repository knowledge...", claim_token=claim_token):
+        return run
     query = derive_query_from_diff(pr_title=pr.title, diff=diff)
     retriever = RAGRetriever(db=db, embedder=embedder)
     retrieved_chunks = retrieve_context(
@@ -410,7 +449,8 @@ def run_review(
     )
 
     # --- 5. Run static analysis -----------------------------------------------
-    _update_progress(db, run, "Running static analysis...")
+    if not _update_progress(db, run, "Running static analysis...", claim_token=claim_token):
+        return run
     run_linters(
         db=db,
         client=client,
@@ -444,7 +484,8 @@ def run_review(
 
     # --- 6. Detect semantic + mechanical conflicts ----------------------------
 
-    _update_progress(db, run, "Detecting semantic conflicts...")
+    if not _update_progress(db, run, "Detecting semantic conflicts...", claim_token=claim_token):
+        return run
     detected_conflicts: List[DetectedConflict] = detect_conflicts(
         diff=diff,
         retrieved_chunks=retrieved_chunks,
@@ -455,7 +496,8 @@ def run_review(
     _persist_conflicts(db, run, detected_conflicts)
 
     # --- 7. Build prompt + call LLM (with one retry on parse failure) ---------
-    _update_progress(db, run, "Generating AI review...")
+    if not _update_progress(db, run, "Generating AI review...", claim_token=claim_token):
+        return run
     user_content = build_user_content(
         pr_title=pr.title,
         diff=bounded_diff,
@@ -516,7 +558,8 @@ def run_review(
         return run
 
     # --- 8. Validate evidence for each finding --------------------------------
-    _update_progress(db, run, "Validating evidence...")
+    if not _update_progress(db, run, "Validating evidence...", claim_token=claim_token):
+        return run
     validated_findings = validate_findings(
         findings=findings_raw,
         retrieved_chunks=retrieved_chunks,
@@ -524,8 +567,43 @@ def run_review(
         diff=diff,
     )
 
+    # GAP-08: Before publishing results, verify that this run was not superseded
+    # or invalidated by a newer commit pushed during review execution, and verify claim token
+    db.refresh(run)
+    if claim_token and run.claim_token != claim_token:
+        logger.warning(
+            "ReviewRun %d claim_token mismatch (%s vs %s). Aborting publish without overwriting results.",
+            run.id, run.claim_token, claim_token
+        )
+        return run
+
+    if run.status in ("superseded", "cancelled", "failed"):
+        logger.info(
+            "ReviewRun %d was marked %s during execution. Aborting without publishing results.",
+            run.id,
+            run.status,
+        )
+        return run
+
+    # Also check if the PR's head_sha has moved past this run's commit
+    latest_pr = db.get(PullRequest, run.pull_request_id)
+    if latest_pr and latest_pr.head_sha and run.commit_sha and latest_pr.head_sha != run.commit_sha:
+        logger.info(
+            "ReviewRun %d (commit=%s) was superseded by newer PR head_sha=%s. Marking superseded.",
+            run.id,
+            run.commit_sha,
+            latest_pr.head_sha,
+        )
+        run.status = "superseded"
+        run.progress_message = f"Superseded by newer commit {latest_pr.head_sha}"
+        run.completed_at = datetime.now(timezone.utc)
+        run.claim_token = None
+        db.commit()
+        return run
+
     # --- 9. Calculate PR risk -------------------------------------------------
-    _update_progress(db, run, "Calculating risk score...")
+    if not _update_progress(db, run, "Calculating risk score...", claim_token=claim_token):
+        return run
     risk_result = calculate_risk(
         diff=diff,
         validated_findings=validated_findings,
@@ -536,6 +614,16 @@ def run_review(
         additions=pr_additions,
         deletions=pr_deletions,
     )
+
+    # Final fencing check before persisting results
+    db.refresh(run)
+    if claim_token and run.claim_token != claim_token:
+        logger.warning("Fencing rejection: ReviewRun %d claim_token mismatch before persistence. Aborting.", run.id)
+        return run
+    if run.status != "running":
+        logger.warning("Fencing rejection: ReviewRun %d status is %s (not 'running') before persistence. Aborting.", run.id, run.status)
+        return run
+
     _persist_risk(db, run, risk_result)
 
     # --- 10. Persist validated findings + evidence ----------------------------

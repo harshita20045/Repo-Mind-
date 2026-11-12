@@ -192,6 +192,9 @@ def _enqueue_review(db: Session, repository_id: int, pr_payload: dict, is_commen
     pr_github_number = pr_payload.get("number")
     pr = _upsert_pr_from_webhook(db, repository_id, pr_payload)
 
+    # Lock the PullRequest row to serialize concurrent review enqueuing for this PR
+    pr = db.query(PullRequest).filter(PullRequest.id == pr.id).with_for_update().first()
+
     if is_comment:
         existing = (
             db.query(ReviewRun)
@@ -212,21 +215,42 @@ def _enqueue_review(db: Session, repository_id: int, pr_payload: dict, is_commen
             logger.info("Webhook: No ReviewRun found for PR #%d comment.", pr_github_number)
             return None
 
-    existing = (
+    # Check for existing review runs for this PR
+    active_runs = (
         db.query(ReviewRun)
         .filter(
             ReviewRun.pull_request_id == pr.id,
             ReviewRun.status.in_(["pending", "running"]),
         )
-        .first()
+        .with_for_update()
+        .all()
     )
-    if existing:
-        logger.info(
-            "Webhook: ReviewRun %d already pending/running for PR #%d. Skipping duplicate.",
-            existing.id,
-            pr_github_number,
-        )
-        return existing
+
+    new_head_sha = pr.head_sha
+    for active_run in active_runs:
+        if active_run.commit_sha == new_head_sha:
+            logger.info(
+                "Webhook: ReviewRun %d already pending/running for PR #%d (sha=%s). Skipping duplicate.",
+                active_run.id,
+                pr_github_number,
+                new_head_sha,
+            )
+            return active_run
+        else:
+            # GAP-08: The commit SHA has changed! Supersede obsolete pending/running runs
+            active_run.status = "superseded"
+            active_run.progress_message = f"Superseded by newer commit {new_head_sha}"
+            active_run.completed_at = datetime.now(timezone.utc)
+            active_run.claim_token = None
+            logger.info(
+                "Webhook: ReviewRun %d (sha=%s) marked superseded by new commit %s for PR #%d.",
+                active_run.id,
+                active_run.commit_sha,
+                new_head_sha,
+                pr_github_number,
+            )
+
+    db.flush()
 
     # Create a new pending ReviewRun for the worker to pick up
     run = ReviewRun(
@@ -239,9 +263,10 @@ def _enqueue_review(db: Session, repository_id: int, pr_payload: dict, is_commen
     db.flush()
 
     logger.info(
-        "Webhook: created ReviewRun %d (pending) for PR #%d (repository_id=%d).",
+        "Webhook: created ReviewRun %d (pending) for PR #%d (sha=%s, repository_id=%d).",
         run.id,
         pr_github_number,
+        new_head_sha,
         repository_id,
     )
     return run
