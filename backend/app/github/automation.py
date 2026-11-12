@@ -63,9 +63,9 @@ def process_automation_actions(db: Session):
 
             client = GitHubClient(pat)
 
-            if action.action_type in ("APPROVE", "REQUEST_CHANGES"):
+            if action.action_type in ("APPROVE", "REQUEST_CHANGES", "REJECT"):
                 if not action.commit_sha:
-                    raise ValueError("commit_sha is required for APPROVE/REQUEST_CHANGES.")
+                    raise ValueError("commit_sha is required for review actions.")
                 
                 # Fetch the associated comment from HumanReview so GitHub doesn't reject REQUEST_CHANGES
                 from backend.app.github.models import HumanReview
@@ -78,9 +78,9 @@ def process_automation_actions(db: Session):
                 body = ""
                 if hr and hr.comment:
                     body = hr.comment
-                elif action.action_type == "REQUEST_CHANGES":
+                elif action.action_type in ("REQUEST_CHANGES", "REJECT"):
                     # GitHub strictly requires a body for REQUEST_CHANGES
-                    body = "Changes requested via RepoMind."
+                    body = "Changes requested via RepoMind." if action.action_type == "REQUEST_CHANGES" else "Pull request rejected via RepoMind."
                     
                 # Fetch and append AI Findings to the review comment
                 from backend.app.review.models import ReviewRun, Finding
@@ -103,12 +103,13 @@ def process_automation_actions(db: Session):
                                 body += ")"
                             body += "\n"
                             
+                review_event = "REQUEST_CHANGES" if action.action_type == "REJECT" else action.action_type
                 res = client.submit_pull_request_review(
                     owner=repo.github_owner,
                     repo=repo.github_name,
                     pr_number=pr.github_number,
                     commit_id=action.commit_sha,
-                    event=action.action_type,
+                    event=review_event,
                     body=body
                 )
                 action.github_resource_id = str(res.get("id"))
@@ -125,7 +126,12 @@ def process_automation_actions(db: Session):
                 )
                 action.github_resource_id = res.get("sha")
             else:
-                raise ValueError(f"Unknown action_type: {action.action_type}")
+                action.status = "FAILED"
+                action.error_code = "UNSUPPORTED_ACTION"
+                action.error_message = f"Unsupported action_type: {action.action_type}"
+                logger.error(f"AutomationAction {action.id} failed: {action.error_message}")
+                db.commit()
+                continue
 
             action.status = "COMPLETED"
             action.completed_at = datetime.now(timezone.utc)

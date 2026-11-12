@@ -29,6 +29,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from backend.app.core.config import settings
 from backend.app.db import get_db
@@ -145,9 +146,16 @@ def _upsert_pr_from_webhook(db: Session, repository_id: int, pr_payload: dict) -
     pr.target_branch = pr_payload.get("base", {}).get("ref")
     pr.head_sha = pr_payload.get("head", {}).get("sha")
     pr.base_sha = pr_payload.get("base", {}).get("sha")
-    pr.additions = pr_payload.get("additions")
-    pr.deletions = pr_payload.get("deletions")
-    pr.files_changed = pr_payload.get("changed_files")
+
+    # GAP-03: Only update diff/size metrics when present in the payload (non-None).
+    # Partial payloads like pull_request_review_comment omit these fields (None);
+    # do not overwrite existing metrics with None. Distinguish 0 from None.
+    if pr_payload.get("additions") is not None:
+        pr.additions = pr_payload.get("additions")
+    if pr_payload.get("deletions") is not None:
+        pr.deletions = pr_payload.get("deletions")
+    if pr_payload.get("changed_files") is not None:
+        pr.files_changed = pr_payload.get("changed_files")
     
     created_at = pr_payload.get("created_at")
     if created_at:
@@ -175,7 +183,11 @@ def _upsert_pr_from_webhook(db: Session, repository_id: int, pr_payload: dict) -
 
 def _enqueue_review(db: Session, repository_id: int, pr_payload: dict, is_comment: bool = False) -> Optional[ReviewRun]:
     """
-    Upsert the PullRequest from payload and create a pending ReviewRun.
+    Upsert the PullRequest from payload and manage review run execution.
+
+    DEF-05: Comments must NEVER reset completed ReviewRuns to pending or trigger
+    duplicate review execution over the same run. Comments are conversation/timeline
+    events recorded via WebhookEvent.
     """
     pr_github_number = pr_payload.get("number")
     pr = _upsert_pr_from_webhook(db, repository_id, pr_payload)
@@ -188,17 +200,16 @@ def _enqueue_review(db: Session, repository_id: int, pr_payload: dict, is_commen
             .first()
         )
         if existing:
-            existing.status = "pending"
-            existing.progress_message = "Re-queued via comment webhook"
-            db.flush()
             logger.info(
-                "Webhook: ReviewRun %d re-queued (pending) for PR #%d due to comment.",
-                existing.id,
+                "Webhook: comment event for PR #%d associated with latest ReviewRun %d (status=%s). "
+                "Event preserved without resetting run status or duplicating findings.",
                 pr_github_number,
+                existing.id,
+                existing.status,
             )
             return existing
         else:
-            logger.info("Webhook: No ReviewRun found to update for PR #%d comment.", pr_github_number)
+            logger.info("Webhook: No ReviewRun found for PR #%d comment.", pr_github_number)
             return None
 
     existing = (
@@ -285,7 +296,10 @@ async def github_webhook(
     action = payload.get("action")
     event_type = x_github_event or "unknown"
 
-    # --- 3. Deduplicate by delivery ID ---
+    # --- 3. Deduplicate by delivery ID and handle retries ---
+    is_retry = False
+    event = None
+
     if x_github_delivery:
         existing_event = (
             db.query(WebhookEvent)
@@ -293,76 +307,128 @@ async def github_webhook(
             .first()
         )
         if existing_event:
-            logger.info(
-                "Webhook: duplicate delivery %s (already processed as %s). Returning 200.",
-                x_github_delivery,
-                existing_event.status,
+            if existing_event.status in ("processed", "skipped"):
+                logger.info(
+                    "Webhook: duplicate delivery %s (already processed as %s). Returning 200.",
+                    x_github_delivery,
+                    existing_event.status,
+                )
+                return {"status": "duplicate", "event_id": existing_event.id}
+            elif existing_event.status == "received":
+                logger.info(
+                    "Webhook: delivery %s is currently being processed. Returning 200.",
+                    x_github_delivery,
+                )
+                return {"status": "duplicate", "event_id": existing_event.id, "detail": "processing"}
+            elif existing_event.status == "failed":
+                logger.info(
+                    "Webhook: retrying previously failed delivery %s (event_id=%d).",
+                    x_github_delivery,
+                    existing_event.id,
+                )
+                is_retry = True
+                event = existing_event
+                event.error_message = None
+                event.received_at = datetime.now(timezone.utc)
+
+    # --- 4. Persist webhook event with concurrency protection if new ---
+    if not event:
+        repository = _resolve_repository(db, payload)
+        repository_id = repository.id if repository else None
+
+        event = WebhookEvent(
+            github_delivery_id=x_github_delivery,
+            event_type=event_type,
+            action=action,
+            repository_id=repository_id,
+            payload=payload,
+            status="received",
+            received_at=datetime.now(timezone.utc),
+        )
+        db.add(event)
+        try:
+            db.commit()
+            db.refresh(event)
+        except IntegrityError:
+            db.rollback()
+            if x_github_delivery:
+                concurrent_event = (
+                    db.query(WebhookEvent)
+                    .filter(WebhookEvent.github_delivery_id == x_github_delivery)
+                    .first()
+                )
+                if concurrent_event:
+                    logger.info(
+                        "Webhook: concurrent duplicate delivery %s handled safely.",
+                        x_github_delivery,
+                    )
+                    return {"status": "duplicate", "event_id": concurrent_event.id}
+            raise
+
+    # --- 5. Process event safely ---
+    try:
+        # Handle ping (GitHub health check)
+        if event_type == "ping":
+            event.status = "skipped"
+            db.commit()
+            return {"status": "pong"}
+
+        # Handle pull_request and pull_request_review_comment events
+        is_pr_event = (event_type == "pull_request" and action in REVIEW_TRIGGER_ACTIONS)
+        is_comment_event = (event_type == "pull_request_review_comment" and action == "created")
+
+        if is_pr_event or is_comment_event:
+            repository = _resolve_repository(db, payload)
+            if not repository:
+                logger.warning(
+                    "Webhook: repository not found in DB for delivery %s. "
+                    "Event stored but not processed.",
+                    x_github_delivery,
+                )
+                event.status = "skipped"
+                event.error_message = "Repository not found in RepoMind database"
+                db.commit()
+                return {"status": "skipped", "reason": "repository_not_found"}
+
+            pr_number = payload.get("pull_request", {}).get("number")
+            if not pr_number:
+                event.status = "skipped"
+                event.error_message = "No PR number in payload"
+                db.commit()
+                return {"status": "skipped", "reason": "no_pr_number"}
+
+            review_run = _enqueue_review(
+                db, repository.id, payload.get("pull_request", {}), is_comment=is_comment_event
             )
-            return {"status": "duplicate", "event_id": existing_event.id}
+            if review_run:
+                event.status = "processed"
+                event.processed_at = datetime.now(timezone.utc)
+                event.error_message = None
+            else:
+                event.status = "skipped"
+                event.error_message = f"PR #{pr_number} not found in DB (sync first)"
 
-    # --- 4. Resolve repository ---
-    repository = _resolve_repository(db, payload)
-    repository_id = repository.id if repository else None
+            db.commit()
+            return {
+                "status": "retried" if is_retry else ("processed" if review_run else "skipped"),
+                "event_type": event_type,
+                "action": action,
+                "review_run_id": review_run.id if review_run else None,
+            }
 
-    # --- 5. Persist webhook event ---
-    event = WebhookEvent(
-        github_delivery_id=x_github_delivery,
-        event_type=event_type,
-        action=action,
-        repository_id=repository_id,
-        payload=payload,
-        status="received",
-        received_at=datetime.now(timezone.utc),
-    )
-    db.add(event)
-    db.flush()
-
-    # --- 6. Handle ping (GitHub health check) ---
-    if event_type == "ping":
+        # All other events — stored but skipped
         event.status = "skipped"
         db.commit()
-        return {"status": "pong"}
+        return {"status": "skipped", "event_type": event_type}
 
-    # --- 7. Handle pull_request and pull_request_review_comment events ---
-    is_pr_event = (event_type == "pull_request" and action in REVIEW_TRIGGER_ACTIONS)
-    is_comment_event = (event_type == "pull_request_review_comment" and action == "created")
-
-    if is_pr_event or is_comment_event:
-        if not repository:
-            logger.warning(
-                "Webhook: repository not found in DB for delivery %s. "
-                "Event stored but not processed.",
-                x_github_delivery,
-            )
-            event.status = "skipped"
-            event.error_message = "Repository not found in RepoMind database"
-            db.commit()
-            return {"status": "skipped", "reason": "repository_not_found"}
-
-        pr_number = payload.get("pull_request", {}).get("number")
-        if not pr_number:
-            event.status = "skipped"
-            event.error_message = "No PR number in payload"
-            db.commit()
-            return {"status": "skipped", "reason": "no_pr_number"}
-                                                                  
-        review_run = _enqueue_review(db, repository_id, payload.get("pull_request", {}), is_comment=is_comment_event)
-        if review_run:
-            event.status = "processed"
-            event.processed_at = datetime.now(timezone.utc)
-        else:
-            event.status = "skipped"
-            event.error_message = f"PR #{pr_number} not found in DB (sync first)"
-
+    except Exception as exc:
+        db.rollback()
+        event.status = "failed"
+        event.error_message = str(exc)[:1000]
+        db.add(event)
         db.commit()
-        return {
-            "status": "processed" if review_run else "skipped",
-            "event_type": event_type,
-            "action": action,
-            "review_run_id": review_run.id if review_run else None,
-        }
-
-    # --- 8. All other events — stored but skipped ---
-    event.status = "skipped"
-    db.commit()
-    return {"status": "skipped", "event_type": event_type}
+        logger.exception("Webhook: unexpected error processing delivery %s", x_github_delivery)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Webhook processing failed",
+        )

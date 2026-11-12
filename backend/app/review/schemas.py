@@ -6,6 +6,7 @@ Per ADR-011: invalid JSON triggers one retry; second failure → ReviewRun FAILE
 Confidence values outside [0.0, 1.0] are rejected (not silently clamped).
 """
 import json
+from enum import Enum
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 
@@ -143,21 +144,36 @@ class FindingResponse(BaseModel):
     recommendation: Optional[str] = None
     confidence: float
     status: str
+    evidence_status: Optional[str] = None
+    lifecycle_status: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class ReviewDecisionAction(str, Enum):
+    APPROVE = "APPROVE"
+    REQUEST_CHANGES = "REQUEST_CHANGES"
+    REJECT = "REJECT"
+
 
 class HumanDecisionRequest(BaseModel):
     """Payload to approve or reject a ReviewRun."""
     action: str = Field(..., description="APPROVE, REQUEST_CHANGES, or REJECT")
     note: Optional[str] = None
 
-    @field_validator("action")
+    @field_validator("action", mode="before")
     @classmethod
-    def validate_action(cls, v: str) -> str:
-        if v not in ("APPROVE", "REQUEST_CHANGES", "REJECT"):
-            raise ValueError("action must be 'APPROVE', 'REQUEST_CHANGES', or 'REJECT'")
-        return v
+    def validate_action(cls, v: Any) -> str:
+        if not isinstance(v, str):
+            raise ValueError("action must be a string")
+        norm = v.strip().upper()
+        if norm in ("APPROVE", "APPROVAL"):
+            return ReviewDecisionAction.APPROVE.value
+        if norm in ("REQUEST_CHANGES", "REQUESTCHANGES", "CHANGES_REQUESTED"):
+            return ReviewDecisionAction.REQUEST_CHANGES.value
+        if norm in ("REJECT", "REJECTION"):
+            return ReviewDecisionAction.REJECT.value
+        raise ValueError("action must be 'APPROVE', 'REQUEST_CHANGES', or 'REJECT'")
 
 class HumanDecisionResponse(BaseModel):
     """API view of a HumanDecision."""

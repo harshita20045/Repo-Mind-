@@ -135,6 +135,7 @@ export function usePermissions(memberships = [], orgId = null) {
       // For convenience to check the 4 target roles, though `can()` is preferred
       isOrgAdmin: hasRole('org_admin'),
       isLead: hasRole('team_lead'),
+      isTeamLead: hasRole('team_lead'),
       isReviewer: hasRole('reviewer'),
       isDeveloper: hasRole('developer') || activeRoles.size === 0,
     };

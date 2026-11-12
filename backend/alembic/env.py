@@ -19,6 +19,7 @@ import backend.app.github.models
 import backend.app.review.models
 import backend.app.chat.models
 import backend.app.webhooks.models
+import backend.app.onboarding.models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

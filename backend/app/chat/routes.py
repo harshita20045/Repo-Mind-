@@ -13,6 +13,9 @@ from backend.app.db import get_db
 from backend.app.auth.dependencies import get_current_user
 from backend.app.auth.models import User
 from backend.app.auth.permissions import Permission, assert_org_permission
+from backend.app.organizations.models import Repository
+from backend.app.github.models import PullRequest
+from backend.app.chat.models import ChatSession
 from backend.app.review.provider import get_llm_provider
 from backend.app.core.config import settings
 
@@ -52,9 +55,33 @@ def start_chat_session(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Start a new chat session."""
+    """Start a new chat session with strict context and organization validation."""
     # Ensure user has CHAT_USE permission in this organization
     assert_org_permission(db, user.id, request.organization_id, Permission.CHAT_USE)
+    
+    # Validate context and prevent cross-tenant repository / PR association
+    ctx = request.context_type.lower()
+    if ctx in ("repository", "repo"):
+        repo = db.get(Repository, request.context_id)
+        if not repo:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found")
+        if repo.project.organization_id != request.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Repository does not belong to specified organization"
+            )
+        assert_org_permission(db, user.id, repo.project.organization_id, Permission.REPOS_READ)
+    elif ctx in ("pr", "pull_request"):
+        pr = db.get(PullRequest, request.context_id)
+        if not pr:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pull request not found")
+        pr_org_id = pr.repository.project.organization_id
+        if pr_org_id != request.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Pull request does not belong to specified organization"
+            )
+        assert_org_permission(db, user.id, pr_org_id, Permission.PRS_READ)
     
     session = create_session(
         db=db,
@@ -80,6 +107,22 @@ def list_chat_sessions(
     """List chat sessions for a specific context."""
     assert_org_permission(db, user.id, organization_id, Permission.CHAT_USE)
     
+    ctx = context_type.lower()
+    if ctx in ("repository", "repo"):
+        repo = db.get(Repository, context_id)
+        if not repo:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found")
+        if repo.project.organization_id != organization_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Repository does not belong to organization")
+        assert_org_permission(db, user.id, repo.project.organization_id, Permission.REPOS_READ)
+    elif ctx in ("pr", "pull_request"):
+        pr = db.get(PullRequest, context_id)
+        if not pr:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pull request not found")
+        if pr.repository.project.organization_id != organization_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Pull request does not belong to organization")
+        assert_org_permission(db, user.id, pr.repository.project.organization_id, Permission.PRS_READ)
+
     sessions = get_sessions(db, user.id, context_type, context_id)
     return [
         ChatSessionResponse(
@@ -97,6 +140,12 @@ def get_chat_history(
     db: Session = Depends(get_db)
 ):
     """Get message history for a session."""
+    session = db.get(ChatSession, session_id)
+    if not session or session.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat session not found")
+    if session.organization_id != organization_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Session does not belong to specified organization")
+        
     assert_org_permission(db, user.id, organization_id, Permission.CHAT_USE)
     
     messages = get_session_messages(db, session_id, user.id)
@@ -118,9 +167,52 @@ def post_chat_message(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Send a message and get the AI assistant response."""
+    """Send a message and get the AI assistant response with strict repository authorization."""
+    session = db.get(ChatSession, session_id)
+    if not session or session.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat session not found")
+    if session.organization_id != organization_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Session does not belong to specified organization")
+
     assert_org_permission(db, user.id, organization_id, Permission.CHAT_USE)
     
+    # Resolve and strictly authorize repository scoping
+    target_repo_id: Optional[int] = None
+    ctx = session.context_type.lower()
+    
+    if ctx in ("repository", "repo"):
+        expected_repo_id = session.context_id
+        if request.repository_id is not None and request.repository_id != expected_repo_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="repository_id cannot differ from session repository context"
+            )
+        target_repo_id = expected_repo_id
+    elif ctx in ("pr", "pull_request"):
+        pr = db.get(PullRequest, session.context_id)
+        if not pr:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pull request not found")
+        if request.repository_id is not None and request.repository_id != pr.repository_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="repository_id cannot differ from pull request repository"
+            )
+        target_repo_id = pr.repository_id
+    else:
+        target_repo_id = request.repository_id
+
+    # If target_repo_id resolved, verify it belongs to this org and user has REPOS_READ
+    if target_repo_id is not None:
+        repo = db.get(Repository, target_repo_id)
+        if not repo:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found")
+        if repo.project.organization_id != organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Repository does not belong to session organization"
+            )
+        assert_org_permission(db, user.id, repo.project.organization_id, Permission.REPOS_READ)
+
     provider = get_llm_provider(settings)
     try:
         assistant_msg = send_message(
@@ -129,7 +221,7 @@ def post_chat_message(
             user_id=user.id,
             message=request.message,
             provider=provider,
-            repository_id=request.repository_id
+            repository_id=target_repo_id
         )
         return ChatMessageResponse(
             id=assistant_msg.id,

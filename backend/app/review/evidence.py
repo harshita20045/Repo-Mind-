@@ -227,7 +227,7 @@ def _verify_file_in_diff(finding: FindingSchema, diff: str) -> bool:
 def _extract_linter_issues(linter_results: List[dict]) -> List[dict]:
     """
     Flatten linter results into a list of individual issues for lookup.
-    Handles Ruff and Bandit output formats.
+    Handles canonical 'results' list and adapts across legacy Ruff and Bandit output formats.
     """
     issues = []
     for result in linter_results:
@@ -236,27 +236,52 @@ def _extract_linter_issues(linter_results: List[dict]) -> List[dict]:
         if not isinstance(raw, dict):
             continue
 
-        # Ruff format: {"results": [...]}
-        if tool == "ruff" and "results" in raw:
-            for item in raw.get("results", []):
-                issues.append({
-                    "tool": "ruff",
-                    "file": item.get("filename"),
-                    "line": item.get("location", {}).get("row"),
-                    "code": item.get("code"),
-                    "message": item.get("message"),
-                })
+        # Canonical format: {"results": [...]}
+        results = raw.get("results")
+        if isinstance(results, list) and len(results) > 0:
+            for item in results:
+                if isinstance(item, dict):
+                    loc = item.get("location") if isinstance(item.get("location"), dict) else {}
+                    issues.append({
+                        "tool": item.get("tool") or tool,
+                        "file": item.get("file") or item.get("filename"),
+                        "line": item.get("line") or loc.get("row") or item.get("line_number"),
+                        "code": item.get("code") or item.get("test_id"),
+                        "message": item.get("message") or item.get("issue_text"),
+                        "severity": item.get("severity") or item.get("issue_severity", "medium"),
+                    })
+            continue
 
-        # Bandit format: {"results": [...]}
-        elif tool == "bandit" and "results" in raw:
-            for item in raw.get("results", []):
-                issues.append({
-                    "tool": "bandit",
-                    "file": item.get("filename"),
-                    "line": item.get("line_number"),
-                    "code": item.get("test_id"),
-                    "message": item.get("issue_text"),
-                    "severity": item.get("issue_severity"),
-                })
+        # Legacy fallback: Ruff {"findings": [...]}
+        if tool == "ruff":
+            findings = raw.get("findings")
+            items = findings if isinstance(findings, list) else []
+            for item in items:
+                if isinstance(item, dict):
+                    loc = item.get("location") if isinstance(item.get("location"), dict) else {}
+                    issues.append({
+                        "tool": "ruff",
+                        "file": item.get("filename") or item.get("file"),
+                        "line": loc.get("row") or item.get("line"),
+                        "code": item.get("code"),
+                        "message": item.get("message"),
+                        "severity": item.get("severity", "medium"),
+                    })
+
+        # Legacy fallback: Bandit {"findings": {"results": [...]}}
+        elif tool == "bandit":
+            findings = raw.get("findings")
+            bandit_dict = findings if isinstance(findings, dict) else raw
+            items = bandit_dict.get("results", []) if isinstance(bandit_dict, dict) else []
+            for item in items:
+                if isinstance(item, dict):
+                    issues.append({
+                        "tool": "bandit",
+                        "file": item.get("filename") or item.get("file"),
+                        "line": item.get("line_number") or item.get("line"),
+                        "code": item.get("test_id") or item.get("code"),
+                        "message": item.get("issue_text") or item.get("message"),
+                        "severity": item.get("issue_severity", "medium"),
+                    })
 
     return issues

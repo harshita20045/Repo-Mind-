@@ -96,11 +96,15 @@ def send_message(
     )
     db.add(user_msg)
     
-    # 2. Retrieve context via RAG
+    # 2. Retrieve context via RAG with strict tenant boundary check
     retriever = RAGRetriever(db=db)
-    # Search across all chunk types
     chunks = []
     if repository_id is not None:
+        from backend.app.organizations.models import Repository
+        repo = db.get(Repository, repository_id)
+        if not repo or repo.project.organization_id != session.organization_id:
+            raise ValueError("Unauthorized repository access")
+
         chunks = retriever.search(
             repository_id=repository_id,
             query_text=message,
@@ -117,7 +121,7 @@ def send_message(
         
 
     # PR Specific Context (Phase 17)
-    if session.context_type == "pull_request":
+    if session.context_type in ("pr", "pull_request"):
         from backend.app.github.models import PullRequest, PullRequestCommit, PullRequestEvent, AIAnalysis, HumanReview
         pr = db.query(PullRequest).filter(PullRequest.id == session.context_id).first()
         if pr:

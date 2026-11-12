@@ -167,6 +167,11 @@ def decide_review_run(
         raise HTTPException(status_code=400, detail="Cannot approve a review run that is not completed")
 
     pr = db.get(PullRequest, run.pull_request_id)
+    if not pr:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pull request associated with this review run not found"
+        )
     if run.commit_sha != pr.head_sha:
         raise HTTPException(status_code=400, detail="Review run is for a stale commit. Please review the latest commit.")
 
@@ -177,11 +182,10 @@ def decide_review_run(
 
     if decision.action == "APPROVE":
         assert_org_permission(db, current_user.id, org_id, Permission.PRS_APPROVE)
-    elif decision.action == "REQUEST_CHANGES":
+    elif decision.action in ("REQUEST_CHANGES", "REJECT"):
         assert_org_permission(db, current_user.id, org_id, Permission.PRS_REQUEST_CHANGES)
     else:
-        # Fallback check for arbitrary decisions (like dismiss)
-        assert_org_permission(db, current_user.id, org_id, Permission.PRS_REVIEW)
+        raise HTTPException(status_code=422, detail=f"Unsupported decision action: {decision.action}")
 
     # 1. Update legacy HumanDecision (if necessary for backwards compatibility)
     existing = db.query(HumanDecision).filter_by(

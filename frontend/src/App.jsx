@@ -14,6 +14,7 @@ import SecurityBrowserPage from './pages/SecurityBrowserPage';
 import SettingsPage from './pages/SettingsPage';
 import ChatPage from './pages/ChatPage';
 import OnboardPage from './pages/OnboardPage';
+import CodebaseGuidePage from './pages/CodebaseGuidePage';
 import AppLayout from './components/Layout/AppLayout';
 
 const queryClient = new QueryClient();
@@ -142,6 +143,7 @@ export default function App() {
             
             <Route element={<ProtectedRoute memberships={memberships} requiredPermission={Permissions.REPOS_READ} />}>
               <Route path="/repositories" element={<RepositoriesPage currentOrgId={currentOrgId} />} />
+              <Route path="/repositories/:rid/guide" element={<CodebaseGuidePage />} />
               <Route path="/repositories/:rid/pull-requests" element={<PullRequestsPage currentOrgId={currentOrgId} />} />
               <Route path="/repositories/:rid/pull-requests/:prid" element={<ReviewPage user={currentUser} memberships={memberships} onLogout={handleLogout} currentOrgId={currentOrgId} />} />
             </Route>

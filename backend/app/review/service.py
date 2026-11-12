@@ -89,11 +89,21 @@ def _persist_validated_findings(
 ) -> List[Finding]:
     """
     Map ValidatedFinding objects to Finding + FindingEvidence DB rows.
-    Also calculates lifecycle_status (new, persistent, resolved) by comparing
-    with the previous completed ReviewRun for this PR.
-    Returns the list of created Finding ORM objects.
+    Also calculates lifecycle_status (new, persistent, resolved, reopened) by comparing
+    with previous completed ReviewRuns for this PR.
+
+    DEF-03: Resolved findings are NOT cloned into every subsequent ReviewRun.
+    Instead:
+    - Findings detected in the current run are created as 'new', 'persistent', or 'reopened'.
+    - If a finding from the immediate previous run is NOT detected in the current run,
+      it was resolved in the current revision; we record a 'resolved' occurrence for the
+      immediate transition without zombie cascading to run n+2, n+3, etc.
+    - Only previous findings that were active ('open' / 'new' / 'persistent') can transition
+      to 'resolved'. Already resolved findings are never cloned forward.
+    - If an issue previously resolved re-appears, it is tagged as 'reopened' instead of
+      'persistent', correctly tracking regression.
     """
-    # 1. Fetch previous completed run
+    # 1. Fetch immediate previous completed run
     previous_run = (
         db.query(ReviewRun)
         .filter(ReviewRun.pull_request_id == run.pull_request_id)
@@ -105,33 +115,55 @@ def _persist_validated_findings(
 
     prev_findings = []
     if previous_run:
+        # Fetch findings from immediate previous run
         prev_findings = db.query(Finding).filter(Finding.review_run_id == previous_run.id).all()
+
+    # Also fetch all historical resolved findings for this PR to detect regressions (reopened)
+    historical_resolved = (
+        db.query(Finding)
+        .join(ReviewRun, Finding.review_run_id == ReviewRun.id)
+        .filter(ReviewRun.pull_request_id == run.pull_request_id)
+        .filter(ReviewRun.id < run.id)
+        .filter(Finding.status == "resolved")
+        .all()
+    )
 
     created_findings: List[Finding] = []
     matched_prev_finding_ids = set()
 
     for vf in validated_findings:
         f = vf.finding
-        
-        # Determine lifecycle status
-        lifecycle = "new"
+
+        def is_match(candidate_finding):
+            file_match = (f.file == candidate_finding.file)
+            type_match = (f.category == candidate_finding.type)
+            line_match = False
+            if f.line is None and candidate_finding.line is None:
+                line_match = True
+            elif f.line is not None and candidate_finding.line is not None:
+                line_match = abs(f.line - candidate_finding.line) <= 3
+            return file_match and type_match and line_match
+
+        # Determine lifecycle status:
+        # Check if matched an active finding in the immediate previous run -> persistent
+        matched_previous = None
         for pf in prev_findings:
             if pf.id in matched_prev_finding_ids:
                 continue
-            # Simple heuristic for finding match: same file and category, and line is close (or None)
-            file_match = (f.file == pf.file)
-            type_match = (f.category == pf.type)
-            # Check line proximity (within 3 lines) to account for minor shifts
-            line_match = False
-            if f.line is None and pf.line is None:
-                line_match = True
-            elif f.line is not None and pf.line is not None:
-                line_match = abs(f.line - pf.line) <= 3
-                
-            if file_match and type_match and line_match:
-                lifecycle = "persistent"
+            if pf.status != "resolved" and is_match(pf):
+                matched_previous = pf
                 matched_prev_finding_ids.add(pf.id)
                 break
+
+        if matched_previous:
+            lifecycle = "persistent"
+        else:
+            # Check if this issue was historically resolved in an earlier run on this PR -> reopened
+            was_resolved = any(is_match(rf) for rf in historical_resolved)
+            if was_resolved:
+                lifecycle = "reopened"
+            else:
+                lifecycle = "new"
 
         finding = Finding(
             review_run_id=run.id,
@@ -175,10 +207,12 @@ def _persist_validated_findings(
             ))
 
         created_findings.append(finding)
-        
-    # Carry over resolved findings from previous run so UI can show them
+
+    # DEF-03: Transition active findings from the immediate previous run that are now fixed
+    # to 'resolved' in this run. CRITICALLY: Do NOT carry over findings that were ALREADY resolved
+    # in the previous run. This halts infinite zombie cascading.
     for pf in prev_findings:
-        if pf.id not in matched_prev_finding_ids:
+        if pf.status != "resolved" and pf.id not in matched_prev_finding_ids:
             resolved_finding = Finding(
                 review_run_id=run.id,
                 type=pf.type,

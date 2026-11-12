@@ -81,6 +81,9 @@ class PullRequest(Base):
     target_branch = Column(String(255), nullable=True)
     base_sha = Column(String(255), nullable=True)
     head_sha = Column(String(255), nullable=True)
+    additions = Column(Integer, nullable=True)
+    deletions = Column(Integer, nullable=True)
+    files_changed = Column(Integer, nullable=True)
     
     draft_status = Column(Integer, default=0) # 0=False, 1=True
     state = Column(String(50), nullable=False, default="open") # open, closed, merged

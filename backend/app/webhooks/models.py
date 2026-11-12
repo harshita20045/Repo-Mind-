@@ -10,7 +10,7 @@ Security:
   - Raw payload is stored as JSONB for processing flexibility.
 """
 import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 
 from backend.app.db import Base
@@ -26,7 +26,10 @@ class WebhookEvent(Base):
                → failed (processing error)
     """
     __tablename__ = "webhook_event"
-    __table_args__ = {"extend_existing": True}
+    __table_args__ = (
+        UniqueConstraint("github_delivery_id", name="uq_webhook_event_github_delivery_id"),
+        {"extend_existing": True},
+    )
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     # GitHub-assigned delivery ID (for deduplication and debugging)

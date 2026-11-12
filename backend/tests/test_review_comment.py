@@ -60,7 +60,13 @@ def _setup_repo_and_pr(db: Session):
     return repo.id, pr.id, run.id
 
 @patch("backend.app.webhooks.routes._verify_github_signature")
-def test_review_comment_updates_existing_run(mock_verify, db_session: Session):
+def test_review_comment_does_not_reset_completed_run_and_preserves_metrics(mock_verify, db_session: Session):
+    """
+    DEF-05 & GAP-03:
+    1. Comments must NEVER reset completed ReviewRuns to pending or duplicate execution.
+    2. Partial webhook payloads (e.g. comments omitting additions/deletions) must NOT
+       overwrite existing PR metrics with None.
+    """
     mock_verify.return_value = True
 
     global db_session_global
@@ -69,6 +75,13 @@ def test_review_comment_updates_existing_run(mock_verify, db_session: Session):
     app.dependency_overrides[get_db] = lambda: db_session
 
     repo_id, pr_id, run_id = _setup_repo_and_pr(db_session)
+
+    # Populate initial metrics on PR
+    pr = db_session.get(PullRequest, pr_id)
+    pr.additions = 250
+    pr.deletions = 45
+    pr.files_changed = 8
+    db_session.commit()
 
     payload = {
         "action": "created",
@@ -79,6 +92,11 @@ def test_review_comment_updates_existing_run(mock_verify, db_session: Session):
         "pull_request": {
             "id": 12345,
             "number": 1,
+            # Notice additions, deletions, changed_files omitted (evaluates to None in payload.get)
+        },
+        "comment": {
+            "id": 9999,
+            "body": "Can you explain this logic?"
         }
     }
 
@@ -88,7 +106,7 @@ def test_review_comment_updates_existing_run(mock_verify, db_session: Session):
         json=payload,
         headers={
             "X-GitHub-Event": "pull_request_review_comment",
-            "X-GitHub-Delivery": "test-delivery-1",
+            "X-GitHub-Delivery": "test-delivery-comment-1",
             "X-Hub-Signature-256": "sha256=dummy"
         }
     )
@@ -97,15 +115,63 @@ def test_review_comment_updates_existing_run(mock_verify, db_session: Session):
     data = response.json()
     assert data["status"] == "processed"
     
-    # Assert ReviewRun is re-used (ID is the same)
+    # Assert ReviewRun is associated
     assert data["review_run_id"] == run_id
 
-    # Verify run status is pending now
+    # Verify run status is STILL completed (NOT reset to pending) - DEF-05
     db_session.expire_all()
     run = db_session.query(ReviewRun).filter(ReviewRun.id == run_id).first()
-    assert run.status == "pending"
-    assert run.progress_message == "Re-queued via comment webhook"
+    assert run.status == "completed"
+    assert run.progress_message == "Done"
+
+    # Verify metrics were NOT overwritten with None - GAP-03
+    pr_updated = db_session.get(PullRequest, pr_id)
+    assert pr_updated.additions == 250
+    assert pr_updated.deletions == 45
+    assert pr_updated.files_changed == 8
 
     # Verify no duplicate ReviewRun created
     run_count = db_session.query(ReviewRun).filter(ReviewRun.pull_request_id == pr_id).count()
     assert run_count == 1
+
+
+@patch("backend.app.webhooks.routes._verify_github_signature")
+def test_valid_zero_metrics_not_ignored(mock_verify, db_session: Session):
+    """
+    GAP-03: Ensure valid integer 0 (e.g. additions=0 on docs-only PR) is correctly updated
+    and distinguished from None (omitted).
+    """
+    mock_verify.return_value = True
+    app.dependency_overrides[get_db] = lambda: db_session
+
+    repo_id, pr_id, run_id = _setup_repo_and_pr(db_session)
+
+    payload = {
+        "action": "synchronize",
+        "repository": {
+            "owner": {"login": "testowner"},
+            "name": "testrepo",
+        },
+        "pull_request": {
+            "id": 12345,
+            "number": 1,
+            "additions": 0,
+            "deletions": 10,
+            "changed_files": 1,
+        }
+    }
+
+    response = client.post(
+        "/webhooks/github",
+        json=payload,
+        headers={
+            "X-GitHub-Event": "pull_request",
+            "X-GitHub-Delivery": "test-delivery-sync-zero",
+            "X-Hub-Signature-256": "sha256=dummy"
+        }
+    )
+    assert response.status_code == 200
+    pr = db_session.get(PullRequest, pr_id)
+    assert pr.additions == 0
+    assert pr.deletions == 10
+    assert pr.files_changed == 1

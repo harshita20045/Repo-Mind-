@@ -152,7 +152,7 @@ export default function ReviewPage() {
   const { rid, prid } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { memberships } = useOutletContext();
+  const { memberships = [] } = useOutletContext() || {};
   const { can } = usePermissions(memberships);
 
   const [activeRunId, setActiveRunId] = useState(null);

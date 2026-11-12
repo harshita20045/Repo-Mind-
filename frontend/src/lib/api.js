@@ -18,12 +18,21 @@ export async function apiRequest(endpoint, options = {}) {
   if (!response.ok) {
     let errorMsg = data?.detail || `Request failed with status ${response.status}`;
     if (response.status === 403) {
-      errorMsg = "You don't have permission to perform this action.";
+      errorMsg = data?.detail || "You don't have permission to perform this action.";
     } else if (response.status === 401) {
-      errorMsg = "Authentication required. Please log in again.";
+      errorMsg = data?.detail || "Authentication required. Please log in again.";
+    } else if (response.status === 409) {
+      errorMsg = data?.detail || "A task is currently in progress. Please wait and retry.";
+    } else if (response.status === 422) {
+      errorMsg = data?.detail || "Validation error occurred. Please check input parameters.";
+    } else if (response.status === 400) {
+      errorMsg = data?.detail || "Bad request.";
+    } else if (response.status === 404) {
+      errorMsg = data?.detail || "Resource not found or access denied.";
     }
     const err = new Error(errorMsg);
     err.status = response.status;
+    err.data = data;
     throw err;
   }
 
@@ -224,5 +233,25 @@ export const securityApi = {
     apiRequest(`/security/findings/${findingId}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
+    }),
+};
+
+export const onboardingApi = {
+  getBlueprint: (repoId) =>
+    apiRequest(`/repositories/${repoId}/onboarding/blueprint`, {
+      method: 'GET',
+    }),
+  refreshBlueprint: (repoId) =>
+    apiRequest(`/repositories/${repoId}/onboarding/blueprint/refresh`, {
+      method: 'POST',
+    }),
+  getProgress: (repoId) =>
+    apiRequest(`/repositories/${repoId}/onboarding/progress`, {
+      method: 'GET',
+    }),
+  updateProgress: (repoId, payload) =>
+    apiRequest(`/repositories/${repoId}/onboarding/progress`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
     }),
 };

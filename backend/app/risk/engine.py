@@ -281,15 +281,36 @@ def _score_complexity(
     if finding_count:
         reasons.append(f"{finding_count} finding(s)")
 
-    # Linter issue count
-    linter_issue_count = sum(
-        len(r.get("raw_output", {}).get("results", []))
-        for r in linter_results
-        if isinstance(r.get("raw_output", {}), dict)
-    )
+    # Linter issue count & failure preservation
+    linter_issue_count = 0
+    linter_errors = []
+    for r in linter_results:
+        raw = r.get("raw_output", {})
+        if not isinstance(raw, dict):
+            continue
+        status = raw.get("status", r.get("status"))
+        tool_name = r.get("tool", "unknown")
+        if status == "error":
+            err_type = raw.get("error_type") or raw.get("message") or "execution error"
+            linter_errors.append(f"{tool_name}: {err_type}")
+
+        # Check canonical "results" first, then adapt
+        results = raw.get("results")
+        if isinstance(results, list):
+            linter_issue_count += len(results)
+        elif tool_name == "ruff" and isinstance(raw.get("findings"), list):
+            linter_issue_count += len(raw["findings"])
+        elif tool_name == "bandit" and isinstance(raw.get("findings"), dict):
+            linter_issue_count += len(raw["findings"].get("results", []))
+        elif isinstance(raw.get("findings"), list):
+            linter_issue_count += len(raw["findings"])
+
     score += min(linter_issue_count * 3, 30)
     if linter_issue_count:
         reasons.append(f"{linter_issue_count} linter issue(s)")
+    if linter_errors:
+        score += min(len(linter_errors) * 5, 15)
+        reasons.append(f"Linter execution errors: {', '.join(linter_errors)}")
 
     # Deep nesting in diff (crude proxy for complexity)
     deep_indent = len(re.findall(r'^\+\s{16,}\S', diff, re.MULTILINE))
