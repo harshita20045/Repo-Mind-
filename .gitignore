@@ -22,3 +22,22 @@ backend/static/
 *.swo
 Thumbs.db
 [Dd]esktop.ini
+
+
+# Keep agent rules and workflows tracked
+# .agents/rules/
+# .agents/workflows/
+
+# AI tool temporary files
+.claude/settings.local.json
+.cursor/
+.continue/cache/
+.aider*
+*.session
+
+# =========================
+# Graphify
+# =========================
+
+# Uncomment only if Graphify output should not be tracked
+# graphify-out/
