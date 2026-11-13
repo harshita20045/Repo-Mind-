@@ -1,0 +1,1 @@
+{"nodes": [{"id": "phase20_acceptance_report_alembic_reset", "label": "Alembic Reset Procedure", "file_type": "code", "source_file": "phase20_acceptance_report.md", "rationale": "Uses alembic upgrade head instead of raw ORM create_all to ensure migration tracking."}], "edges": [], "hyperedges": []}
