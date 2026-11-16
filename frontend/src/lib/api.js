@@ -255,3 +255,104 @@ export const onboardingApi = {
       body: JSON.stringify(payload),
     }),
 };
+
+export const intelligenceApi = {
+  getSummary: (repoId) =>
+    apiRequest(`/repositories/${repoId}/intelligence/summary`, {
+      method: 'GET',
+    }),
+  getGraph: (repoId, { nodeType = '', search = '', limit = 100 } = {}) => {
+    const params = new URLSearchParams();
+    if (nodeType) params.append('node_type', nodeType);
+    if (search) params.append('search', search);
+    if (limit) params.append('limit', limit);
+    return apiRequest(`/repositories/${repoId}/intelligence/graph?${params.toString()}`, {
+      method: 'GET',
+    });
+  },
+  getArchitectureDiagram: (repoId) =>
+    apiRequest(`/repositories/${repoId}/intelligence/architecture-diagram`, {
+      method: 'GET',
+    }),
+  getDependencies: (repoId, ecosystem = '') => {
+    const query = ecosystem ? `?ecosystem=${ecosystem}` : '';
+    return apiRequest(`/repositories/${repoId}/intelligence/dependencies${query}`, {
+      method: 'GET',
+    });
+  },
+  getSymbols: (repoId, { symbolType = '', search = '', limit = 50, offset = 0 } = {}) => {
+    const params = new URLSearchParams();
+    if (symbolType) params.append('symbol_type', symbolType);
+    if (search) params.append('search', search);
+    if (limit) params.append('limit', limit);
+    if (offset) params.append('offset', offset);
+    return apiRequest(`/repositories/${repoId}/intelligence/symbols?${params.toString()}`, {
+      method: 'GET',
+    });
+  },
+  triggerIndex: (repoId) =>
+    apiRequest(`/repositories/${repoId}/intelligence/index`, {
+      method: 'POST',
+    }),
+};
+
+export const impactApi = {
+  getLatestPrImpact: (repoId, prId) =>
+    apiRequest(`/repositories/${repoId}/pull-requests/${prId}/impact`, {
+      method: 'GET',
+    }),
+  analyzeImpact: (repoId, payload) =>
+    apiRequest(`/repositories/${repoId}/impact/analyze`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getImpactById: (analysisId) =>
+    apiRequest(`/impact/${analysisId}`, {
+      method: 'GET',
+    }),
+  getImpactGraph: (analysisId) =>
+    apiRequest(`/impact/${analysisId}/graph`, {
+      method: 'GET',
+    }),
+};
+
+export const architectureApi = {
+  getLatestAnalysis: (repoId) =>
+    apiRequest(`/repositories/${repoId}/architecture/analysis`, {
+      method: 'GET',
+    }),
+  triggerAnalysis: (repoId) =>
+    apiRequest(`/repositories/${repoId}/architecture/analyze`, {
+      method: 'POST',
+    }),
+  getRules: (repoId) =>
+    apiRequest(`/repositories/${repoId}/architecture/rules`, {
+      method: 'GET',
+    }),
+  createRule: (repoId, payload) =>
+    apiRequest(`/repositories/${repoId}/architecture/rules`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateRule: (repoId, ruleId, payload) =>
+    apiRequest(`/repositories/${repoId}/architecture/rules/${ruleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  deleteRule: (repoId, ruleId) =>
+    apiRequest(`/repositories/${repoId}/architecture/rules/${ruleId}`, {
+      method: 'DELETE',
+    }),
+  resetRules: (repoId) =>
+    apiRequest(`/repositories/${repoId}/architecture/rules/reset-defaults`, {
+      method: 'POST',
+    }),
+  getCircularDependencies: (repoId) =>
+    apiRequest(`/repositories/${repoId}/architecture/circular`, {
+      method: 'GET',
+    }),
+  getFlows: (repoId) =>
+    apiRequest(`/repositories/${repoId}/architecture/flows`, {
+      method: 'GET',
+    }),
+};

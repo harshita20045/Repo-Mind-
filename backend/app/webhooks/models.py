@@ -50,6 +50,11 @@ class WebhookEvent(Base):
     # received | processed | skipped | failed
     status = Column(String(50), nullable=False, default="received")
     error_message = Column(Text, nullable=True)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.datetime.now(datetime.timezone.utc),
+        nullable=False,
+    )
     received_at = Column(
         DateTime(timezone=True),
         default=lambda: datetime.datetime.now(datetime.timezone.utc),

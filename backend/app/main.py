@@ -38,6 +38,9 @@ app.add_middleware(
 from backend.app.review.router import router as review_router
 from backend.app.chat.routes import router as chat_router
 from backend.app.onboarding.routes import router as onboarding_router
+from backend.app.intelligence.routes import router as intelligence_router
+from backend.app.impact.routes import router as impact_router
+from backend.app.architecture.routes import router as architecture_router
 
 app.include_router(health_router)
 app.include_router(auth_router)
@@ -49,6 +52,9 @@ app.include_router(chat_router)
 app.include_router(analytics_router)
 app.include_router(security_router)
 app.include_router(onboarding_router)
+app.include_router(intelligence_router)
+app.include_router(impact_router)
+app.include_router(architecture_router)
 
 
 if __name__ == "__main__":

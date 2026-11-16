@@ -210,3 +210,98 @@ class TestPullRequestEndpoints:
     def test_get_pr_requires_org_membership(self, client):
         r = client.get("/pull-requests/1")
         assert r.status_code == 401
+
+    def test_connect_repository_infers_org_from_project(self, client, db_session):
+        token, org_id, user_id = _setup_user_and_org(client, db_session, "OrgInfer")
+        proj = client.post(
+            f"/organizations/{org_id}/projects",
+            json={"name": "ProjInfer"},
+            cookies={"access_token": token},
+        )
+        assert proj.status_code == 201
+        project_id = proj.json()["id"]
+
+        with patch("backend.app.github.service.GitHubClient") as mock_client:
+            mock_inst = MagicMock()
+            repo_info = {
+                "id": "998877",
+                "name": "infer-repo",
+                "owner": {"login": "infer-owner"},
+                "html_url": "https://github.com/infer-owner/infer-repo",
+                "default_branch": "main",
+            }
+            mock_inst.get_repository.return_value = repo_info
+            mock_inst.validate_repository_access.return_value = repo_info
+            mock_client.return_value = mock_inst
+
+            # Call /repositories/connect WITHOUT ?organization_id= query param
+            response = client.post(
+                "/repositories/connect",
+                json={
+                    "project_id": project_id,
+                    "github_owner": "infer-owner",
+                    "github_name": "infer-repo",
+                    "default_branch": "main",
+                },
+                cookies={"access_token": token},
+            )
+            assert response.status_code == 201
+            data = response.json()
+            assert "repository_id" in data
+            assert "Successfully connected" in data["message"]
+
+    def test_get_pr_files_returns_database_files(self, client, db_session):
+        token, org_id, user_id = _setup_user_and_org(client, db_session, "OrgPRFiles")
+        proj = client.post(
+            f"/organizations/{org_id}/projects",
+            json={"name": "ProjFiles"},
+            cookies={"access_token": token},
+        )
+        proj_id = proj.json()["id"]
+        repo = client.post(
+            f"/projects/{proj_id}/repositories",
+            json={"github_owner": "ownerf", "github_name": "repof", "github_repository_id": "999888", "default_branch": "main"},
+            cookies={"access_token": token},
+        )
+        repo_id = repo.json()["id"]
+
+        from datetime import datetime, timezone
+        from backend.app.github.models import PullRequest, PullRequestFile
+        pr = PullRequest(
+            repository_id=repo_id,
+            github_pr_id=f"gh_pr_{uuid.uuid4().hex[:8]}",
+            github_number=10,
+            title="Feature PR",
+            state="open",
+            head_sha="abcdef123456",
+            created_at=datetime.now(timezone.utc),
+        )
+        db_session.add(pr)
+        db_session.flush()
+
+        f1 = PullRequestFile(
+            pull_request_id=pr.id,
+            file_path="src/main.py",
+            status="modified",
+            additions=15,
+            deletions=3,
+            changes=18,
+            patch_data="@@ -1 +1 @@",
+        )
+        db_session.add(f1)
+        db_session.commit()
+
+        r = client.get(
+            f"/pull-requests/{pr.id}/files",
+            cookies={"access_token": token},
+        )
+        assert r.status_code == 200
+        data = r.json()
+        assert len(data) == 1
+        assert data[0]["filename"] == "src/main.py"
+        assert data[0]["file_path"] == "src/main.py"
+        assert data[0]["status"] == "modified"
+        assert data[0]["additions"] == 15
+        assert data[0]["deletions"] == 3
+        assert data[0]["changes"] == 18
+        assert data[0]["patch"] == "@@ -1 +1 @@"

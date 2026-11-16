@@ -152,6 +152,8 @@ def poll_and_execute() -> None:
             )
 
     consecutive_errors = 0
+    last_reconciliation_time = 0.0
+    RECONCILIATION_INTERVAL_SECONDS = 60.0
 
     while True:
         try:
@@ -161,6 +163,12 @@ def poll_and_execute() -> None:
             _process_one_job(provider)
             _process_one_indexing_job()
             _process_automations()
+
+            now = time.time()
+            if now - last_reconciliation_time >= RECONCILIATION_INTERVAL_SECONDS:
+                _process_reconciliation()
+                last_reconciliation_time = now
+
             consecutive_errors = 0
         except Exception as exc:
             consecutive_errors += 1
@@ -370,6 +378,18 @@ def _process_automations() -> None:
             process_automation_actions(db)
     except Exception as exc:
         logger.error("Error processing automation actions: %s: %s", type(exc).__name__, exc)
+
+
+def _process_reconciliation() -> None:
+    """Periodically reconcile pull requests with GitHub state to heal missed webhook events."""
+    from backend.app.db import SessionLocal
+    from backend.app.github.reconciliation import reconcile_pull_requests
+    try:
+        with SessionLocal() as db:
+            reconcile_pull_requests(db)
+    except Exception as exc:
+        logger.error("Error processing PR reconciliation: %s: %s", type(exc).__name__, exc)
+
 
 if __name__ == "__main__":
     poll_and_execute()

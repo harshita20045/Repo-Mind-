@@ -43,6 +43,9 @@ class ValidatedFinding:
     contradicting_evidence: List[dict] = field(default_factory=list)
     # Updated confidence after evidence check
     adjusted_confidence: float = 0.0
+    # Zero-hallucination rejection flag (RepoMind 2.0)
+    is_rejected: bool = False
+    rejection_reason: Optional[str] = None
 
 
 def validate_findings(
@@ -50,6 +53,7 @@ def validate_findings(
     retrieved_chunks: List[RetrievalResult],
     linter_results: List[dict],
     diff: str,
+    filter_rejected: bool = False,
 ) -> List[ValidatedFinding]:
     """
     Validate a list of LLM findings against available evidence.
@@ -59,6 +63,7 @@ def validate_findings(
         retrieved_chunks: RAG chunks retrieved for this PR.
         linter_results:   Structured linter output (Ruff, Bandit).
         diff:             The unified diff for this PR.
+        filter_rejected:  If True, drop ungrounded/contradicted findings.
 
     Returns:
         List of ValidatedFinding objects with evidence status and adjusted confidence.
@@ -70,13 +75,22 @@ def validate_findings(
 
     for finding in findings:
         vf = _validate_single_finding(finding, retrieved_chunks, linter_issues, diff)
+        if filter_rejected and vf.is_rejected:
+            logger.info(
+                "Rejecting ungrounded finding '%s' (file: %s): %s",
+                finding.title,
+                finding.file,
+                vf.rejection_reason,
+            )
+            continue
         validated.append(vf)
         logger.debug(
-            "Finding '%s' → %s (confidence: %.2f → %.2f)",
+            "Finding '%s' → %s (confidence: %.2f → %.2f, rejected=%s)",
             finding.title,
             vf.evidence_status,
             finding.confidence,
             vf.adjusted_confidence,
+            vf.is_rejected,
         )
 
     return validated
@@ -95,7 +109,8 @@ def _validate_single_finding(
     1. For security/architecture findings: look for matching rule in RAG chunks.
     2. For linter-overlapping findings: check if linter confirmed the issue.
     3. For diff-based findings: verify the cited file/line appears in the diff.
-    4. Apply confidence adjustments based on evidence strength.
+    4. Code snippet evidence check: verify quoted snippet exists in diff or chunks.
+    5. Apply confidence adjustments and mark ungrounded findings as rejected.
     """
     vf = ValidatedFinding(
         finding=finding,
@@ -113,36 +128,57 @@ def _validate_single_finding(
     if linter_evidence:
         vf.supporting_evidence.extend(linter_evidence)
 
-    # --- Check 3: Does the cited file/line appear in the diff? ---
+    # --- Check 3: Does the cited file appear in the diff? ---
     diff_confirmed = _verify_file_in_diff(finding, diff)
 
+    # --- Check 4: Code snippet evidence verification ---
+    snippet_confirmed = False
+    if finding.evidence and diff:
+        snippet_clean = finding.evidence.strip()
+        # Strip common diff markers (+, -, `) for matching
+        stripped_snippet = snippet_clean.lstrip("+-`").strip()
+        if stripped_snippet and (stripped_snippet in diff or any(stripped_snippet in c.text for c in retrieved_chunks)):
+            snippet_confirmed = True
+            vf.supporting_evidence.append({
+                "type": "code_snippet",
+                "text": snippet_clean[:200],
+                "strength": "strong",
+            })
+
     # --- Classify evidence status ---
-    if finding.category == "standards_violation" and not chunk_evidence:
-        # standards_violation MUST cite a rule — no chunk support = unverified
-        vf.evidence_status = "unverified"
-        vf.adjusted_confidence = min(finding.confidence, 0.5)
-    elif vf.supporting_evidence:
-        # Has supporting evidence from RAG or linter
-        strong_evidence = [e for e in vf.supporting_evidence if e.get("strength") == "strong"]
-        if strong_evidence:
-            vf.evidence_status = "supported"
-            # Boost confidence slightly for strongly supported findings
-            vf.adjusted_confidence = min(finding.confidence * 1.1, 1.0)
-        else:
-            vf.evidence_status = "supported"
-            vf.adjusted_confidence = finding.confidence
-    elif not diff_confirmed and finding.file:
-        # The cited file doesn't appear in the diff — likely a hallucination
+    if not diff_confirmed and finding.file:
+        # The cited file doesn't appear in the diff — hallucination!
         vf.evidence_status = "contradicted"
-        vf.adjusted_confidence = min(finding.confidence * 0.3, 0.3)
+        vf.adjusted_confidence = min(finding.confidence * 0.2, 0.2)
+        vf.is_rejected = True
+        vf.rejection_reason = f"File '{finding.file}' not found in PR diff"
         vf.contradicting_evidence.append({
             "type": "diff_check",
             "message": f"File '{finding.file}' not found in PR diff",
         })
+    elif finding.category in ("standards_violation", "conventions") and not chunk_evidence:
+        # conventions MUST cite a rule — no chunk support = unverified
+        vf.evidence_status = "unverified"
+        vf.adjusted_confidence = min(finding.confidence, 0.5)
+    elif vf.supporting_evidence:
+        # Has supporting evidence from RAG, linter, or snippet match
+        strong_evidence = [e for e in vf.supporting_evidence if e.get("strength") == "strong"]
+        if strong_evidence:
+            vf.evidence_status = "supported"
+            vf.adjusted_confidence = min(finding.confidence * 1.1, 1.0)
+        else:
+            vf.evidence_status = "supported"
+            vf.adjusted_confidence = finding.confidence
     else:
         # No strong evidence either way — unverified
         vf.evidence_status = "unverified"
         vf.adjusted_confidence = min(finding.confidence * 0.8, 0.8)
+
+    # Rejection gate: if contradicted or confidence too low to be credible
+    if vf.evidence_status == "contradicted" or vf.adjusted_confidence < 0.30:
+        vf.is_rejected = True
+        if not vf.rejection_reason:
+            vf.rejection_reason = f"Insufficient grounding (confidence {vf.adjusted_confidence:.2f} < 0.30)"
 
     return vf
 

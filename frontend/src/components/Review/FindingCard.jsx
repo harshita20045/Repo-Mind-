@@ -1,6 +1,24 @@
 import React, { useState } from 'react';
 import { SeverityBadge } from '../ui/Badge';
 
+function LifecycleBadge({ status }) {
+  const styles = {
+    new: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+    persistent: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+    resolved: 'text-text-muted bg-white/5 border-white/10 line-through',
+    reopened: 'text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse',
+  };
+  const normalized = status?.toLowerCase() || 'new';
+  const style = styles[normalized] || styles.new;
+  const label = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+
+  return (
+    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${style}`}>
+      {label}
+    </span>
+  );
+}
+
 function EvidenceStatus({ status }) {
   const styles = {
     supported: 'text-success',
@@ -40,14 +58,23 @@ export default function FindingCard({ finding }) {
   };
   const leftColor = leftColors[sev] || 'bg-border';
 
+  // 8 Multi-Stage categories + legacy fallback
   const categoryColors = {
-    security: 'text-danger bg-danger/10',
-    bug: 'text-warning bg-warning/10',
-    performance: 'text-accent bg-accent/10',
-    style: 'text-primary bg-primary/10',
-    architecture: 'text-info bg-info/10',
+    syntax: 'text-cyan-400 bg-cyan-500/10 border-cyan-400/20',
+    security: 'text-danger bg-danger/10 border-danger/20',
+    quality: 'text-primary bg-primary/10 border-primary/20',
+    conventions: 'text-emerald-400 bg-emerald-500/10 border-emerald-400/20',
+    architecture: 'text-indigo-400 bg-indigo-500/10 border-indigo-400/20',
+    api_contract: 'text-amber-400 bg-amber-500/10 border-amber-400/20',
+    dependencies: 'text-rose-400 bg-rose-500/10 border-rose-400/20',
+    testing: 'text-purple-400 bg-purple-500/10 border-purple-400/20',
+    // Legacy mappings
+    standards_violation: 'text-emerald-400 bg-emerald-500/10 border-emerald-400/20',
+    style: 'text-primary bg-primary/10 border-primary/20',
+    performance: 'text-accent bg-accent/10 border-accent/20',
+    bug: 'text-warning bg-warning/10 border-warning/20',
   };
-  const catColor = categoryColors[finding.type?.toLowerCase()] || 'text-text-muted bg-surfaceHighlight';
+  const catColor = categoryColors[finding.type?.toLowerCase()] || 'text-text-muted bg-surfaceHighlight border-white/5';
 
   return (
     <div className="relative flex flex-col bg-surface border border-border rounded-lg shadow-sm mb-4 transition-colors">
@@ -81,10 +108,13 @@ export default function FindingCard({ finding }) {
               )}
             </div>
           </button>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+            {finding.lifecycle_status && (
+              <LifecycleBadge status={finding.lifecycle_status} />
+            )}
             {finding.type && (
-              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-white/5 ${catColor}`}>
-                {finding.type}
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${catColor}`}>
+                {finding.type.replace('_', ' ')}
               </span>
             )}
             <SeverityBadge severity={sev} />
@@ -113,7 +143,7 @@ export default function FindingCard({ finding }) {
               </div>
             )}
 
-            {/* Evidence & Rules - Crucial for RepoMind */}
+            {/* Evidence & Rules - Grounding */}
             <div className="flex flex-col gap-3 pt-3 border-t border-border">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">Analysis Grounding</span>
@@ -129,11 +159,11 @@ export default function FindingCard({ finding }) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                     </svg>
                   </div>
-                  <div>
-                    <div className="text-[12px] font-medium text-text-primary mb-1">Repository Rule Matches</div>
-                    <div className="text-[12px] text-text-secondary font-mono bg-surfaceHighlight px-2 py-1 rounded inline-block border border-border">
+                  <div className="w-full">
+                    <div className="text-[12px] font-medium text-text-primary mb-1">Code Evidence & Grounded Rule</div>
+                    <pre className="text-[12px] text-text-secondary font-mono bg-surfaceHighlight p-2 rounded border border-border whitespace-pre-wrap overflow-x-auto">
                       {finding.rule_source}
-                    </div>
+                    </pre>
                   </div>
                 </div>
               ) : (

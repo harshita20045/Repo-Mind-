@@ -45,6 +45,7 @@ from backend.app.review.prompts import (
 )
 from backend.app.review.context import derive_query_from_diff, retrieve_context
 from backend.app.review.evidence import validate_findings, ValidatedFinding
+from backend.app.review.analysis import extract_pr_analysis_context, PRAnalysisContext
 from backend.app.linter.service import run_linters
 from backend.app.conflicts.engine import detect_conflicts, DetectedConflict
 from backend.app.risk.engine import calculate_risk
@@ -109,6 +110,25 @@ def _update_progress(db: Session, run: ReviewRun, message: str, claim_token: Opt
     return True
 
 
+def compute_finding_fingerprint(
+    file: Optional[str],
+    category: str,
+    title: str,
+    snippet: Optional[str] = None,
+) -> str:
+    """
+    Deterministic hash fingerprint for finding deduplication and lifecycle tracking.
+    Normalizes whitespace and file path formatting to prevent cosmetic duplicate alerts.
+    """
+    import hashlib
+    norm_file = (file or "").replace("\\", "/").strip().lower()
+    norm_cat = (category or "").strip().lower()
+    norm_title = " ".join((title or "").strip().lower().split())
+    norm_snip = " ".join((snippet or "").strip().lower().split()[:20])
+    raw = f"{norm_file}:{norm_cat}:{norm_title}:{norm_snip}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def _persist_validated_findings(
     db: Session, run: ReviewRun, validated_findings: List[ValidatedFinding]
 ) -> List[Finding]:
@@ -117,16 +137,10 @@ def _persist_validated_findings(
     Also calculates lifecycle_status (new, persistent, resolved, reopened) by comparing
     with previous completed ReviewRuns for this PR.
 
-    DEF-03: Resolved findings are NOT cloned into every subsequent ReviewRun.
-    Instead:
-    - Findings detected in the current run are created as 'new', 'persistent', or 'reopened'.
-    - If a finding from the immediate previous run is NOT detected in the current run,
-      it was resolved in the current revision; we record a 'resolved' occurrence for the
-      immediate transition without zombie cascading to run n+2, n+3, etc.
-    - Only previous findings that were active ('open' / 'new' / 'persistent') can transition
-      to 'resolved'. Already resolved findings are never cloned forward.
-    - If an issue previously resolved re-appears, it is tagged as 'reopened' instead of
-      'persistent', correctly tracking regression.
+    RepoMind 2.0 Invariants:
+    - Zero-hallucination filter: Ungrounded and contradicted findings are REJECTED and discarded.
+    - Deterministic fingerprinting: Avoids duplicate findings across runs and tolerates line shifts.
+    - DEF-03: Resolved findings are NOT cloned infinitely across runs; regressions are tagged 'reopened'.
     """
     # 1. Fetch immediate previous completed run
     previous_run = (
@@ -153,20 +167,40 @@ def _persist_validated_findings(
         .all()
     )
 
+    # Filter out ungrounded and contradicted findings (strict zero-hallucination policy)
+    active_validated_findings = [
+        vf for vf in validated_findings
+        if not getattr(vf, "is_rejected", False) and vf.evidence_status != "contradicted"
+    ]
+
     created_findings: List[Finding] = []
     matched_prev_finding_ids = set()
+    seen_current_fps = set()
 
-    for vf in validated_findings:
+    for vf in active_validated_findings:
         f = vf.finding
+        fp = compute_finding_fingerprint(f.file, f.category, f.title, f.evidence)
+        if fp in seen_current_fps:
+            logger.debug("Deduplicated identical finding in run %d: %s (%s)", run.id, f.title, f.file)
+            continue
+        seen_current_fps.add(fp)
 
         def is_match(candidate_finding):
+            cand_fp = compute_finding_fingerprint(
+                candidate_finding.file,
+                candidate_finding.type,
+                candidate_finding.title,
+                candidate_finding.rule_source,
+            )
+            if fp == cand_fp:
+                return True
             file_match = (f.file == candidate_finding.file)
             type_match = (f.category == candidate_finding.type)
             line_match = False
             if f.line is None and candidate_finding.line is None:
                 line_match = True
             elif f.line is not None and candidate_finding.line is not None:
-                line_match = abs(f.line - candidate_finding.line) <= 3
+                line_match = abs(f.line - candidate_finding.line) <= 5
             return file_match and type_match and line_match
 
         # Determine lifecycle status:
@@ -421,13 +455,34 @@ def run_review(
             pr_files_raw = client.get_pull_request_files(
                 repo.github_owner, repo.github_name, pr.github_number
             )
-            changed_files = [f.get("filename", "") for f in pr_files_raw if f.get("filename")]
-            pr_additions = sum(f.get("additions", 0) for f in pr_files_raw)
-            pr_deletions = sum(f.get("deletions", 0) for f in pr_files_raw)
         except Exception:
-            changed_files = []
-            pr_additions = None
-            pr_deletions = None
+            pr_files_raw = []
+
+        # Feature 1: PR Analysis & Knowledge Graph Context Extraction
+        pr_context = extract_pr_analysis_context(db, pr, diff, pr_files_raw=pr_files_raw)
+        changed_files = pr_context.changed_files
+        pr_additions = pr_context.additions
+        pr_deletions = pr_context.deletions
+
+        # Handle empty diff PRs cleanly (0 findings, 0 risk)
+        if pr_context.has_empty_diff:
+            logger.info("ReviewRun %d: PR %d has empty diff. Completing cleanly.", run.id, pr.github_number)
+            risk_result = calculate_risk(
+                diff="",
+                validated_findings=[],
+                conflicts=[],
+                linter_results=[],
+                changed_files=[],
+                pr_title=pr.title or "",
+                additions=0,
+                deletions=0,
+            )
+            _persist_risk(db, run, risk_result)
+            run.status = "completed"
+            run.completed_at = datetime.now(timezone.utc)
+            run.progress_message = None
+            db.commit()
+            return run
     except Exception as exc:
         logger.warning(
             "ReviewRun %d: failed to fetch PR diff. Error type: %s. Marking failed.",
@@ -449,16 +504,17 @@ def run_review(
     )
 
     # --- 5. Run static analysis -----------------------------------------------
-    if not _update_progress(db, run, "Running static analysis...", claim_token=claim_token):
-        return run
-    run_linters(
-        db=db,
-        client=client,
-        owner=repo.github_owner,
-        repo=repo.github_name,
-        pr_number=pr.github_number,
-        review_run_id=run.id,
-    )
+    if not pr_context.has_only_deletions:
+        if not _update_progress(db, run, "Running static analysis...", claim_token=claim_token):
+            return run
+        run_linters(
+            db=db,
+            client=client,
+            owner=repo.github_owner,
+            repo=repo.github_name,
+            pr_number=pr.github_number,
+            review_run_id=run.id,
+        )
 
     # Fetch linter results for prompt + validation
     linter_rows = db.query(LinterResult).filter(LinterResult.review_run_id == run.id).all()
@@ -490,7 +546,7 @@ def run_review(
         diff=diff,
         retrieved_chunks=retrieved_chunks,
         pr_title=pr.title or "",
-        pr_description="",
+        pr_description=pr.description or "",
         changed_files=changed_files,
     )
     _persist_conflicts(db, run, detected_conflicts)
@@ -499,10 +555,14 @@ def run_review(
     if not _update_progress(db, run, "Generating AI review...", claim_token=claim_token):
         return run
     user_content = build_user_content(
-        pr_title=pr.title,
+        pr_title=pr.title or "",
         diff=bounded_diff,
         retrieved_chunks=retrieved_chunks,
         linter_results_text=linter_results_text,
+        pr_description=pr.description or "",
+        branch_info=f"{pr_context.source_branch} -> {pr_context.target_branch}",
+        related_modules=pr_context.related_modules,
+        affected_endpoints=pr_context.affected_endpoints,
     )
 
     uc_len = len(user_content)
@@ -628,6 +688,32 @@ def run_review(
 
     # --- 10. Persist validated findings + evidence ----------------------------
     created_findings = _persist_validated_findings(db, run, validated_findings)
+
+    # --- 10b. Run Change Impact & Blast Radius Analysis -----------------------
+    try:
+        from backend.app.impact.engine import run_change_impact_analysis
+        run_change_impact_analysis(
+            db=db,
+            repository_id=repository_id,
+            diff=diff,
+            pull_request_id=pr.id,
+            review_run_id=run.id,
+            commit_sha=run.commit_sha,
+            target_branch=pr.target_branch or "main",
+        )
+    except Exception as exc:
+        logger.warning("ReviewRun %d: change impact analysis warning: %s", run.id, exc)
+
+    # --- 10c. Run Architecture Intelligence Audit -----------------------------
+    try:
+        from backend.app.architecture.engine import run_architecture_analysis
+        run_architecture_analysis(
+            db=db,
+            repository_id=repository_id,
+            pull_request_id=pr.id,
+        )
+    except Exception as exc:
+        logger.warning("ReviewRun %d: architecture analysis warning: %s", run.id, exc)
 
     # --- 11. Mark completed ---------------------------------------------------
     run.status = "completed"

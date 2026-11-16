@@ -77,55 +77,91 @@ def calculate_risk(
 
     # --- Factor 1: Security exposure (weight 25) ---
     security_score, security_detail = _score_security(validated_findings, conflicts, changed_files)
+    sec_reasons = security_detail.get("reasons", [])
     factors["security_exposure"] = {
         "score": security_score,
         "weight": 25,
         "weighted": int(security_score * 0.25),
+        "evidence": sec_reasons,
+        "recommended_action": (
+            "Audit critical/high security findings, verify authentication/authorization checks, and avoid committing secrets."
+            if security_score > 0 else "No elevated security risks detected."
+        ),
         **security_detail,
     }
 
     # --- Factor 2: Architecture risk (weight 15) ---
     arch_score, arch_detail = _score_architecture(validated_findings, conflicts)
+    arch_reasons = arch_detail.get("reasons", [])
     factors["architecture_risk"] = {
         "score": arch_score,
         "weight": 15,
         "weighted": int(arch_score * 0.15),
+        "evidence": arch_reasons,
+        "recommended_action": (
+            "Respect module boundary abstractions and verify API contract compatibility with client services."
+            if arch_score > 0 else "Architecture and component boundaries remain intact."
+        ),
         **arch_detail,
     }
 
     # --- Factor 3: Test risk (weight 15) ---
     test_score, test_detail = _score_test_risk(conflicts, linter_results, changed_files)
+    test_reasons = test_detail.get("reasons", [])
     factors["test_risk"] = {
         "score": test_score,
         "weight": 15,
         "weighted": int(test_score * 0.15),
+        "evidence": test_reasons,
+        "recommended_action": (
+            "Add automated test coverage for newly introduced logic and modified source files."
+            if test_score > 0 else "Test coverage is adequate for the modified files."
+        ),
         **test_detail,
     }
 
     # --- Factor 4: Code complexity (weight 20) ---
     complexity_score, complexity_detail = _score_complexity(diff, validated_findings, linter_results)
+    comp_reasons = complexity_detail.get("reasons", [])
     factors["code_complexity"] = {
         "score": complexity_score,
         "weight": 20,
         "weighted": int(complexity_score * 0.20),
+        "evidence": comp_reasons,
+        "recommended_action": (
+            "Refactor complex control flows, reduce method length, and resolve static analysis warnings."
+            if complexity_score > 0 else "Code complexity is within manageable thresholds."
+        ),
         **complexity_detail,
     }
 
     # --- Factor 5: Change size (weight 10) ---
     size_score, size_detail = _score_change_size(additions, deletions, diff)
+    size_reasons = size_detail.get("reasons", [])
     factors["change_size"] = {
         "score": size_score,
         "weight": 10,
         "weighted": int(size_score * 0.10),
+        "evidence": size_reasons,
+        "recommended_action": (
+            "Consider breaking large, multi-concern pull requests into smaller focused increments."
+            if size_score > 40 else "Pull request size is compact and easy to review."
+        ),
         **size_detail,
     }
 
     # --- Factor 6: Dependency risk (weight 10) ---
     dep_score, dep_detail = _score_dependency_risk(changed_files)
+    dep_reasons = dep_detail.get("reasons", [])
     factors["dependency_risk"] = {
         "score": dep_score,
         "weight": 10,
         "weighted": int(dep_score * 0.10),
+        "evidence": dep_reasons,
+        "recommended_action": (
+            "Pin exact dependency versions, verify license compliance, and audit for known vulnerabilities."
+            if dep_score > 0 else "No package dependency changes detected."
+        ),
         **dep_detail,
     }
 
@@ -136,6 +172,11 @@ def calculate_risk(
         "score": br_score,
         "weight": 5,
         "weighted": int(br_score * 0.05),
+        "evidence": [f"{blast_radius['directly_affected']} directly affected source file(s)"],
+        "recommended_action": (
+            "Run end-to-end integration tests to verify downstream subsystems importing modified files."
+            if br_score > 20 else "Change blast radius is localized."
+        ),
         "details": f"{blast_radius['directly_affected']} directly affected modules",
     }
 
@@ -365,9 +406,10 @@ def _score_dependency_risk(changed_files: List[str]) -> tuple[int, dict]:
     ]
 
     score = min(len(dep_files) * 30, 100)
+    reasons = [f"{len(dep_files)} dependency file(s) modified: {', '.join(dep_files)}"] if dep_files else []
     return score, {
         "dependency_files": dep_files,
-        "reasons": [f"{len(dep_files)} dependency file(s) modified"] if dep_files else [],
+        "reasons": reasons,
     }
 
 
@@ -475,5 +517,7 @@ def _generate_summary(
         parts.append(f"{critical_findings} high/critical supported finding(s).")
     if conflicts:
         parts.append(f"{len(conflicts)} conflict(s) detected.")
+
+    parts.append("Risk score reflects change blast radius and recommended review scrutiny, not certainty of defects.")
 
     return " ".join(parts)

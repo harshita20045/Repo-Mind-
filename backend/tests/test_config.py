@@ -6,4 +6,4 @@ def test_settings_loaded():
     assert settings.FERNET_KEY is not None
 
 def test_embedding_model_specification():
-    assert settings.EMBEDDING_MODEL == "sentence-transformers/all-mpnet-base-v2"
+    assert settings.EMBEDDING_MODEL == "sentence-transformers/all-MiniLM-L6-v2"

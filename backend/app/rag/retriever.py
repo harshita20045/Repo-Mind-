@@ -32,11 +32,13 @@ class RAGRetriever:
         repository_id: int, 
         query_text: str, 
         top_k: int = 5,
-        chunk_types: Optional[List[str]] = None
+        chunk_types: Optional[List[str]] = None,
+        file_path_pattern: Optional[str] = None,
     ) -> List[RetrievalResult]:
         """
         Search for the top_k most similar document chunks in a repository.
-        Optionally filter by chunk_types (e.g., ["documentation", "source_code"]).
+        Optionally filter by chunk_types (e.g., ["documentation", "source_code", "class", "function"])
+        or file_path_pattern.
         """
         # Validate top_k
         if top_k <= 0 or top_k > self.MAX_TOP_K:
@@ -66,10 +68,46 @@ class RAGRetriever:
         # Apply chunk_type filter if specified
         if chunk_types:
             stmt = stmt.where(DocumentChunk.chunk_type.in_(chunk_types))
+        if file_path_pattern:
+            stmt = stmt.where(Document.path.ilike(f"%{file_path_pattern}%"))
             
         stmt = stmt.order_by(distance).limit(top_k)
 
-        results = self.db.execute(stmt).all()
+        try:
+            with self.db.begin_nested():
+                results = self.db.execute(stmt).all()
+        except Exception as e:
+            if "operator does not exist" in str(e) or "<=>" in str(e) or "type modifier is not allowed" in str(e):
+                stmt_fallback = (
+                    select(DocumentChunk, Document)
+                    .join(Document, DocumentChunk.document_id == Document.id)
+                    .where(DocumentChunk.repository_id == repository_id)
+                )
+                if chunk_types:
+                    stmt_fallback = stmt_fallback.where(DocumentChunk.chunk_type.in_(chunk_types))
+                if file_path_pattern:
+                    stmt_fallback = stmt_fallback.where(Document.path.ilike(f"%{file_path_pattern}%"))
+                rows = self.db.execute(stmt_fallback).all()
+                import numpy as np
+                q_vec = np.array(query_embedding, dtype=float)
+                q_norm = np.linalg.norm(q_vec)
+                scored = []
+                for chunk, doc in rows:
+                    c_emb = chunk.embedding
+                    if isinstance(c_emb, str):
+                        import json
+                        c_emb = json.loads(c_emb)
+                    c_vec = np.array(c_emb, dtype=float)
+                    c_norm = np.linalg.norm(c_vec)
+                    if q_norm > 0 and c_norm > 0:
+                        dist = 1.0 - (float(np.dot(q_vec, c_vec)) / float(q_norm * c_norm))
+                    else:
+                        dist = 1.0
+                    scored.append((chunk, doc, dist))
+                scored.sort(key=lambda x: x[2])
+                results = scored[:top_k]
+            else:
+                raise
 
         # Map to typed schema
         retrieval_results = []

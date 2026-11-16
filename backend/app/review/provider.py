@@ -116,25 +116,11 @@ class GeminiProvider:
                 "Run: pip install google-genai"
             ) from exc
 
-        import tenacity
-        
-        def retry_if_transient_error(exception):
-            if isinstance(exception, APIError):
-                # Retry on 429 (Rate Limit) and 500, 502, 503, 504 (Server Errors)
-                if exception.code in (429, 500, 502, 503, 504):
-                    return True
-            return False
+        try:
+            import tenacity
+        except ImportError:
+            tenacity = None
 
-        @tenacity.retry(
-            retry=tenacity.retry_if_exception(retry_if_transient_error),
-            wait=tenacity.wait_exponential(multiplier=1, min=4, max=60),
-            stop=tenacity.stop_after_attempt(3),
-            reraise=True,
-            before_sleep=lambda retry_state: logger.warning(
-                "Gemini transient failure (attempt %d). Retrying... Error: %s",
-                retry_state.attempt_number, retry_state.outcome.exception()
-            )
-        )
         def _call_gemini():
             client = genai.Client(api_key=self._api_key)
             # Add reasonable timeout and deterministic temperature
@@ -149,6 +135,25 @@ class GeminiProvider:
                 config=config
             )
             return response.text
+
+        if tenacity is not None:
+            def retry_if_transient_error(exception):
+                if isinstance(exception, APIError):
+                    # Retry on 429 (Rate Limit) and 500, 502, 503, 504 (Server Errors)
+                    if exception.code in (429, 500, 502, 503, 504):
+                        return True
+                return False
+
+            _call_gemini = tenacity.retry(
+                retry=tenacity.retry_if_exception(retry_if_transient_error),
+                wait=tenacity.wait_exponential(multiplier=1, min=4, max=60),
+                stop=tenacity.stop_after_attempt(3),
+                reraise=True,
+                before_sleep=lambda retry_state: logger.warning(
+                    "Gemini transient failure (attempt %d). Retrying... Error: %s",
+                    retry_state.attempt_number, retry_state.outcome.exception()
+                )
+            )(_call_gemini)
 
         try:
             return _call_gemini()
@@ -190,26 +195,11 @@ class GroqProvider:
                 "Run: pip install groq"
             ) from exc
 
-        import tenacity
+        try:
+            import tenacity
+        except ImportError:
+            tenacity = None
 
-        def retry_if_transient_error(exception):
-            if isinstance(exception, groq.APIError):
-                # groq.APIStatusError has status_code
-                status = getattr(exception, "status_code", None)
-                if status in (429, 500, 502, 503, 504):
-                    return True
-            return False
-
-        @tenacity.retry(
-            retry=tenacity.retry_if_exception(retry_if_transient_error),
-            wait=tenacity.wait_exponential(multiplier=1, min=4, max=60),
-            stop=tenacity.stop_after_attempt(3),
-            reraise=True,
-            before_sleep=lambda retry_state: logger.warning(
-                "Groq transient failure (attempt %d). Retrying... Error: %s",
-                retry_state.attempt_number, retry_state.outcome.exception()
-            )
-        )
         def _call_groq():
             client = Groq(api_key=self._api_key)
             response = client.chat.completions.create(
@@ -222,6 +212,26 @@ class GroqProvider:
                 temperature=0.2,
             )
             return response.choices[0].message.content
+
+        if tenacity is not None:
+            def retry_if_transient_error(exception):
+                if isinstance(exception, groq.APIError):
+                    # groq.APIStatusError has status_code
+                    status = getattr(exception, "status_code", None)
+                    if status in (429, 500, 502, 503, 504):
+                        return True
+                return False
+
+            _call_groq = tenacity.retry(
+                retry=tenacity.retry_if_exception(retry_if_transient_error),
+                wait=tenacity.wait_exponential(multiplier=1, min=4, max=60),
+                stop=tenacity.stop_after_attempt(3),
+                reraise=True,
+                before_sleep=lambda retry_state: logger.warning(
+                    "Groq transient failure (attempt %d). Retrying... Error: %s",
+                    retry_state.attempt_number, retry_state.outcome.exception()
+                )
+            )(_call_groq)
 
         try:
             return _call_groq()
@@ -247,7 +257,7 @@ class FallbackProvider:
     def complete(self, system_prompt: str, user_content: str) -> str:
         try:
             return self._primary.complete(system_prompt, user_content)
-        except LLMProviderError as exc:
+        except Exception as exc:
             logger.warning(f"Primary provider failed: {exc}. Falling back to secondary provider.")
             return self._secondary.complete(system_prompt, user_content)
 

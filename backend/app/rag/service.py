@@ -48,49 +48,16 @@ def index_repository(db: Session, repository_id: int) -> None:
     # 2. Discover documents
     documents_meta = loader.discover_documents()
     
-    # 3. Process each document
+    # 3. Load valid document contents
+    file_dict = {}
     for doc_meta in documents_meta:
         path = doc_meta["path"]
         sha = doc_meta["sha"]
-        
-        # Load and hash
         text_content = loader.load_document_content(path, sha)
-        if not text_content:
-            continue
-            
-        content_hash = loader.hash_content(text_content)
-        
-        # Check idempotency
-        existing_doc = rag_repo.get_document_by_path(repository_id, path)
-        if existing_doc and existing_doc.content_hash == content_hash:
-            # Unchanged, skip
-            continue
-            
-        # 4. Save document metadata
-        doc = rag_repo.save_document(repository_id, path, content_hash)
-        
-        # 5. Chunking
-        text_chunks = chunker.chunk_text(text_content)
-        if not text_chunks:
-            continue
-            
-        # 6. Embedding
-        embeddings = embedder.embed_chunks(text_chunks)
-        
-        # Determine chunk type
-        chunk_type = loader.determine_chunk_type(path)
-        
-        # 7. Persistence
-        # Combine text and embeddings
-        chunk_data = list(zip(text_chunks, embeddings))
-        rag_repo.save_chunks(
-            repository_id, 
-            doc.id, 
-            chunk_data,
-            chunk_type=chunk_type,
-            file_path=path
-        )
-        
-    # We do not mark index_status here because Phase 13 owns job states.
-    # We just commit the data.
-    db.commit()
+        if text_content:
+            file_dict[path] = text_content
+
+    # 4. Orchestrate complete Repository Intelligence Indexing
+    from backend.app.intelligence.indexer import RepositoryIndexer
+    indexer = RepositoryIndexer(db, repository_id)
+    indexer.index_from_file_dict(file_dict, commit_sha=repo.default_branch)

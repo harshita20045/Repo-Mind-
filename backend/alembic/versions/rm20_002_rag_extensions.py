@@ -23,11 +23,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 1. Alter vector dimension
-    # Changing vector dimensions in Postgres requires a cast or recreating the column.
-    # Since we don't have production data yet, altering the type directly with a USING clause or dropping/adding is easiest.
-    # For safety in this test setup, we will just use raw SQL to alter the type.
-    op.execute("ALTER TABLE document_chunk ALTER COLUMN embedding TYPE vector(768) USING embedding::vector(768)")
+    # 1. Alter vector dimension if pgvector is available
+    bind = op.get_bind()
+    has_vector = bind.execute(sa.text("SELECT 1 FROM pg_available_extensions WHERE name = 'vector'")).scalar()
+    if has_vector:
+        op.execute("ALTER TABLE document_chunk ALTER COLUMN embedding TYPE vector(768) USING embedding::vector(768)")
 
     # 2. Add new columns
     op.add_column('document_chunk', sa.Column(

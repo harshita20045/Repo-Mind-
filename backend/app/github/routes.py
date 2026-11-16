@@ -10,7 +10,7 @@ Endpoints per api-design.md:
 All endpoints derive organization_id from the session — never trusted from request input.
 The GitHub PAT is NEVER returned in any response.
 """
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -83,7 +83,7 @@ def list_github_repositories(
 )
 def connect_repository(
     payload: schemas.GitHubConnectRequest,
-    organization_id: int = Query(..., description="Organization to connect the repository to"),
+    organization_id: Optional[int] = Query(None, description="Organization to connect the repository to"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -91,6 +91,12 @@ def connect_repository(
     Validate access using the current user's OAuth token and persist the connection.
     Only org_admin can call this endpoint.
     """
+    if organization_id is None:
+        project = get_project_by_id(db, payload.project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        organization_id = project.organization_id
+
     verify_org_admin(db, current_user.id, organization_id)
 
     repo = service.connect_repository(
@@ -568,8 +574,24 @@ def get_pull_request_files(
     if not pr:
         raise HTTPException(status_code=404, detail="Pull request not found")
     _assert_repo_access(db, pr.repository_id, current_user.id)
-    # Returning a mock array of files changed
-    return [{"filename": "example.py", "status": "modified", "additions": 10, "deletions": 2}]
+    
+    from backend.app.github.models import PullRequestFile
+    files = db.query(PullRequestFile).filter(PullRequestFile.pull_request_id == pull_request_id).all()
+    return [
+        {
+            "id": f.id,
+            "filename": f.file_path,
+            "file_path": f.file_path,
+            "status": f.status or "modified",
+            "additions": f.additions or 0,
+            "deletions": f.deletions or 0,
+            "changes": f.changes or 0,
+            "patch": f.patch_data,
+            "blob_url": f.blob_url,
+            "raw_url": f.raw_url,
+        }
+        for f in files
+    ]
 
 @router.post("/pull-requests/{pull_request_id}/reopen")
 def reopen_pull_request(

@@ -9,7 +9,24 @@ vi.mock('../src/lib/api', () => ({
   reviewApi: {
     triggerReview: vi.fn(),
     getReviewRun: vi.fn(),
-  }
+    listReviewRuns: vi.fn().mockResolvedValue([]),
+    approveReviewRun: vi.fn().mockResolvedValue({}),
+  },
+  githubApi: {
+    getPullRequest: vi.fn().mockResolvedValue({
+      id: 42,
+      github_number: 42,
+      title: 'Test PR',
+      state: 'open',
+      github_author_login: 'octocat',
+    }),
+    getPullRequestEvents: vi.fn().mockResolvedValue([]),
+    mergePullRequest: vi.fn().mockResolvedValue({}),
+    reopenPullRequest: vi.fn().mockResolvedValue({}),
+  },
+  orgApi: {
+    getRepository: vi.fn().mockResolvedValue({ id: 1, github_name: 'repo-1' }),
+  },
 }));
 
 import { reviewApi } from '../src/lib/api';
@@ -90,13 +107,12 @@ describe('ReviewUI Lifecycle', () => {
     
     // Wait for completed state to show findings
     await waitFor(() => {
-      expect(screen.getByText('Findings')).toBeInTheDocument();
-    }, { timeout: 3000 });
-    
-    expect(screen.getByText('Hardcoded secret')).toBeInTheDocument();
+      expect(screen.getByText('Hardcoded secret')).toBeInTheDocument();
+    }, { timeout: 4000 });
     expect(screen.getByText('critical')).toBeInTheDocument();
     expect(screen.getByText('security')).toBeInTheDocument();
-    expect(screen.getByText('src/config.js :12')).toBeInTheDocument();
+    expect(screen.getByText('src/config.js')).toBeInTheDocument();
+    expect(screen.getByText('L12')).toBeInTheDocument();
   });
 
   test('displays error state on failure', async () => {

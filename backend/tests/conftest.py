@@ -13,6 +13,9 @@ from backend.app.organizations.models import Project, Repository, GithubConnecti
 from backend.app.github.models import PullRequest, Commit, AutomationAction, GitHubIdentity, GitHubCredential, ProjectMergePolicy
 from backend.app.review.models import ReviewRun, Finding, LinterResult, HumanDecision
 from backend.app.webhooks.models import WebhookEvent
+from backend.app.intelligence.models import CodeGraphNode, CodeGraphEdge, PackageDependency, RepositoryScanSummary
+from backend.app.impact.models import ChangeImpactAnalysis
+from backend.app.architecture.models import ArchitectureRule, ArchitectureAnalysis, ArchitectureViolation
 
 # Explicitly configure the test database URL
 from sqlalchemy.engine.url import make_url
@@ -51,7 +54,10 @@ def setup_test_db():
         conn.execute(text("DROP SCHEMA public CASCADE;"))
         conn.execute(text("CREATE SCHEMA public;"))
         conn.execute(text("GRANT ALL ON SCHEMA public TO public;"))
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        try:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        except Exception:
+            pass
     
     # Ensure Alembic uses the test database URL, not the development URL
     from backend.app.core.config import settings

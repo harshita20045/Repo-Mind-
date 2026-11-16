@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { reviewApi, githubApi, orgApi } from '../lib/api';
+import { reviewApi, githubApi, orgApi, impactApi } from '../lib/api';
 import { useOutletContext } from 'react-router-dom';
 import { usePermissions, Permissions } from '../hooks/usePermissions';
 import ReviewStateIndicator from '../components/Review/ReviewStateIndicator';
@@ -10,6 +10,7 @@ import ChatAssistant from '../components/Review/ChatAssistant';
 import RiskAssessment from '../components/Review/RiskAssessment';
 import ConflictList from '../components/Review/ConflictList';
 import ActivityLog from '../components/Review/ActivityLog';
+import ChangeImpactDashboard from '../components/Impact/ChangeImpactDashboard';
 import { RiskBadge, StatusBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -176,7 +177,11 @@ export default function ReviewPage() {
 
   const { mutate: triggerReview, isPending: isTriggering, error: triggerError } = useMutation({
     mutationFn: () => reviewApi.triggerReview(prid),
-    onSuccess: (data) => setActiveRunId(data.job_id),
+    onSuccess: (data) => {
+      if (data?.job_id) {
+        setActiveRunId(data.job_id);
+      }
+    },
   });
 
   const { data: runsData } = useQuery({
@@ -202,6 +207,12 @@ export default function ReviewPage() {
     queryKey: ['repository', rid],
     queryFn: () => orgApi.getRepository(rid),
     enabled: !!rid,
+  });
+
+  const { data: impactData, isLoading: loadingImpact } = useQuery({
+    queryKey: ['prImpact', rid, prid],
+    queryFn: () => impactApi.getLatestPrImpact(rid, prid),
+    enabled: !!rid && !!prid,
   });
 
   const { mutate: submitDecision, isPending: isSubmittingDecision } = useMutation({
@@ -232,8 +243,10 @@ export default function ReviewPage() {
   });
 
   React.useEffect(() => {
-    if (!activeRunId) triggerReview();
-  }, [prid]);
+    if (!activeRunId && runsData && runsData.length > 0) {
+      setActiveRunId(runsData[0].id);
+    }
+  }, [runsData, activeRunId]);
 
   const currentStatus = runData?.status || null;
   const isCompleted = currentStatus === 'completed';
@@ -249,6 +262,7 @@ export default function ReviewPage() {
 
   const tabs = [
     { id: 'findings', label: 'Findings', count: isCompleted ? findings.length : null },
+    { id: 'impact', label: 'Change Impact', count: impactData?.directly_affected_count !== undefined ? impactData.directly_affected_count : null },
     { id: 'risk', label: 'Risk Assessment', count: null },
     { id: 'conflicts', label: 'Conflicts', count: isCompleted ? conflicts.length : null },
     { id: 'chat', label: 'AI Assistant', count: null },
@@ -383,6 +397,17 @@ export default function ReviewPage() {
             )}
           </div>
         )}
+
+        {isCompleted && runData?.related_modules && runData.related_modules.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-border flex items-center gap-2 flex-wrap text-xs">
+            <span className="font-semibold text-text-muted uppercase tracking-wider text-[11px]">Related Subsystems:</span>
+            {runData.related_modules.map((mod, idx) => (
+              <span key={idx} className="font-mono text-[11px] px-2 py-0.5 rounded bg-surfaceHighlight border border-border text-text-secondary">
+                {mod}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-6">
@@ -408,6 +433,13 @@ export default function ReviewPage() {
                 repositoryId={runData?.repository_id || parseInt(rid)}
                 contextType="pr"
                 contextId={prid}
+              />
+            ) : activeTab === 'impact' ? (
+              <ChangeImpactDashboard
+                impactData={impactData}
+                isLoading={loadingImpact}
+                repositoryId={rid}
+                pullRequestId={prid}
               />
             ) : !isCompleted ? (
               <ReviewStateIndicator

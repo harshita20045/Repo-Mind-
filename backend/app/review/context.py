@@ -97,4 +97,11 @@ def retrieve_context(
     Returns:
         List of RetrievalResult objects (may be empty if no chunks indexed).
     """
-    return retriever.search(repository_id=repository_id, query_text=query, top_k=top_k)
+    try:
+        return retriever.search(repository_id=repository_id, query_text=query, top_k=top_k)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            "RAG context retrieval skipped due to error: %s: %s", type(exc).__name__, exc
+        )
+        return []

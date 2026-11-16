@@ -5,8 +5,8 @@ Provides PullRequest and Commit models per database-design.md.
 GithubConnection already lives in organizations/models.py (Phase 4).
 """
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, UniqueConstraint
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import relationship, backref
 from backend.app.db import Base
 
 
@@ -282,18 +282,7 @@ class AutomationAction(Base):
     requested_by = relationship("User", backref="requested_actions")
     github_identity = relationship("GitHubIdentity", backref="executed_actions")
 
-class WebhookEvent(Base):
-    __tablename__ = "webhook_event"
-    __table_args__ = {"extend_existing": True}
-
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    repository_id = Column(Integer, ForeignKey("repository.id", ondelete="CASCADE"), nullable=True, index=True)
-    github_delivery_id = Column(String(255), unique=True, index=True, nullable=False)
-    event_type = Column(String(100), nullable=False)
-    payload = Column(String, nullable=False)
-    processed = Column(Integer, default=0)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    processed_at = Column(DateTime(timezone=True), nullable=True)
+from backend.app.webhooks.models import WebhookEvent
 
 class ProjectMergePolicy(Base):
     __tablename__ = "project_merge_policy"

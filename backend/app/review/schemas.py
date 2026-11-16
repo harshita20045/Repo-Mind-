@@ -13,7 +13,23 @@ from pydantic import BaseModel, Field, field_validator
 
 VALID_SEVERITIES = frozenset(["critical", "high", "medium", "low", "info"])
 VALID_CATEGORIES = frozenset([
-    "standards_violation", "style", "security", "performance", "general"
+    # 8 RepoMind 2.0 multi-stage review categories:
+    "syntax",
+    "security",
+    "quality",
+    "conventions",
+    "architecture",
+    "api_contract",
+    "dependencies",
+    "testing",
+    # Legacy aliases preserved for backward compatibility:
+    "standards_violation",
+    "style",
+    "performance",
+    "general",
+    "bug",
+    "correctness",
+    "maintainability",
 ])
 
 
@@ -233,6 +249,21 @@ class RiskAssessmentResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class ConflictResponse(BaseModel):
+    """API view of Conflict."""
+    id: int
+    conflict_type: str
+    category: str
+    severity: str
+    title: str
+    description: str
+    evidence: Optional[Dict[str, Any]] = None
+    status: str
+
+    class Config:
+        from_attributes = True
+
+
 class ReviewRunResponse(BaseModel):
     """Returned by GET /review-runs/{id} to provide run details and findings."""
     id: int
@@ -241,9 +272,12 @@ class ReviewRunResponse(BaseModel):
     status: str
     started_at: datetime
     completed_at: Optional[datetime] = None
+    progress_message: Optional[str] = None
     findings: List[FindingResponse] = []
     human_decisions: List[HumanDecisionResponse] = []
     risk_assessment: Optional[RiskAssessmentResponse] = None
+    conflicts: List[ConflictResponse] = []
+    related_modules: List[str] = []
 
     class Config:
         from_attributes = True

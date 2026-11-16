@@ -172,6 +172,12 @@ def get_review_run(
     # Authorize organization access
     verify_org_member(db, current_user.id, org_id)
 
+    # Populate related modules from Code Knowledge Graph
+    file_paths = list(set([f.file for f in run.findings if f.file]))
+    from backend.app.review.analysis import query_related_modules
+    kg_info = query_related_modules(db, pr.repository_id, file_paths)
+    run.related_modules = kg_info.get("related_modules", [])
+
     return run
 
 

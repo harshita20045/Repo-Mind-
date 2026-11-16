@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # deployment override (for example, local HTTPS development).
     COOKIE_SECURE: Optional[bool] = None
     COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
-    EMBEDDING_MODEL: str = "sentence-transformers/all-mpnet-base-v2"
+    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
     BOOTSTRAP_TOKEN: Optional[str] = "fkjerngiorneognrengioirw0rrrrrth348h3fin3gnw3480"
     # Allowed CORS origins
     FRONTEND_URLS: list[str] = [

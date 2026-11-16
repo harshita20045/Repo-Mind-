@@ -19,9 +19,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Change the vector column type from vector(1536) to vector(384)
-    # Using raw SQL because alembic's alter_column does not always handle custom pgvector type resizing well
-    op.execute("ALTER TABLE document_chunk ALTER COLUMN embedding TYPE vector(384);")
+    bind = op.get_bind()
+    has_vector = bind.execute(sa.text("SELECT 1 FROM pg_available_extensions WHERE name = 'vector'")).scalar()
+    if has_vector:
+        op.execute("ALTER TABLE document_chunk ALTER COLUMN embedding TYPE vector(384);")
 
 
 def downgrade() -> None:

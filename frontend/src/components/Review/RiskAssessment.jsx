@@ -3,7 +3,7 @@ import { RiskBadge } from '../ui/Badge';
 import EmptyState from '../ui/EmptyState';
 
 // ─── Risk vector card ──────────────────────────────────────────────────────────
-function RiskVector({ label, level, description }) {
+function RiskVector({ label, level, description, recommendedAction }) {
   const styles = {
     critical: { badge: 'bg-danger/10 text-danger border-danger/25', bar: 'bg-danger', width: '100%' },
     high:     { badge: 'bg-orange-500/10 text-orange-400 border-orange-400/25', bar: 'bg-orange-500', width: '75%' },
@@ -15,21 +15,29 @@ function RiskVector({ label, level, description }) {
   const style = styles[normalized] || styles.unknown;
 
   return (
-    <div className="bg-surface border border-border rounded-lg shadow-sm p-4">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[13px] font-semibold text-text-secondary">{label}</span>
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wide ${style.badge}`}>
-          {level || 'Unknown'}
-        </span>
+    <div className="bg-surface border border-border rounded-lg shadow-sm p-4 flex flex-col justify-between">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-[13px] font-semibold text-text-secondary">{label}</span>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wide ${style.badge}`}>
+            {level || 'Unknown'}
+          </span>
+        </div>
+        <div className="h-1.5 bg-surfaceHighlight rounded-full overflow-hidden mb-2">
+          <div
+            className={`h-full rounded-full ${style.bar} transition-all duration-1000`}
+            style={{ width: style.width }}
+            role="presentation"
+          />
+        </div>
+        <p className="text-xs text-text-muted leading-relaxed mb-3">{description}</p>
       </div>
-      <div className="h-1.5 bg-surfaceHighlight rounded-full overflow-hidden mb-2">
-        <div
-          className={`h-full rounded-full ${style.bar} transition-all duration-1000`}
-          style={{ width: style.width }}
-          role="presentation"
-        />
-      </div>
-      <p className="text-xs text-text-muted leading-relaxed">{description}</p>
+      {recommendedAction && (
+        <div className="text-[11px] text-text-secondary bg-surfaceHighlight/60 border border-border/60 rounded p-2 mt-auto">
+          <span className="font-semibold text-primary block mb-0.5">Recommended Action:</span>
+          {recommendedAction}
+        </div>
+      )}
     </div>
   );
 }
@@ -123,6 +131,7 @@ export default function RiskAssessment({ riskData }) {
                   label={label}
                   level={level}
                   description={description}
+                  recommendedAction={factor.recommended_action}
                 />
               );
             })}
