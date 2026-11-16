@@ -5,6 +5,7 @@ import { onboardingApi, orgApi } from '../lib/api';
 import { usePermissions, Permissions } from '../hooks/usePermissions';
 import { Button } from '../components/ui/Button';
 import MermaidViewer from '../components/Onboarding/MermaidViewer';
+import RepositoryNav from '../components/Layout/RepositoryNav';
 
 export default function CodebaseGuidePage() {
   const { rid } = useParams();
@@ -18,6 +19,10 @@ export default function CodebaseGuidePage() {
   const [notesDirty, setNotesDirty] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [selectedFlow, setSelectedFlow] = useState('api_lifecycle');
+  const [glossarySearch, setGlossarySearch] = useState('');
+  const [glossaryCategory, setGlossaryCategory] = useState('all');
+  const [explorerSearch, setExplorerSearch] = useState('');
   const saveTimeoutRef = useRef(null);
 
   // Repository metadata query
@@ -66,7 +71,7 @@ export default function CodebaseGuidePage() {
   // Sync initial user progress values
   useEffect(() => {
     if (progress) {
-      if (progress.active_track && ['backend', 'frontend', 'fullstack'].includes(progress.active_track)) {
+      if (progress.active_track && ['backend', 'frontend', 'fullstack', 'qa'].includes(progress.active_track)) {
         setSelectedTrack(progress.active_track);
       }
       if (!notesDirty && progress.notes !== undefined) {
@@ -215,6 +220,9 @@ export default function CodebaseGuidePage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-16">
+      {/* Repository Unified Sub-Navigation */}
+      <RepositoryNav repositoryId={repoId} currentTab="guide" />
+
       {/* ─── Breadcrumbs & Header ────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
         <div>
@@ -314,30 +322,75 @@ export default function CodebaseGuidePage() {
           )}
         </div>
 
-        {/* Request-to-Database Execution Flow */}
-        {blueprint?.request_flow && blueprint.request_flow.length > 0 && (
-          <div className="p-6 rounded-2xl border border-white/10 bg-surface/70 backdrop-blur-md space-y-4">
-            <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
-              Request-to-Database Execution Flow Trace
-            </h3>
-            <div className="relative border-l border-primary/30 ml-3 pl-6 space-y-6 py-2">
-              {blueprint.request_flow.map((step, idx) => (
-                <div key={idx} className="relative group">
-                  <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 border-primary bg-background flex items-center justify-center">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  </div>
-                  <div className="flex flex-col sm:flex-row sm:items-baseline gap-2">
-                    <span className="text-xs font-bold text-primary uppercase tracking-wider">{step.layer}</span>
-                    <span className="text-xs font-mono text-text-muted bg-surfaceHighlight/40 px-2 py-0.5 rounded">
-                      {step.file} {step.symbol ? `→ ${step.symbol}` : ''}
-                    </span>
-                  </div>
-                  <p className="text-xs text-text-secondary mt-1">{step.description}</p>
-                </div>
+        {/* Application & Runtime Execution Flows */}
+        <div className="p-6 rounded-2xl border border-white/10 bg-surface/70 backdrop-blur-md space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
+            <div>
+              <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+                Request-to-Database Execution Flow Trace
+              </h3>
+              <p className="text-xs text-text-muted mt-0.5">
+                Step-by-step code execution traces across key application lifecycles.
+              </p>
+            </div>
+            {/* Flow switcher tabs */}
+            <div className="flex p-1 bg-surfaceHighlight/30 rounded-xl border border-white/10 w-fit flex-wrap gap-1">
+              {[
+                { id: 'api_lifecycle', label: 'API Request' },
+                { id: 'startup', label: 'App Startup' },
+                { id: 'auth_flow', label: 'Auth & RBAC' },
+                { id: 'db_flow', label: 'Database & ORM' },
+              ].map((flow) => (
+                <button
+                  key={flow.id}
+                  onClick={() => setSelectedFlow(flow.id)}
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                    selectedFlow === flow.id
+                      ? 'bg-primary text-white shadow-sm shadow-primary/20'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  {flow.label}
+                </button>
               ))}
             </div>
           </div>
-        )}
+
+          {/* Active Flow Steps */}
+          {(() => {
+            const activeSteps =
+              blueprint?.application_flows?.[selectedFlow] ||
+              (selectedFlow === 'api_lifecycle' ? blueprint?.request_flow : []) ||
+              [];
+
+            if (activeSteps.length === 0) {
+              return (
+                <div className="p-4 text-xs text-text-muted text-center italic">
+                  No specific execution steps recorded for this lifecycle flow.
+                </div>
+              );
+            }
+
+            return (
+              <div className="relative border-l border-primary/30 ml-3 pl-6 space-y-5 py-2">
+                {activeSteps.map((step, idx) => (
+                  <div key={idx} className="relative group">
+                    <div className="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 border-primary bg-background flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-baseline gap-2">
+                      <span className="text-xs font-bold text-primary uppercase tracking-wider">{step.layer}</span>
+                      <span className="text-xs font-mono text-text-muted bg-surfaceHighlight/40 px-2 py-0.5 rounded">
+                        {step.file} {step.symbol ? `→ ${step.symbol}` : ''}
+                      </span>
+                    </div>
+                    <p className="text-xs text-text-secondary mt-1">{step.description}</p>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
 
         {/* Architecture Mermaid Flowchart */}
         {blueprint?.mermaid_diagram && (
@@ -346,6 +399,16 @@ export default function CodebaseGuidePage() {
               Architecture & Component Relationships
             </h3>
             <MermaidViewer chart={blueprint.mermaid_diagram} />
+          </div>
+        )}
+
+        {/* Request Lifecycle Sequence Diagram */}
+        {blueprint?.lifecycle_diagram && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+              End-to-End Request Lifecycle Sequence Diagram
+            </h3>
+            <MermaidViewer chart={blueprint.lifecycle_diagram} />
           </div>
         )}
       </section>
@@ -360,29 +423,52 @@ export default function CodebaseGuidePage() {
             </h2>
           </div>
 
-          {/* Track Selector Tabs */}
-          <div className="flex p-1 bg-surfaceHighlight/30 rounded-xl border border-white/10 w-fit">
-            {[
-              { id: 'backend', label: 'Backend Track' },
-              { id: 'frontend', label: 'Frontend Track' },
-              { id: 'fullstack', label: 'Fullstack Track' },
-            ].map((track) => (
-              <button
-                key={track.id}
-                onClick={() => handleTrackChange(track.id)}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 ${
-                  selectedTrack === track.id
-                    ? 'bg-primary text-white shadow-sm shadow-primary/20'
-                    : 'text-text-muted hover:text-text-primary'
-                }`}
-              >
-                {track.label}
-              </button>
-            ))}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Track Selector Tabs */}
+            <div className="flex p-1 bg-surfaceHighlight/30 rounded-xl border border-white/10 w-fit flex-wrap gap-1">
+              {[
+                { id: 'backend', label: 'Backend Track' },
+                { id: 'frontend', label: 'Frontend Track' },
+                { id: 'fullstack', label: 'Fullstack Track' },
+                { id: 'qa', label: 'QA Engineer Track' },
+              ].map((track) => (
+                <button
+                  key={track.id}
+                  onClick={() => handleTrackChange(track.id)}
+                  className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150 ${
+                    selectedTrack === track.id
+                      ? 'bg-primary text-white shadow-sm shadow-primary/20'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  {track.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Track Progress Completion Meter */}
+            {milestones.length > 0 && (
+              <div className="flex items-center gap-3 bg-surface border border-border px-4 py-2 rounded-xl">
+                <div className="text-right">
+                  <div className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
+                    Track Milestones
+                  </div>
+                  <div className="text-xs font-bold text-text-primary">
+                    {completedCount} / {milestones.length} Completed ({progressPercent}%)
+                  </div>
+                </div>
+                <div className="w-24 h-2.5 bg-surfaceHighlight rounded-full overflow-hidden border border-border/50">
+                  <div
+                    className="h-full bg-primary transition-all duration-300 rounded-full"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* ─── SECTION 3: CURATED READING ORDER (5-7 FILES) ─────────────────── */}
+        {/* ─── SECTION 3: CURATED READING ORDER ─────────────────────────────── */}
         <div className="space-y-4">
           <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Prioritized Reading Order ({selectedTrack} Focus)
@@ -399,11 +485,11 @@ export default function CodebaseGuidePage() {
                   key={idx}
                   className="p-4 rounded-xl border border-white/10 bg-surface/60 hover:border-primary/40 transition-all backdrop-blur-md flex flex-col md:flex-row md:items-start justify-between gap-4"
                 >
-                  <div className="flex items-start gap-3.5">
+                  <div className="flex items-start gap-3.5 flex-1">
                     <span className="w-6 h-6 rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
                       {idx + 1}
                     </span>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <code className="text-xs font-mono font-semibold text-text-primary bg-black/40 px-2 py-0.5 rounded border border-white/5">
                           {item.file_path}
@@ -415,11 +501,16 @@ export default function CodebaseGuidePage() {
                           <span className="text-[11px] text-text-muted font-mono">{item.key_lines}</span>
                         )}
                       </div>
-                      <p className="text-xs text-text-secondary leading-relaxed pt-1">
+                      <p className="text-xs text-text-secondary leading-relaxed pt-0.5">
                         {item.why_read}
                       </p>
+                      {item.responsibilities && (
+                        <p className="text-xs text-text-muted pt-0.5">
+                          <strong className="text-text-secondary">Responsibilities:</strong> {item.responsibilities}
+                        </p>
+                      )}
                       {item.focus_symbols && item.focus_symbols.length > 0 && (
-                        <div className="flex items-center gap-1.5 pt-1 flex-wrap">
+                        <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
                           <span className="text-[11px] text-text-muted font-medium">Focus symbols:</span>
                           {item.focus_symbols.map((sym, sIdx) => (
                             <code key={sIdx} className="text-[11px] text-primary bg-primary/5 px-1.5 py-0.5 rounded font-mono">
@@ -427,6 +518,31 @@ export default function CodebaseGuidePage() {
                             </code>
                           ))}
                         </div>
+                      )}
+                      {item.important_functions && item.important_functions.length > 0 && (
+                        <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
+                          <span className="text-[11px] text-text-muted font-medium">Key functions:</span>
+                          {item.important_functions.map((fn, fIdx) => (
+                            <code key={fIdx} className="text-[11px] text-accent bg-accent/5 px-1.5 py-0.5 rounded font-mono">
+                              {fn}
+                            </code>
+                          ))}
+                        </div>
+                      )}
+                      {item.dependencies && item.dependencies.length > 0 && (
+                        <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
+                          <span className="text-[11px] text-text-muted font-medium">Dependencies:</span>
+                          {item.dependencies.map((dep, dIdx) => (
+                            <span key={dIdx} className="text-[10px] text-text-muted bg-white/5 px-1.5 py-0.5 rounded font-mono">
+                              {dep}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {item.relevant_documentation && (
+                        <p className="text-[11px] text-primary/80 pt-0.5 font-mono">
+                          Documentation: {item.relevant_documentation}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -505,6 +621,11 @@ export default function CodebaseGuidePage() {
                         </span>
                       </div>
                       <p className="text-xs text-text-secondary">{m.description}</p>
+                      {m.practical_task && (
+                        <div className="pt-1 text-xs text-text-muted bg-white/[0.02] p-2 rounded border border-white/5">
+                          <strong className="text-text-secondary">Exploration Task:</strong> {m.practical_task}
+                        </div>
+                      )}
                       {m.action_hint && (
                         <div className="pt-1 flex items-center gap-2">
                           <code className="text-[11px] font-mono bg-black/40 px-2 py-0.5 rounded text-primary border border-white/5">
@@ -550,7 +671,7 @@ export default function CodebaseGuidePage() {
         </div>
       </section>
 
-      {/* ─── SECTION 5: CAUTION ZONES & SAFE STARTER AREAS ───────────────────── */}
+      {/* ─── SECTION 3: CAUTION ZONES & SAFE STARTER AREAS ───────────────────── */}
       <section aria-labelledby="section-compass" className="space-y-6 pt-6 border-t border-white/10">
         <div className="flex items-center gap-2">
           <span className="w-2 h-5 rounded-full bg-danger" />
@@ -624,6 +745,216 @@ export default function CodebaseGuidePage() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* ─── SECTION 4: REPOSITORY GLOSSARY & DOMAIN TERMINOLOGY ────────────── */}
+      <section aria-labelledby="section-glossary" className="space-y-6 pt-6 border-t border-white/10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-5 rounded-full bg-secondary" />
+            <h2 id="section-glossary" className="text-lg font-bold text-text-primary">
+              4. Repository Glossary & Domain Terms
+            </h2>
+          </div>
+
+          {/* Category Filter Chips & Search */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="text"
+              value={glossarySearch}
+              onChange={(e) => setGlossarySearch(e.target.value)}
+              placeholder="Search terms or definitions..."
+              className="px-3 py-1.5 text-xs bg-black/30 border border-white/10 rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary w-48"
+            />
+            <div className="flex p-0.5 bg-surfaceHighlight/30 rounded-lg border border-white/10">
+              {['all', 'domain', 'architecture', 'infrastructure', 'testing'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setGlossaryCategory(cat)}
+                  className={`px-2.5 py-1 text-[11px] font-semibold rounded capitalize transition-all ${
+                    glossaryCategory === cat
+                      ? 'bg-primary text-white'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Glossary Items Grid */}
+        {(() => {
+          const glossaryList = blueprint?.glossary || [];
+          const filtered = glossaryList.filter((item) => {
+            const matchesCat = glossaryCategory === 'all' || item.category?.toLowerCase() === glossaryCategory.toLowerCase();
+            const q = glossarySearch.toLowerCase().trim();
+            const matchesSearch = !q ||
+              item.term?.toLowerCase().includes(q) ||
+              item.definition?.toLowerCase().includes(q) ||
+              item.related_files?.some((f) => f.toLowerCase().includes(q));
+            return matchesCat && matchesSearch;
+          });
+
+          if (filtered.length === 0) {
+            return (
+              <div className="p-6 rounded-xl border border-white/5 bg-surfaceHighlight/20 text-center text-xs text-text-muted">
+                {glossaryList.length === 0
+                  ? 'No repository glossary terms defined in this blueprint.'
+                  : 'No terms matching current filters.'}
+              </div>
+            );
+          }
+
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="p-4 rounded-xl border border-white/10 bg-surface/60 hover:border-primary/40 transition-all backdrop-blur-md space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-text-primary">{item.term}</span>
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-white/5 text-primary border border-white/10">
+                      {item.category}
+                    </span>
+                  </div>
+                  <p className="text-xs text-text-secondary leading-relaxed">{item.definition}</p>
+                  {item.related_files && item.related_files.length > 0 && (
+                    <div className="pt-2 border-t border-white/5 space-y-1">
+                      <span className="text-[10px] text-text-muted font-medium">Related files:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {item.related_files.map((rf, rIdx) => (
+                          <code key={rIdx} className="text-[10px] font-mono bg-black/40 text-text-muted px-1.5 py-0.5 rounded">
+                            {rf}
+                          </code>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+      </section>
+
+      {/* ─── SECTION 5: INTERACTIVE CODEBASE EXPLORER ───────────────────────── */}
+      <section aria-labelledby="section-explorer" className="space-y-6 pt-6 border-t border-white/10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-5 rounded-full bg-primary" />
+            <h2 id="section-explorer" className="text-lg font-bold text-text-primary">
+              5. Interactive Codebase Explorer
+            </h2>
+          </div>
+          <input
+            type="text"
+            value={explorerSearch}
+            onChange={(e) => setExplorerSearch(e.target.value)}
+            placeholder="Filter codebase files or symbols..."
+            className="px-3 py-1.5 text-xs bg-black/30 border border-white/10 rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary w-64"
+          />
+        </div>
+
+        {(() => {
+          // Aggregate all referenced files across all subsystems, reading lists, flows
+          const fileMap = new Map();
+
+          // Subsystems
+          blueprint?.subsystems?.forEach((s) => {
+            s.key_files?.forEach((kf) => {
+              if (!fileMap.has(kf)) fileMap.set(kf, { path: kf, roles: [s.name], symbols: [] });
+            });
+          });
+
+          // Reading lists
+          if (blueprint?.tracks) {
+            Object.values(blueprint.tracks).forEach((t) => {
+              t.reading_order?.forEach((ro) => {
+                const entry = fileMap.get(ro.file_path) || { path: ro.file_path, roles: [], symbols: [] };
+                if (!entry.roles.includes(ro.role)) entry.roles.push(ro.role);
+                ro.focus_symbols?.forEach((s) => {
+                  if (!entry.symbols.includes(s)) entry.symbols.push(s);
+                });
+                fileMap.set(ro.file_path, entry);
+              });
+            });
+          }
+
+          // Request / application flows
+          const flows = [
+            ...(blueprint?.request_flow || []),
+            ...(blueprint?.application_flows?.startup || []),
+            ...(blueprint?.application_flows?.api_lifecycle || []),
+            ...(blueprint?.application_flows?.auth_flow || []),
+            ...(blueprint?.application_flows?.db_flow || []),
+          ];
+          flows.forEach((st) => {
+            if (st.file) {
+              const entry = fileMap.get(st.file) || { path: st.file, roles: [], symbols: [] };
+              if (!entry.roles.includes(st.layer)) entry.roles.push(st.layer);
+              if (st.symbol && !entry.symbols.includes(st.symbol)) entry.symbols.push(st.symbol);
+              fileMap.set(st.file, entry);
+            }
+          });
+
+          const allFiles = Array.from(fileMap.values());
+          const q = explorerSearch.toLowerCase().trim();
+          const filtered = allFiles.filter((f) => {
+            if (!q) return true;
+            return (
+              f.path.toLowerCase().includes(q) ||
+              f.roles.some((r) => r.toLowerCase().includes(q)) ||
+              f.symbols.some((s) => s.toLowerCase().includes(q))
+            );
+          });
+
+          if (filtered.length === 0) {
+            return (
+              <div className="p-6 rounded-xl border border-white/5 bg-surfaceHighlight/20 text-center text-xs text-text-muted">
+                {allFiles.length === 0 ? 'No codebase files mapped.' : 'No files matching search criteria.'}
+              </div>
+            );
+          }
+
+          return (
+            <div className="p-4 rounded-2xl border border-white/10 bg-surface/70 backdrop-blur-md space-y-2">
+              <div className="text-xs text-text-muted font-medium mb-2">
+                Showing {filtered.length} indexed files with mapped responsibilities
+              </div>
+              <div className="divide-y divide-white/5 max-h-96 overflow-y-auto pr-1">
+                {filtered.map((item, idx) => (
+                  <div key={idx} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-white/[0.02] px-2 rounded-lg transition-colors">
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs font-mono font-semibold text-text-primary bg-black/40 px-2 py-0.5 rounded">
+                        file: {item.path}
+                      </code>
+                      {item.roles.map((r, rIdx) => (
+                        <span key={rIdx} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-primary">
+                          Role: {r}
+                        </span>
+                      ))}
+                    </div>
+                    {item.symbols.length > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {item.symbols.slice(0, 4).map((s, sIdx) => (
+                          <code key={sIdx} className="text-[10px] font-mono text-accent bg-accent/5 px-1 py-0.5 rounded">
+                            sym: {s}
+                          </code>
+                        ))}
+                        {item.symbols.length > 4 && (
+                          <span className="text-[10px] text-text-muted">+{item.symbols.length - 4}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </section>
     </div>
   );

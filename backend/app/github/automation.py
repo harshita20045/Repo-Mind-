@@ -14,7 +14,8 @@ def _get_token_for_identity(db: Session, identity_id: int) -> str:
     credential = db.query(GitHubCredential).filter(GitHubCredential.github_identity_id == identity_id).first()
     if not credential:
         raise ValueError(f"No GitHub credential found for identity {identity_id}")
-    return decrypt_token(credential.encrypted_access_token)
+    from backend.app.github.service import get_valid_access_token_for_credential
+    return get_valid_access_token_for_credential(db, credential)
 
 def process_automation_actions(db: Session):
     """

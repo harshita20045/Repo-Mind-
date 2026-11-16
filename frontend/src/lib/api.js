@@ -356,3 +356,72 @@ export const architectureApi = {
       method: 'GET',
     }),
 };
+
+export const testingApi = {
+  getPrTestScenarios: (repoId, prId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const endpoint = `/repositories/${repoId}/pull-requests/${prId}/test-intelligence${query ? `?${query}` : ''}`;
+    return apiRequest(endpoint, { method: 'GET' });
+  },
+  triggerTestAnalysis: (repoId, payload) =>
+    apiRequest(`/repositories/${repoId}/test-intelligence/analyze`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  generateTestCase: (scenarioId, payload = {}) =>
+    apiRequest(`/test-scenarios/${scenarioId}/generate`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  executeGeneratedTest: (testId) =>
+    apiRequest(`/generated-tests/${testId}/execute`, {
+      method: 'POST',
+    }),
+  getTestDashboard: (prId) =>
+    apiRequest(`/test-intelligence/dashboard/${prId}`, {
+      method: 'GET',
+    }),
+};
+
+export const historyApi = {
+  getHistoricalPrs: (repoId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/repositories/${repoId}/history/prs${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
+  getPreviousChanges: (repoId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/repositories/${repoId}/history/changes${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
+  getRecurringIssues: (repoId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/repositories/${repoId}/history/recurring-issues${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
+  getAdrs: (repoId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/repositories/${repoId}/history/adrs${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
+  getSimilarBugs: (repoId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/repositories/${repoId}/history/similar-bugs${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
+  compareChanges: (repoId, payload) =>
+    apiRequest(`/repositories/${repoId}/history/compare`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  triggerIndex: (repoId, payload = {}) =>
+    apiRequest(`/repositories/${repoId}/history/index`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+};

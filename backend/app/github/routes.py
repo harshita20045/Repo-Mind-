@@ -306,6 +306,7 @@ async def github_oauth_callback(
         token_data = token_response.json()
         access_token = token_data.get("access_token")
         refresh_token = token_data.get("refresh_token")
+        expires_in = token_data.get("expires_in")
         
         if not access_token:
             raise HTTPException(status_code=400, detail="GitHub did not return an access token")
@@ -334,6 +335,7 @@ async def github_oauth_callback(
                 github_login=github_login,
                 access_token=access_token,
                 refresh_token=refresh_token,
+                expires_in=expires_in,
             )
             link_status = "success"
         except HTTPException as exc:

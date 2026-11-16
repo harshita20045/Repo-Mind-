@@ -16,6 +16,7 @@ import ChatPage from './pages/ChatPage';
 import OnboardPage from './pages/OnboardPage';
 import CodebaseGuidePage from './pages/CodebaseGuidePage';
 import RepositoryTopologyPage from './pages/RepositoryTopologyPage';
+import HistoricalIntelligencePage from './pages/HistoricalIntelligencePage';
 import AppLayout from './components/Layout/AppLayout';
 
 const queryClient = new QueryClient();
@@ -146,6 +147,7 @@ export default function App() {
               <Route path="/repositories" element={<RepositoriesPage currentOrgId={currentOrgId} />} />
               <Route path="/repositories/:rid/guide" element={<CodebaseGuidePage />} />
               <Route path="/repositories/:rid/topology" element={<RepositoryTopologyPage />} />
+              <Route path="/repositories/:rid/history" element={<HistoricalIntelligencePage />} />
               <Route path="/repositories/:rid/pull-requests" element={<PullRequestsPage currentOrgId={currentOrgId} />} />
               <Route path="/repositories/:rid/pull-requests/:prid" element={<ReviewPage user={currentUser} memberships={memberships} onLogout={handleLogout} currentOrgId={currentOrgId} />} />
             </Route>

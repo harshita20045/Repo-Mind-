@@ -45,8 +45,20 @@ def index_repository(db: Session, repository_id: int) -> None:
     embedder = LocalEmbedder()
     rag_repo = RAGRepository(db)
     
+    from backend.app.github.client import GitHubAPIError
+
     # 2. Discover documents
-    documents_meta = loader.discover_documents()
+    try:
+        documents_meta = loader.discover_documents()
+    except GitHubAPIError as e:
+        if e.status_code == 401:
+            logger.info("Encountered 401 during indexing, forcing token refresh...")
+            pat = get_decrypted_github_token_for_org(db, organization_id, force_refresh=True)
+            github_client = GitHubClient(pat)
+            loader = DocumentLoader(github_client, repo.github_owner, repo.github_name, repo.default_branch)
+            documents_meta = loader.discover_documents()
+        else:
+            raise
     
     # 3. Load valid document contents
     file_dict = {}

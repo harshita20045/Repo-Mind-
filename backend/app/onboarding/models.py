@@ -63,6 +63,11 @@ class RepositoryBlueprint(Base):
     safe_starter_areas = Column(JSONB, nullable=True)         # [{ area, description, starter_ideas }]
     mermaid_diagram = Column(Text, nullable=True)             # Valid Mermaid flowchart
 
+    # Smart Developer Onboarding Extensions (RM 2.0 Phase 9)
+    application_flows = Column(JSONB, nullable=True)          # { startup: [...], api_lifecycle: [...], auth_flow: [...], db_flow: [...] }
+    lifecycle_diagram = Column(Text, nullable=True)           # Valid Mermaid sequenceDiagram
+    glossary = Column(JSONB, nullable=True)                   # [{ term, category, definition, related_files }]
+
     created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
     updated_at = Column(
         DateTime(timezone=True),

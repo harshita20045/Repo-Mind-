@@ -11,6 +11,9 @@ import RiskAssessment from '../components/Review/RiskAssessment';
 import ConflictList from '../components/Review/ConflictList';
 import ActivityLog from '../components/Review/ActivityLog';
 import ChangeImpactDashboard from '../components/Impact/ChangeImpactDashboard';
+import TestIntelligenceDashboard from '../components/Testing/TestIntelligenceDashboard';
+import HistoricalContextCard from '../components/Review/HistoricalContextCard';
+import { testingApi } from '../lib/api';
 import { RiskBadge, StatusBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -215,6 +218,12 @@ export default function ReviewPage() {
     enabled: !!rid && !!prid,
   });
 
+  const { data: testDashboard } = useQuery({
+    queryKey: ['testIntelligenceDashboard', prid],
+    queryFn: () => testingApi.getTestDashboard(prid),
+    enabled: !!prid,
+  });
+
   const { mutate: submitDecision, isPending: isSubmittingDecision } = useMutation({
     mutationFn: (decision) => reviewApi.approveReviewRun(activeRunId, decision),
     onSuccess: () => {
@@ -263,6 +272,8 @@ export default function ReviewPage() {
   const tabs = [
     { id: 'findings', label: 'Findings', count: isCompleted ? findings.length : null },
     { id: 'impact', label: 'Change Impact', count: impactData?.directly_affected_count !== undefined ? impactData.directly_affected_count : null },
+    { id: 'tests', label: 'Test Intelligence', count: testDashboard?.total_scenarios_count !== undefined ? testDashboard.total_scenarios_count : null },
+    { id: 'history', label: 'History & ADRs', count: null },
     { id: 'risk', label: 'Risk Assessment', count: null },
     { id: 'conflicts', label: 'Conflicts', count: isCompleted ? conflicts.length : null },
     { id: 'chat', label: 'AI Assistant', count: null },
@@ -438,6 +449,16 @@ export default function ReviewPage() {
               <ChangeImpactDashboard
                 impactData={impactData}
                 isLoading={loadingImpact}
+                repositoryId={rid}
+                pullRequestId={prid}
+              />
+            ) : activeTab === 'tests' ? (
+              <TestIntelligenceDashboard
+                repositoryId={rid}
+                pullRequestId={prid}
+              />
+            ) : activeTab === 'history' ? (
+              <HistoricalContextCard
                 repositoryId={rid}
                 pullRequestId={prid}
               />

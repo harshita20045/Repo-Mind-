@@ -10,7 +10,7 @@ Security invariants (per security.md, NFR-001):
 - The PAT is NEVER logged, NEVER included in exceptions surfaced to clients.
 - decrypt_token raises ValueError on corruption — callers must catch and report job failure.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
@@ -25,6 +25,127 @@ from backend.app.organizations.service import get_repository_by_id, get_project_
 # ---------------------------------------------------------------------------
 # Connection management
 # ---------------------------------------------------------------------------
+
+def refresh_github_credential(db: Session, credential: "GitHubCredential") -> str:
+    """
+    Refresh an expired GitHub OAuth access token using its encrypted refresh token.
+    Updates encrypted_access_token, encrypted_refresh_token, and expires_at in DB.
+    Returns the new decrypted access token.
+    """
+    from backend.app.core.config import settings
+    import httpx
+
+    if not credential.encrypted_refresh_token:
+        raise ValueError("Cannot refresh GitHub token: no refresh token available.")
+
+    refresh_token = decrypt_token(credential.encrypted_refresh_token)
+    client_id = getattr(settings, "GITHUB_CLIENT_ID", None)
+    client_secret = getattr(settings, "GITHUB_CLIENT_SECRET", None)
+
+    if not client_id or not client_secret:
+        raise ValueError("GitHub OAuth credentials (GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET) are not configured.")
+
+    data = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+    }
+    headers = {"Accept": "application/json"}
+
+    with httpx.Client(timeout=20.0) as client:
+        resp = client.post("https://github.com/login/oauth/access_token", data=data, headers=headers)
+        if resp.status_code != 200:
+            if credential.identity:
+                credential.identity.connection_status = "EXPIRED"
+                db.commit()
+            raise ValueError(f"GitHub token refresh failed with HTTP {resp.status_code}")
+
+        res_data = resp.json()
+        if "error" in res_data:
+            err = res_data.get("error_description") or res_data.get("error")
+            if credential.identity:
+                credential.identity.connection_status = "EXPIRED"
+                db.commit()
+            raise ValueError(f"GitHub token refresh error: {err}")
+
+        new_access_token = res_data.get("access_token")
+        new_refresh_token = res_data.get("refresh_token")
+        expires_in = res_data.get("expires_in")
+
+        if not new_access_token:
+            raise ValueError("GitHub refreshed response did not contain an access_token.")
+
+        credential.encrypted_access_token = encrypt_token(new_access_token)
+        if new_refresh_token:
+            credential.encrypted_refresh_token = encrypt_token(new_refresh_token)
+        if expires_in:
+            credential.expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(expires_in))
+
+        if credential.identity:
+            credential.identity.connection_status = "CONNECTED"
+            credential.identity.verified_at = datetime.now(timezone.utc)
+
+        db.commit()
+        return new_access_token
+
+
+def get_valid_access_token_for_credential(
+    db: Session,
+    credential: "GitHubCredential",
+    force_refresh: bool = False,
+) -> str:
+    """
+    Retrieve a valid access token for the given GitHubCredential.
+    If force_refresh is True or the token is expired/expiring (or missing expires_at
+    while a refresh token is present and the token fails a fast validity check),
+    automatically refreshes the token using refresh_github_credential.
+    """
+    now = datetime.now(timezone.utc)
+    needs_refresh = force_refresh
+
+    if credential.identity and credential.identity.connection_status == "EXPIRED" and not force_refresh:
+        raise ValueError("GitHub connection is EXPIRED. Please reconnect your GitHub account in Settings.")
+
+    if not needs_refresh and credential.encrypted_refresh_token:
+        if credential.expires_at is not None:
+            expires_at = credential.expires_at
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            # Refresh if expiring within 5 minutes or already expired
+            if expires_at <= now + timedelta(minutes=5):
+                needs_refresh = True
+        else:
+            # Legacy token with refresh token but no expires_at: check if token is valid
+            try:
+                raw_token = decrypt_token(credential.encrypted_access_token)
+                import httpx
+                headers = {
+                    "Authorization": f"Bearer {raw_token}",
+                    "Accept": "application/vnd.github.v3+json",
+                    "X-GitHub-Api-Version": "2022-11-28",
+                }
+                with httpx.Client(timeout=5.0) as client:
+                    resp = client.get("https://api.github.com/user", headers=headers)
+                    if resp.status_code == 401:
+                        needs_refresh = True
+                    elif resp.status_code == 200:
+                        credential.expires_at = now + timedelta(hours=8)
+                        db.commit()
+            except Exception:
+                needs_refresh = True
+
+    if needs_refresh and credential.encrypted_refresh_token:
+        try:
+            return refresh_github_credential(db, credential)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to refresh GitHub token: {exc}")
+            if force_refresh:
+                raise
+
+    return decrypt_token(credential.encrypted_access_token)
+
 
 def connect_repository(
     db: Session,
@@ -50,9 +171,9 @@ def connect_repository(
         raise HTTPException(status_code=400, detail="GitHub credentials not found.")
 
     try:
-        pat = decrypt_token(credential.encrypted_access_token)
-    except ValueError:
-        raise HTTPException(status_code=500, detail="Failed to decrypt GitHub credentials.")
+        pat = get_valid_access_token_for_credential(db, credential)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to obtain valid GitHub credentials: {exc}")
 
     client = GitHubClient(pat)
     try:
@@ -148,9 +269,10 @@ def get_github_connection_for_org(db: Session, organization_id: int) :
     )
 
 
-def get_decrypted_github_token_for_org(db: Session, organization_id: int) -> str:
+def get_decrypted_github_token_for_org(db: Session, organization_id: int, force_refresh: bool = False) -> str:
     """
-    Return the decrypted GitHub token for an org by finding an org_admin with a linked GitHub Identity.
+    Return a valid decrypted GitHub token for an org by finding an org_admin with a linked GitHub Identity.
+    If expired and a refresh token exists, automatically refreshes before returning.
     Raises HTTPException if no connection is configured or decryption fails.
     NEVER log or re-raise the token value.
     """
@@ -175,12 +297,11 @@ def get_decrypted_github_token_for_org(db: Session, organization_id: int) -> str
             detail="No GitHub connection configured for this organization.",
         )
     try:
-        from backend.app.github.encryption import decrypt_token
-        return decrypt_token(credential.encrypted_access_token)
-    except Exception:
+        return get_valid_access_token_for_credential(db, credential, force_refresh=force_refresh)
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to decrypt GitHub credentials. Contact your org admin.",
+            detail=f"Failed to obtain valid GitHub credentials: {exc}",
         )
 
 
@@ -189,9 +310,8 @@ def get_decrypted_github_token_for_org(db: Session, organization_id: int) -> str
 # ---------------------------------------------------------------------------
 
 
-def get_decrypted_github_token_for_user(db: Session, user_id: int) -> str:
+def get_decrypted_github_token_for_user(db: Session, user_id: int, force_refresh: bool = False) -> str:
     from backend.app.github.models import GitHubIdentity, GitHubCredential
-    from backend.app.github.encryption import decrypt_token
     from fastapi import HTTPException, status
     
     identity = db.query(GitHubIdentity).filter(GitHubIdentity.user_id == user_id).first()
@@ -203,9 +323,9 @@ def get_decrypted_github_token_for_user(db: Session, user_id: int) -> str:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="GitHub credentials not found.")
         
     try:
-        return decrypt_token(credential.encrypted_access_token)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to decrypt token.")
+        return get_valid_access_token_for_credential(db, credential, force_refresh=force_refresh)
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to obtain valid GitHub credentials: {exc}")
 
 def _get_org_id_for_repository(db: Session, repository_id: int) -> int:
     """Walk repository → project → organization_id."""
@@ -368,7 +488,8 @@ def upsert_github_identity(
     github_user_id: str,
     github_login: str,
     access_token: str,
-    refresh_token: Optional[str],
+    refresh_token: Optional[str] = None,
+    expires_in: Optional[int] = None,
 ):
     from backend.app.github.models import GitHubIdentity, GitHubCredential
     from backend.app.github.encryption import encrypt_token
@@ -415,17 +536,20 @@ def upsert_github_identity(
     credential = db.query(GitHubCredential).filter(GitHubCredential.github_identity_id == identity.id).first()
     encrypted_access = encrypt_token(access_token)
     encrypted_refresh = encrypt_token(refresh_token) if refresh_token else None
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(expires_in)) if expires_in else None
 
     if not credential:
         credential = GitHubCredential(
             github_identity_id=identity.id,
             encrypted_access_token=encrypted_access,
-            encrypted_refresh_token=encrypted_refresh
+            encrypted_refresh_token=encrypted_refresh,
+            expires_at=expires_at,
         )
         db.add(credential)
     else:
         credential.encrypted_access_token = encrypted_access
         credential.encrypted_refresh_token = encrypted_refresh
+        credential.expires_at = expires_at
         
     db.commit()
     db.refresh(identity)

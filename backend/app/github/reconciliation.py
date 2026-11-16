@@ -30,11 +30,25 @@ def reconcile_pull_requests(db: Session):
             if not identity or not identity.credential:
                 continue
 
-            pat = decrypt_token(identity.credential.encrypted_access_token)
+            if identity.connection_status == "EXPIRED":
+                logger.warning(f"Reconciliation: GitHub connection for user {sys_user_id} is EXPIRED. Please reconnect GitHub in Settings.")
+                continue
+
+            from backend.app.github.service import get_valid_access_token_for_credential, refresh_github_credential
+            pat = get_valid_access_token_for_credential(db, identity.credential)
             client = GitHubClient(pat)
             
             # Fetch active PRs from GitHub
-            remote_prs = client.list_pull_requests(repo.github_owner, repo.github_name, state="all", per_page=50)
+            try:
+                remote_prs = client.list_pull_requests(repo.github_owner, repo.github_name, state="all", per_page=50)
+            except GitHubAPIError as api_err:
+                if api_err.status_code == 401 and identity.credential.encrypted_refresh_token:
+                    logger.info(f"Reconciliation: 401 encountered, refreshing token for user {sys_user_id}")
+                    pat = refresh_github_credential(db, identity.credential)
+                    client = GitHubClient(pat)
+                    remote_prs = client.list_pull_requests(repo.github_owner, repo.github_name, state="all", per_page=50)
+                else:
+                    raise
             
             for remote_pr in remote_prs:
                 github_number = remote_pr.get("number")

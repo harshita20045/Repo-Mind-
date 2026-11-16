@@ -1,5 +1,6 @@
 @echo off
 rem Start RepoMind frontend (Vite React) using npm
+cd /d "%~dp0"
 
 cd frontend
 if not exist "node_modules" (

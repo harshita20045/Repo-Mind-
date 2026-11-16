@@ -1,5 +1,6 @@
 @echo off
 rem Start RepoMind background worker
+cd /d "%~dp0"
 
 set "VENV=.venv"
 if not exist "%VENV%" (

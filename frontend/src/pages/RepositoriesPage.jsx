@@ -341,6 +341,14 @@ export default function RepositoriesPage() {
                           Topology
                         </Button>
                       </Link>
+                      <Link to={`/repositories/${repo.id}/history`}>
+                        <Button variant="outline" size="xs" className="mr-1.5" title="Open Historical Code Intelligence & ADRs">
+                          <svg className="w-3.5 h-3.5 text-indigo-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          History
+                        </Button>
+                      </Link>
                       {canIndex && (repo.index_status === 'indexed' || repo.index_status === 'failed' || repo.index_status === 'unindexed') && (
                         <Button
                           variant="ghost"

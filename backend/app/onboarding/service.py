@@ -33,6 +33,9 @@ from backend.app.onboarding.schemas import (
     RequestFlowStep,
     CautionZone,
     SafeStarterArea,
+    ExecutionFlows,
+    ExecutionFlowStep,
+    GlossaryItem,
 )
 from backend.app.onboarding.prompts import (
     ONBOARDING_SYSTEM_PROMPT,
@@ -223,6 +226,9 @@ class OnboardingService:
             "caution_zones": bp.caution_zones,
             "safe_starter_areas": bp.safe_starter_areas,
             "mermaid_diagram": bp.mermaid_diagram,
+            "application_flows": bp.application_flows,
+            "lifecycle_diagram": bp.lifecycle_diagram,
+            "glossary": bp.glossary,
             "analyzed_commit_sha": bp.analyzed_commit_sha,
         }
         has_prior_valid = bp.summary is not None
@@ -255,6 +261,9 @@ class OnboardingService:
             bp.caution_zones = [c.model_dump() for c in payload.caution_zones]
             bp.safe_starter_areas = [s.model_dump() for s in payload.safe_starter_areas]
             bp.mermaid_diagram = payload.mermaid_diagram
+            bp.application_flows = payload.application_flows.model_dump() if payload.application_flows else None
+            bp.lifecycle_diagram = payload.lifecycle_diagram
+            bp.glossary = [g.model_dump() for g in payload.glossary] if payload.glossary else []
             bp.generation_completed_at = now
             bp.generation_error = None
             bp.retry_count = 0
@@ -281,6 +290,9 @@ class OnboardingService:
                 bp.caution_zones = prev_data["caution_zones"]
                 bp.safe_starter_areas = prev_data["safe_starter_areas"]
                 bp.mermaid_diagram = prev_data["mermaid_diagram"]
+                bp.application_flows = prev_data["application_flows"]
+                bp.lifecycle_diagram = prev_data["lifecycle_diagram"]
+                bp.glossary = prev_data["glossary"]
                 bp.analyzed_commit_sha = prev_data["analyzed_commit_sha"]
                 bp.generation_error = f"Regeneration failed: {str(exc)}. Preserving last valid blueprint."
             else:
@@ -361,7 +373,24 @@ class OnboardingService:
                 )
             track.reading_order = valid_readings
 
-        # 3. Caution zones paths check (must match file or prefix directory)
+        # 3. Application flows grounding check
+        if payload.application_flows:
+            flows = [
+                ("startup", payload.application_flows.startup),
+                ("api_lifecycle", payload.application_flows.api_lifecycle),
+                ("auth_flow", payload.application_flows.auth_flow),
+                ("db_flow", payload.application_flows.db_flow),
+            ]
+            for flow_name, steps in flows:
+                valid_steps = [s for s in steps if s.file in indexed_paths]
+                setattr(payload.application_flows, flow_name, valid_steps)
+
+        # 4. Glossary related files grounding check
+        if payload.glossary:
+            for item in payload.glossary:
+                item.related_files = [f for f in item.related_files if f in indexed_paths]
+
+        # 5. Caution zones paths check (must match file or prefix directory)
         for zone in payload.caution_zones:
             path = zone.path.rstrip("/")
             path_exists = any(p == path or p.startswith(path + "/") for p in indexed_paths)
@@ -415,6 +444,21 @@ class OnboardingService:
                 except Exception:
                     pass
 
+        app_flows = None
+        if bp.application_flows and isinstance(bp.application_flows, dict):
+            try:
+                app_flows = ExecutionFlows.model_validate(bp.application_flows)
+            except Exception:
+                pass
+
+        glossary_items = []
+        if bp.glossary and isinstance(bp.glossary, list):
+            for g in bp.glossary:
+                try:
+                    glossary_items.append(GlossaryItem.model_validate(g))
+                except Exception:
+                    pass
+
         return RepositoryBlueprintResponse(
             repository_id=bp.repository_id,
             analyzed_commit_sha=bp.analyzed_commit_sha,
@@ -429,6 +473,9 @@ class OnboardingService:
             caution_zones=caution_zones,
             safe_starter_areas=safe_starter_areas,
             mermaid_diagram=bp.mermaid_diagram,
+            application_flows=app_flows,
+            lifecycle_diagram=bp.lifecycle_diagram,
+            glossary=glossary_items,
             retry_count=bp.retry_count,
             generation_error=bp.generation_error,
             created_at=bp.created_at,

@@ -41,6 +41,8 @@ from backend.app.onboarding.routes import router as onboarding_router
 from backend.app.intelligence.routes import router as intelligence_router
 from backend.app.impact.routes import router as impact_router
 from backend.app.architecture.routes import router as architecture_router
+from backend.app.testing.routes import router as testing_router
+from backend.app.history.routes import router as history_router
 
 app.include_router(health_router)
 app.include_router(auth_router)
@@ -55,6 +57,8 @@ app.include_router(onboarding_router)
 app.include_router(intelligence_router)
 app.include_router(impact_router)
 app.include_router(architecture_router)
+app.include_router(testing_router)
+app.include_router(history_router)
 
 
 if __name__ == "__main__":

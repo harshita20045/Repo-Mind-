@@ -80,3 +80,5 @@ export function IconButton({
     </button>
   );
 }
+
+export default Button;

@@ -14,6 +14,27 @@ const ROUTE_LABELS = {
 function getPageInfo(pathname) {
   if (ROUTE_LABELS[pathname]) return ROUTE_LABELS[pathname];
 
+  if (/^\/repositories\/\d+\/topology$/.test(pathname)) {
+    return {
+      label: 'Topology & Knowledge Graph',
+      crumbs: [{ label: 'Repositories', to: '/repositories' }],
+    };
+  }
+
+  if (/^\/repositories\/\d+\/guide$/.test(pathname)) {
+    return {
+      label: 'Codebase Guide & Onboarding',
+      crumbs: [{ label: 'Repositories', to: '/repositories' }],
+    };
+  }
+
+  if (/^\/repositories\/\d+\/history$/.test(pathname)) {
+    return {
+      label: 'Historical Code Intel',
+      crumbs: [{ label: 'Repositories', to: '/repositories' }],
+    };
+  }
+
   if (/^\/repositories\/\d+\/pull-requests\/\d+$/.test(pathname)) {
     const parts = pathname.split('/');
     return {

@@ -715,6 +715,19 @@ def run_review(
     except Exception as exc:
         logger.warning("ReviewRun %d: architecture analysis warning: %s", run.id, exc)
 
+    # --- 10d. Run AI Test Intelligence Analysis -------------------------------
+    try:
+        from backend.app.testing.analyzer import run_test_intelligence_analysis
+        run_test_intelligence_analysis(
+            db=db,
+            repository_id=repository_id,
+            diff=diff,
+            pull_request_id=pr.id,
+            review_run_id=run.id,
+        )
+    except Exception as exc:
+        logger.warning("ReviewRun %d: test intelligence analysis warning: %s", run.id, exc)
+
     # --- 11. Mark completed ---------------------------------------------------
     run.status = "completed"
     run.completed_at = datetime.now(timezone.utc)

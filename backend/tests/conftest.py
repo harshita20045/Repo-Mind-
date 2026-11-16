@@ -16,6 +16,10 @@ from backend.app.webhooks.models import WebhookEvent
 from backend.app.intelligence.models import CodeGraphNode, CodeGraphEdge, PackageDependency, RepositoryScanSummary
 from backend.app.impact.models import ChangeImpactAnalysis
 from backend.app.architecture.models import ArchitectureRule, ArchitectureAnalysis, ArchitectureViolation
+from backend.app.testing.models import TestScenario, GeneratedTestCase
+from backend.app.onboarding.models import RepositoryBlueprint, UserOnboardingProgress
+from backend.app.chat.models import ChatSession, ChatMessage
+from backend.app.history.models import ArchitectureDecisionRecord, HistoricalCommitRecord, RecurringIssueHotspot
 
 # Explicitly configure the test database URL
 from sqlalchemy.engine.url import make_url

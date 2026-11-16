@@ -39,17 +39,21 @@ class RequestFlowStep(BaseModel):
 
 
 class ReadingOrderItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     file_path: str = Field(..., min_length=1, max_length=500, description="Relative path in the repository")
     role: str = Field(..., min_length=2, max_length=100, description="Role in system (e.g. Entry Point, Domain Model, Handler)")
     why_read: str = Field(..., min_length=10, max_length=1000, description="Specific learning objective for reading this file")
     focus_symbols: List[str] = Field(default_factory=list, description="Key functions/classes to inspect")
     key_lines: Optional[str] = Field(None, max_length=50, description="Optional suggested line range (e.g. L1-L45)")
+    responsibilities: Optional[str] = Field(None, description="Detailed responsibilities of this module")
+    important_functions: List[str] = Field(default_factory=list, description="Primary functions/methods to understand")
+    dependencies: List[str] = Field(default_factory=list, description="Subsystems or packages this module depends on")
+    relevant_documentation: Optional[str] = Field(None, description="Relevant documentation link or guide section")
 
 
 class MilestoneItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     id: str = Field(..., min_length=2, max_length=50, pattern=r"^[a-zA-Z0-9_\-]+$", description="Unique milestone identifier")
     title: str = Field(..., min_length=5, max_length=150, description="Action-oriented milestone title")
@@ -59,6 +63,7 @@ class MilestoneItem(BaseModel):
         description="Type of hands-on verification"
     )
     action_hint: str = Field(..., min_length=5, max_length=500, description="Exact command or search string to verify completion")
+    practical_task: Optional[str] = Field(None, description="Hands-on exploration task instructions")
 
     @field_validator("id", mode="before")
     @classmethod
@@ -95,19 +100,19 @@ class MilestoneItem(BaseModel):
 
 
 class TrackPlan(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
-    track_name: Literal["backend", "frontend", "fullstack"] = Field(..., description="Role track name")
+    track_name: Literal["backend", "frontend", "fullstack", "qa"] = Field(..., description="Role track name")
     reading_order: List[ReadingOrderItem] = Field(
         default_factory=list,
         min_length=0,
-        max_length=10,
+        max_length=15,
         description="Prioritized files to read (5-7 recommended where evidence exists)"
     )
     milestones: List[MilestoneItem] = Field(
         default_factory=list,
         min_length=0,
-        max_length=10,
+        max_length=15,
         description="Actionable onboarding milestones for this track"
     )
 
@@ -118,6 +123,34 @@ class TrackPlan(BaseModel):
         if len(ids) != len(set(ids)):
             raise ValueError("Milestone IDs within a track must be unique")
         return v
+
+
+class ExecutionFlowStep(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    step_number: int = Field(..., ge=1, le=20)
+    layer: str = Field(..., min_length=2, max_length=100)
+    file: str = Field(..., min_length=1, max_length=500)
+    symbol: Optional[str] = Field(None, max_length=150)
+    description: str = Field(..., min_length=5, max_length=1000)
+
+
+class ExecutionFlows(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    startup: List[ExecutionFlowStep] = Field(default_factory=list, description="Application bootstrap and startup flow")
+    api_lifecycle: List[ExecutionFlowStep] = Field(default_factory=list, description="HTTP request-to-response routing lifecycle")
+    auth_flow: List[ExecutionFlowStep] = Field(default_factory=list, description="Authentication, token decoding, and RBAC authorization flow")
+    db_flow: List[ExecutionFlowStep] = Field(default_factory=list, description="Database connection pool, ORM query, and transaction flow")
+
+
+class GlossaryItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    term: str = Field(..., min_length=2, max_length=100, description="Domain or architectural term")
+    category: str = Field(..., description="Category: domain, architecture, infrastructure, testing")
+    definition: str = Field(..., min_length=5, max_length=1000, description="Clear, repository-grounded explanation")
+    related_files: List[str] = Field(default_factory=list, description="Files exemplifying this concept")
 
 
 class CautionZone(BaseModel):
@@ -145,16 +178,19 @@ class LLMBlueprintPayload(BaseModel):
     Strict payload schema expected from Gemini.
     Rejects fabricated or incomplete structures.
     """
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     summary: str = Field(..., min_length=20, max_length=5000, description="Comprehensive architectural summary")
     architecture_pattern: str = Field(..., min_length=3, max_length=100, description="Architecture pattern (e.g. Modular Monolith)")
     subsystems: List[SubsystemItem] = Field(..., min_length=1, description="Primary subsystems")
     request_flow: List[RequestFlowStep] = Field(..., min_length=2, description="Request-to-database execution steps")
-    tracks: Dict[str, TrackPlan] = Field(..., description="Role plans keyed by 'backend', 'frontend', 'fullstack'")
+    tracks: Dict[str, TrackPlan] = Field(..., description="Role plans keyed by 'backend', 'frontend', 'fullstack', optionally 'qa'")
     caution_zones: List[CautionZone] = Field(default_factory=list, description="High-risk caution zones")
     safe_starter_areas: List[SafeStarterArea] = Field(default_factory=list, description="Beginner-friendly contribution areas")
     mermaid_diagram: str = Field(..., min_length=10, description="Mermaid flowchart definition")
+    application_flows: Optional[ExecutionFlows] = Field(default=None, description="Detailed startup, api, auth, and db runtime flows")
+    lifecycle_diagram: Optional[str] = Field(default=None, description="Mermaid sequenceDiagram illustrating request lifecycle")
+    glossary: Optional[List[GlossaryItem]] = Field(default_factory=list, description="Repository and domain glossary")
 
     @field_validator("tracks")
     @classmethod
@@ -173,8 +209,6 @@ class LLMBlueprintPayload(BaseModel):
         if not any(clean.startswith(starter) for starter in valid_starters):
             raise ValueError("Mermaid diagram must begin with a recognized diagram type (e.g. 'flowchart TD' or 'graph TD')")
 
-        # Sanitize unquoted node labels with parentheses/special characters:
-        # e.g. Router[API Router (app/api/*.py)] -> Router["API Router (app/api/*.py)"]
         def quote_bracket_label(match):
             prefix, content, suffix = match.group(1), match.group(2).strip(), match.group(3)
             if (content.startswith('"') and content.endswith('"')) or (content.startswith("'") and content.endswith("'")):
@@ -183,6 +217,18 @@ class LLMBlueprintPayload(BaseModel):
             return f'{prefix}"{safe_content}"{suffix}'
 
         clean = re.sub(r'(\b[a-zA-Z0-9_\-]+\[)([^\]\r\n]+)(\])', quote_bracket_label, clean)
+        return clean
+
+    @field_validator("lifecycle_diagram")
+    @classmethod
+    def validate_lifecycle_diagram(cls, v: Optional[str]) -> Optional[str]:
+        if not v:
+            return None
+        clean = v.strip().replace("```mermaid", "").replace("```", "").strip()
+        if not clean.startswith("sequenceDiagram"):
+            # If not starting with sequenceDiagram, ensure it has a valid starter or prefix
+            if not any(clean.startswith(s) for s in ("sequenceDiagram", "graph ", "flowchart ")):
+                clean = f"sequenceDiagram\n{clean}"
         return clean
 
 
@@ -207,6 +253,9 @@ class RepositoryBlueprintResponse(BaseModel):
     caution_zones: List[CautionZone] = []
     safe_starter_areas: List[SafeStarterArea] = []
     mermaid_diagram: Optional[str] = None
+    application_flows: Optional[ExecutionFlows] = None
+    lifecycle_diagram: Optional[str] = None
+    glossary: List[GlossaryItem] = []
     retry_count: int = 0
     generation_error: Optional[str] = None
     created_at: Optional[datetime] = None
@@ -226,7 +275,7 @@ class UserProgressResponse(BaseModel):
 class UpdateProgressRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    active_track: Optional[Literal["backend", "frontend", "fullstack"]] = None
+    active_track: Optional[Literal["backend", "frontend", "fullstack", "qa"]] = None
     completed_milestones: Optional[List[str]] = None
     notes: Optional[str] = None
 

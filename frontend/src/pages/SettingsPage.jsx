@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import MemberManagement from '../components/MemberManagement';
 import TeamManagement from '../components/TeamManagement';
 import { githubApi } from '../lib/api';
@@ -71,6 +71,19 @@ export default function SettingsPage() {
   const { user, memberships, currentOrgId } = useOutletContext();
   const [activeTab, setActiveTab] = useState('integrations');
   const [isLinking, setIsLinking] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusParam = searchParams.get('status');
+
+  useEffect(() => {
+    if (statusParam === 'success') {
+      alert('GitHub account linked successfully!');
+      window.location.href = '/settings';
+    } else if (statusParam === 'already_linked') {
+      alert('This GitHub account is already linked to another RepoMind user account. To link it here, you must first log in to that account and unlink it.');
+      searchParams.delete('status');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [statusParam]);
 
   const handleLinkGitHub = async () => {
     setIsLinking(true);
@@ -90,7 +103,8 @@ export default function SettingsPage() {
     if (!confirm('Are you sure you want to unlink your GitHub account? You will lose access to interact with repositories.')) return;
     try {
       await githubApi.unlinkGitHub();
-      alert('GitHub account unlinked successfully. Refresh to see changes.');
+      alert('GitHub account unlinked successfully.');
+      window.location.reload();
     } catch (err) {
       alert('Failed to unlink: ' + err.message);
     }

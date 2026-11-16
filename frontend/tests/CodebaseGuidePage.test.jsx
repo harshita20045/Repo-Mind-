@@ -147,7 +147,61 @@ const mockBlueprint = {
         },
       ],
     },
+    qa: {
+      track_name: 'qa',
+      reading_order: [
+        {
+          file_path: 'backend/tests/test_review.py',
+          role: 'E2E Test Suite',
+          why_read: 'Understands test fixtures and API contracts',
+          focus_symbols: ['test_review_flow'],
+          responsibilities: 'Validates automated review engine',
+          important_functions: ['test_review_flow'],
+          dependencies: ['pytest'],
+          relevant_documentation: 'docs/testing.md',
+        },
+      ],
+      milestones: [
+        {
+          id: 'qa_m1',
+          title: 'Run Integration Tests',
+          description: 'Execute backend pytest suite',
+          action_type: 'run_command',
+          action_hint: 'pytest backend/tests/ -v',
+          practical_task: 'Run tests and inspect log output',
+        },
+      ],
+    },
   },
+  application_flows: {
+    startup: [
+      { step_number: 1, layer: 'Bootstrap', file: 'backend/app/main.py', symbol: 'main', description: 'Boots app configuration' },
+    ],
+    api_lifecycle: [
+      { step_number: 1, layer: 'Routing', file: 'backend/app/main.py', symbol: 'app', description: 'Incoming HTTP request dispatched to router' },
+    ],
+    auth_flow: [
+      { step_number: 1, layer: 'Auth Middleware', file: 'backend/app/auth/dependencies.py', symbol: 'get_current_user', description: 'Validates JWT token' },
+    ],
+    db_flow: [
+      { step_number: 1, layer: 'Database Session', file: 'backend/app/db.py', symbol: 'get_db', description: 'Provides scoped DB session' },
+    ],
+  },
+  lifecycle_diagram: 'sequenceDiagram\n    Client->>Server: Request\n    Server-->>Client: Response',
+  glossary: [
+    {
+      term: 'PullRequestReview',
+      category: 'domain',
+      definition: 'AI-assisted code review finding aggregate',
+      related_files: ['backend/app/review/models.py'],
+    },
+    {
+      term: 'VectorSearch',
+      category: 'architecture',
+      definition: 'pgvector semantic search indexing engine',
+      related_files: ['backend/app/rag/service.py'],
+    },
+  ],
   caution_zones: [
     {
       path: 'backend/app/auth',
@@ -432,5 +486,96 @@ describe('CodebaseGuidePage', () => {
       expect(screen.getByText(/Textual Architecture Representation/i)).toBeInTheDocument();
       expect(screen.getByText('Diagram fallback mode')).toBeInTheDocument();
     });
+  });
+
+  it('13. Switches to QA Engineer Track and displays QA reading order and exploration task', async () => {
+    renderGuidePage();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'QA Engineer Track' })).toBeInTheDocument();
+    });
+
+    // Click QA Engineer Track
+    fireEvent.click(screen.getByRole('button', { name: 'QA Engineer Track' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('backend/tests/test_review.py')).toBeInTheDocument();
+      expect(screen.getByText('E2E Test Suite')).toBeInTheDocument();
+      expect(screen.getByText('Run Integration Tests')).toBeInTheDocument();
+      expect(screen.getByText(/Run tests and inspect log output/)).toBeInTheDocument();
+    });
+
+    expect(onboardingApi.updateProgress).toHaveBeenCalledWith(1, { active_track: 'qa' });
+  });
+
+  it('14. Switches between execution flows (App Startup, Auth & RBAC, Database & ORM)', async () => {
+    renderGuidePage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Request-to-Database Execution Flow Trace')).toBeInTheDocument();
+    });
+
+    // Click App Startup flow button
+    fireEvent.click(screen.getByRole('button', { name: 'App Startup' }));
+    expect(screen.getByText('Bootstrap')).toBeInTheDocument();
+    expect(screen.getByText('Boots app configuration')).toBeInTheDocument();
+
+    // Click Auth & RBAC flow button
+    fireEvent.click(screen.getByRole('button', { name: 'Auth & RBAC' }));
+    expect(screen.getByText('Auth Middleware')).toBeInTheDocument();
+    expect(screen.getByText('Validates JWT token')).toBeInTheDocument();
+
+    // Click Database & ORM flow button
+    fireEvent.click(screen.getByRole('button', { name: 'Database & ORM' }));
+    expect(screen.getByText('Database Session')).toBeInTheDocument();
+    expect(screen.getByText('Provides scoped DB session')).toBeInTheDocument();
+  });
+
+  it('15. Renders request lifecycle sequence diagram', async () => {
+    renderGuidePage();
+
+    await waitFor(() => {
+      expect(screen.getByText('End-to-End Request Lifecycle Sequence Diagram')).toBeInTheDocument();
+    });
+  });
+
+  it('16. Filters repository glossary by category chip and text search', async () => {
+    renderGuidePage();
+
+    await waitFor(() => {
+      expect(screen.getByText('4. Repository Glossary & Domain Terms')).toBeInTheDocument();
+    });
+
+    // Both glossary terms visible initially
+    expect(screen.getByText('PullRequestReview')).toBeInTheDocument();
+    expect(screen.getByText('VectorSearch')).toBeInTheDocument();
+
+    // Filter by category: domain
+    fireEvent.click(screen.getByRole('button', { name: 'domain' }));
+    expect(screen.getByText('PullRequestReview')).toBeInTheDocument();
+    expect(screen.queryByText('VectorSearch')).not.toBeInTheDocument();
+
+    // Reset filter: all
+    fireEvent.click(screen.getByRole('button', { name: 'all' }));
+    expect(screen.getByText('VectorSearch')).toBeInTheDocument();
+
+    // Search filter
+    const searchInput = screen.getByPlaceholderText(/Search terms or definitions/i);
+    fireEvent.change(searchInput, { target: { value: 'pgvector' } });
+    expect(screen.getByText('VectorSearch')).toBeInTheDocument();
+    expect(screen.queryByText('PullRequestReview')).not.toBeInTheDocument();
+  });
+
+  it('17. Filters interactive codebase explorer files and symbols', async () => {
+    renderGuidePage();
+
+    await waitFor(() => {
+      expect(screen.getByText('5. Interactive Codebase Explorer')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText(/Filter codebase files or symbols/i);
+    fireEvent.change(searchInput, { target: { value: 'permissions' } });
+
+    expect(screen.getByText(/file: backend\/app\/auth\/permissions.py/)).toBeInTheDocument();
   });
 });

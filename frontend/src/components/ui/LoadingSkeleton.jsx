@@ -126,3 +126,5 @@ export function PageLoader({ message = 'Loading...' }) {
     </div>
   );
 }
+
+export default Skeleton;
