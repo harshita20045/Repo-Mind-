@@ -224,7 +224,7 @@ export default function CodebaseGuidePage() {
       <RepositoryNav repositoryId={repoId} currentTab="guide" />
 
       {/* ─── Breadcrumbs & Header ────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
             <Link to="/repositories" className="hover:text-primary transition-colors">Repositories</Link>
@@ -296,23 +296,23 @@ export default function CodebaseGuidePage() {
         </div>
 
         {/* Summary Card */}
-        <div className="p-6 rounded-2xl border border-white/10 bg-surface/70 backdrop-blur-md shadow-lg space-y-4">
+        <div className="p-6 rounded-2xl border border-border bg-surface shadow-lg space-y-4">
           <p className="text-sm text-text-secondary leading-relaxed">
             {blueprint?.summary || 'No architectural summary available.'}
           </p>
 
           {/* Subsystems Breakdown */}
           {blueprint?.subsystems && blueprint.subsystems.length > 0 && (
-            <div className="pt-4 border-t border-white/5">
+            <div className="pt-4 border-t border-border">
               <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
                 Identified Subsystems & Key Directories
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {blueprint.subsystems.map((sub, i) => (
-                  <div key={i} className="p-3.5 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors space-y-1.5">
+                  <div key={i} className="p-3.5 rounded-xl border border-border bg-surfaceHighlight/50 hover:bg-surfaceHighlight transition-colors space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-sm text-text-primary">{sub.name}</span>
-                      <code className="text-[11px] px-2 py-0.5 rounded bg-black/40 text-primary font-mono">{sub.path}</code>
+                      <code className="text-[11px] px-2 py-0.5 rounded bg-surfaceHighlight text-primary font-mono">{sub.path}</code>
                     </div>
                     <p className="text-xs text-text-muted line-clamp-2">{sub.purpose}</p>
                   </div>
@@ -323,8 +323,8 @@ export default function CodebaseGuidePage() {
         </div>
 
         {/* Application & Runtime Execution Flows */}
-        <div className="p-6 rounded-2xl border border-white/10 bg-surface/70 backdrop-blur-md space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-3">
+        <div className="p-6 rounded-2xl border border-border bg-surface space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
             <div>
               <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
                 Request-to-Database Execution Flow Trace
@@ -334,7 +334,7 @@ export default function CodebaseGuidePage() {
               </p>
             </div>
             {/* Flow switcher tabs */}
-            <div className="flex p-1 bg-surfaceHighlight/30 rounded-xl border border-white/10 w-fit flex-wrap gap-1">
+            <div className="flex p-1 bg-surfaceHighlight/30 rounded-xl border border-border w-fit flex-wrap gap-1">
               {[
                 { id: 'api_lifecycle', label: 'API Request' },
                 { id: 'startup', label: 'App Startup' },
@@ -414,7 +414,7 @@ export default function CodebaseGuidePage() {
       </section>
 
       {/* ─── SECTION 2: ROLE-BASED ONBOARDING TRACKS ────────────────────────── */}
-      <section aria-labelledby="section-tracks" className="space-y-6 pt-6 border-t border-white/10">
+      <section aria-labelledby="section-tracks" className="space-y-6 pt-6 border-t border-border">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-5 rounded-full bg-accent" />
@@ -425,7 +425,7 @@ export default function CodebaseGuidePage() {
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             {/* Track Selector Tabs */}
-            <div className="flex p-1 bg-surfaceHighlight/30 rounded-xl border border-white/10 w-fit flex-wrap gap-1">
+            <div className="flex p-1 bg-surfaceHighlight/30 rounded-xl border border-border w-fit flex-wrap gap-1">
               {[
                 { id: 'backend', label: 'Backend Track' },
                 { id: 'frontend', label: 'Frontend Track' },
@@ -475,7 +475,7 @@ export default function CodebaseGuidePage() {
           </h3>
 
           {readingList.length === 0 ? (
-            <div className="p-6 rounded-xl border border-white/5 bg-surfaceHighlight/20 text-center text-xs text-text-muted">
+            <div className="p-6 rounded-xl border border-border bg-surfaceHighlight/20 text-center text-xs text-text-muted">
               No specific files indexed for this track in this repository snapshot.
             </div>
           ) : (
@@ -483,7 +483,7 @@ export default function CodebaseGuidePage() {
               {readingList.map((item, idx) => (
                 <div
                   key={idx}
-                  className="p-4 rounded-xl border border-white/10 bg-surface/60 hover:border-primary/40 transition-all backdrop-blur-md flex flex-col md:flex-row md:items-start justify-between gap-4"
+                  className="p-4 rounded-xl border border-border bg-surface hover:border-primary/40 transition-all backdrop-blur-md flex flex-col md:flex-row md:items-start justify-between gap-4"
                 >
                   <div className="flex items-start gap-3.5 flex-1">
                     <span className="w-6 h-6 rounded-lg bg-primary/10 text-primary border border-primary/20 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -491,7 +491,7 @@ export default function CodebaseGuidePage() {
                     </span>
                     <div className="space-y-1.5 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <code className="text-xs font-mono font-semibold text-text-primary bg-black/40 px-2 py-0.5 rounded border border-white/5">
+                        <code className="text-xs font-mono font-semibold text-text-primary bg-surfaceHighlight px-2 py-0.5 rounded border border-border">
                           {item.file_path}
                         </code>
                         <span className="text-[11px] px-2 py-0.5 rounded bg-accent/10 text-accent border border-accent/20 font-medium">
@@ -533,7 +533,7 @@ export default function CodebaseGuidePage() {
                         <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
                           <span className="text-[11px] text-text-muted font-medium">Dependencies:</span>
                           {item.dependencies.map((dep, dIdx) => (
-                            <span key={dIdx} className="text-[10px] text-text-muted bg-white/5 px-1.5 py-0.5 rounded font-mono">
+                            <span key={dIdx} className="text-[10px] text-text-muted bg-surfaceHighlight px-1.5 py-0.5 rounded font-mono">
                               {dep}
                             </span>
                           ))}
@@ -553,8 +553,8 @@ export default function CodebaseGuidePage() {
         </div>
 
         {/* ─── SECTION 4: PERSONAL ONBOARDING CHECKLIST & SCRATCHPAD ──────────── */}
-        <div className="p-6 rounded-2xl border border-white/10 bg-surface/70 backdrop-blur-md space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+        <div className="p-6 rounded-2xl border border-border bg-surface space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
             <div>
               <h3 className="text-sm font-bold text-text-primary">
                 My Hands-On Ramp-Up Milestones
@@ -578,7 +578,7 @@ export default function CodebaseGuidePage() {
           </div>
 
           {/* Privacy Notice Banner */}
-          <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/5 text-[11px] text-text-muted">
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-surfaceHighlight/50 border border-border text-[11px] text-text-muted">
             <svg className="w-4 h-4 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
@@ -602,33 +602,33 @@ export default function CodebaseGuidePage() {
                     className={`flex items-start gap-3.5 p-3.5 rounded-xl border transition-all cursor-pointer ${
                       isChecked
                         ? 'bg-success/[0.04] border-success/30 text-text-primary'
-                        : 'bg-white/[0.02] border-white/5 hover:border-white/15'
+                        : 'bg-surfaceHighlight/50 border-border hover:border-border'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={isChecked}
                       onChange={() => handleToggleMilestone(m.id)}
-                      className="w-4 h-4 mt-0.5 rounded border-white/20 text-primary focus:ring-primary focus:ring-offset-background bg-surfaceHighlight/50 cursor-pointer"
+                      className="w-4 h-4 mt-0.5 rounded border-border text-primary focus:ring-primary focus:ring-offset-background bg-surfaceHighlight/50 cursor-pointer"
                     />
                     <div className="space-y-1 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`text-xs font-semibold ${isChecked ? 'line-through text-text-muted' : 'text-text-primary'}`}>
                           {m.title}
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-text-muted uppercase tracking-wider font-mono">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-surfaceHighlight text-text-muted uppercase tracking-wider font-mono">
                           {m.action_type.replace('_', ' ')}
                         </span>
                       </div>
                       <p className="text-xs text-text-secondary">{m.description}</p>
                       {m.practical_task && (
-                        <div className="pt-1 text-xs text-text-muted bg-white/[0.02] p-2 rounded border border-white/5">
+                        <div className="pt-1 text-xs text-text-muted bg-surfaceHighlight/50 p-2 rounded border border-border">
                           <strong className="text-text-secondary">Exploration Task:</strong> {m.practical_task}
                         </div>
                       )}
                       {m.action_hint && (
                         <div className="pt-1 flex items-center gap-2">
-                          <code className="text-[11px] font-mono bg-black/40 px-2 py-0.5 rounded text-primary border border-white/5">
+                          <code className="text-[11px] font-mono bg-surfaceHighlight px-2 py-0.5 rounded text-primary border border-border">
                             {m.action_hint}
                           </code>
                         </div>
@@ -641,7 +641,7 @@ export default function CodebaseGuidePage() {
           </div>
 
           {/* Private Developer Scratchpad */}
-          <div className="pt-4 border-t border-white/10 space-y-2">
+          <div className="pt-4 border-t border-border space-y-2">
             <div className="flex items-center justify-between">
               <label htmlFor="dev-scratchpad" className="text-xs font-bold text-text-primary uppercase tracking-wider">
                 Personal Developer Scratchpad (Private)
@@ -665,14 +665,14 @@ export default function CodebaseGuidePage() {
               onChange={handleNotesChange}
               onBlur={handleNotesBlur}
               placeholder="Record local port mappings, test commands, or personal onboarding notes here..."
-              className="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+              className="w-full bg-surfaceHighlight border border-border rounded-xl p-3 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary font-mono"
             />
           </div>
         </div>
       </section>
 
       {/* ─── SECTION 3: CAUTION ZONES & SAFE STARTER AREAS ───────────────────── */}
-      <section aria-labelledby="section-compass" className="space-y-6 pt-6 border-t border-white/10">
+      <section aria-labelledby="section-compass" className="space-y-6 pt-6 border-t border-border">
         <div className="flex items-center gap-2">
           <span className="w-2 h-5 rounded-full bg-danger" />
           <h2 id="section-compass" className="text-lg font-bold text-text-primary">
@@ -748,7 +748,7 @@ export default function CodebaseGuidePage() {
       </section>
 
       {/* ─── SECTION 4: REPOSITORY GLOSSARY & DOMAIN TERMINOLOGY ────────────── */}
-      <section aria-labelledby="section-glossary" className="space-y-6 pt-6 border-t border-white/10">
+      <section aria-labelledby="section-glossary" className="space-y-6 pt-6 border-t border-border">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-5 rounded-full bg-secondary" />
@@ -764,9 +764,9 @@ export default function CodebaseGuidePage() {
               value={glossarySearch}
               onChange={(e) => setGlossarySearch(e.target.value)}
               placeholder="Search terms or definitions..."
-              className="px-3 py-1.5 text-xs bg-black/30 border border-white/10 rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary w-48"
+              className="px-3 py-1.5 text-xs bg-surfaceHighlight border border-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary w-48"
             />
-            <div className="flex p-0.5 bg-surfaceHighlight/30 rounded-lg border border-white/10">
+            <div className="flex p-0.5 bg-surfaceHighlight/30 rounded-lg border border-border">
               {['all', 'domain', 'architecture', 'infrastructure', 'testing'].map((cat) => (
                 <button
                   key={cat}
@@ -799,7 +799,7 @@ export default function CodebaseGuidePage() {
 
           if (filtered.length === 0) {
             return (
-              <div className="p-6 rounded-xl border border-white/5 bg-surfaceHighlight/20 text-center text-xs text-text-muted">
+              <div className="p-6 rounded-xl border border-border bg-surfaceHighlight/20 text-center text-xs text-text-muted">
                 {glossaryList.length === 0
                   ? 'No repository glossary terms defined in this blueprint.'
                   : 'No terms matching current filters.'}
@@ -812,21 +812,21 @@ export default function CodebaseGuidePage() {
               {filtered.map((item, idx) => (
                 <div
                   key={idx}
-                  className="p-4 rounded-xl border border-white/10 bg-surface/60 hover:border-primary/40 transition-all backdrop-blur-md space-y-2"
+                  className="p-4 rounded-xl border border-border bg-surface hover:border-primary/40 transition-all backdrop-blur-md space-y-2"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sm text-text-primary">{item.term}</span>
-                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-white/5 text-primary border border-white/10">
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-surfaceHighlight text-primary border border-border">
                       {item.category}
                     </span>
                   </div>
                   <p className="text-xs text-text-secondary leading-relaxed">{item.definition}</p>
                   {item.related_files && item.related_files.length > 0 && (
-                    <div className="pt-2 border-t border-white/5 space-y-1">
+                    <div className="pt-2 border-t border-border space-y-1">
                       <span className="text-[10px] text-text-muted font-medium">Related files:</span>
                       <div className="flex flex-wrap gap-1">
                         {item.related_files.map((rf, rIdx) => (
-                          <code key={rIdx} className="text-[10px] font-mono bg-black/40 text-text-muted px-1.5 py-0.5 rounded">
+                          <code key={rIdx} className="text-[10px] font-mono bg-surfaceHighlight text-text-muted px-1.5 py-0.5 rounded">
                             {rf}
                           </code>
                         ))}
@@ -841,7 +841,7 @@ export default function CodebaseGuidePage() {
       </section>
 
       {/* ─── SECTION 5: INTERACTIVE CODEBASE EXPLORER ───────────────────────── */}
-      <section aria-labelledby="section-explorer" className="space-y-6 pt-6 border-t border-white/10">
+      <section aria-labelledby="section-explorer" className="space-y-6 pt-6 border-t border-border">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-5 rounded-full bg-primary" />
@@ -854,7 +854,7 @@ export default function CodebaseGuidePage() {
             value={explorerSearch}
             onChange={(e) => setExplorerSearch(e.target.value)}
             placeholder="Filter codebase files or symbols..."
-            className="px-3 py-1.5 text-xs bg-black/30 border border-white/10 rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary w-64"
+            className="px-3 py-1.5 text-xs bg-surfaceHighlight border border-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary w-64"
           />
         </div>
 
@@ -913,26 +913,26 @@ export default function CodebaseGuidePage() {
 
           if (filtered.length === 0) {
             return (
-              <div className="p-6 rounded-xl border border-white/5 bg-surfaceHighlight/20 text-center text-xs text-text-muted">
+              <div className="p-6 rounded-xl border border-border bg-surfaceHighlight/20 text-center text-xs text-text-muted">
                 {allFiles.length === 0 ? 'No codebase files mapped.' : 'No files matching search criteria.'}
               </div>
             );
           }
 
           return (
-            <div className="p-4 rounded-2xl border border-white/10 bg-surface/70 backdrop-blur-md space-y-2">
+            <div className="p-4 rounded-2xl border border-border bg-surface space-y-2">
               <div className="text-xs text-text-muted font-medium mb-2">
                 Showing {filtered.length} indexed files with mapped responsibilities
               </div>
               <div className="divide-y divide-white/5 max-h-96 overflow-y-auto pr-1">
                 {filtered.map((item, idx) => (
-                  <div key={idx} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-white/[0.02] px-2 rounded-lg transition-colors">
+                  <div key={idx} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-surfaceHighlight/50 px-2 rounded-lg transition-colors">
                     <div className="flex items-center gap-2">
-                      <code className="text-xs font-mono font-semibold text-text-primary bg-black/40 px-2 py-0.5 rounded">
+                      <code className="text-xs font-mono font-semibold text-text-primary bg-surfaceHighlight px-2 py-0.5 rounded">
                         file: {item.path}
                       </code>
                       {item.roles.map((r, rIdx) => (
-                        <span key={rIdx} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-primary">
+                        <span key={rIdx} className="text-[10px] px-1.5 py-0.5 rounded bg-surfaceHighlight text-primary">
                           Role: {r}
                         </span>
                       ))}

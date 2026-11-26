@@ -78,10 +78,10 @@ export default function Modal({
       {/* Panel */}
       <div
         data-modal-content
-        className={`relative w-full ${sizes[size] || sizes.md} bg-surface border border-white/10 rounded-2xl shadow-modal animate-scale-in ${className}`}
+        className={`relative w-full ${sizes[size] || sizes.md} bg-surface border border-border rounded-2xl shadow-modal animate-scale-in ${className}`}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-white/[0.07]">
+        <div className="flex items-start justify-between p-6 border-b border-border">
           <div>
             <h2
               id="modal-title"
@@ -97,7 +97,7 @@ export default function Modal({
           </div>
           <button
             onClick={onClose}
-            className="ml-4 p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/5 transition-colors flex-shrink-0"
+            className="ml-4 p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surfaceHighlight transition-colors flex-shrink-0"
             aria-label="Close modal"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">

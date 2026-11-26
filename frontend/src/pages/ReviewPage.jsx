@@ -27,7 +27,7 @@ function Tab({ id, label, isActive, count, onClick }) {
       onClick={onClick}
       className={`flex items-center gap-2 px-4 py-3 text-[13px] font-medium border-b-2 transition-all duration-150 ${isActive
           ? 'text-primary border-primary'
-          : 'text-text-muted border-transparent hover:text-text-primary hover:border-white/20'
+          : 'text-text-muted border-transparent hover:text-text-primary hover:border-border'
         }`}
     >
       {label}
@@ -507,17 +507,17 @@ export default function ReviewPage() {
           {isCompleted && runData && (
             <SectionCard title="Analysis Metadata">
               <div className="flex flex-col gap-3 text-[13px]">
-                <div className="flex justify-between border-b border-white/[0.04] pb-2">
+                <div className="flex justify-between border-b border-border pb-2">
                   <span className="text-text-muted">Target Commit</span>
                   <span className="font-mono text-text-primary">{runData.commit_sha?.substring(0, 7) || 'N/A'}</span>
                 </div>
-                <div className="flex justify-between border-b border-white/[0.04] pb-2">
+                <div className="flex justify-between border-b border-border pb-2">
                   <span className="text-text-muted">Started</span>
                   <span className="text-text-primary text-right">
                     {runData.started_at ? new Date(runData.started_at).toLocaleString() : 'N/A'}
                   </span>
                 </div>
-                <div className="flex justify-between border-b border-white/[0.04] pb-2">
+                <div className="flex justify-between border-b border-border pb-2">
                   <span className="text-text-muted">Completed</span>
                   <span className="text-text-primary text-right">
                     {runData.completed_at ? new Date(runData.completed_at).toLocaleString() : 'N/A'}

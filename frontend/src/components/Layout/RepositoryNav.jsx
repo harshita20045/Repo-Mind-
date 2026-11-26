@@ -67,11 +67,11 @@ export default function RepositoryNav({
   ];
 
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-surface/60 backdrop-blur-md shadow-sm overflow-hidden mb-6">
+    <div className="rounded-xl border border-border bg-surface shadow-sm overflow-hidden mb-6">
       {/* Top Banner */}
-      <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.06]">
+      <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/30 flex items-center justify-center text-primary flex-shrink-0 shadow-glow-primary">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary flex-shrink-0 shadow-xs">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
             </svg>
@@ -80,7 +80,7 @@ export default function RepositoryNav({
             <div className="flex items-center gap-2.5 flex-wrap">
               <h2 className="text-lg font-bold text-text-primary tracking-tight">{repoName}</h2>
               {repository?.default_branch && (
-                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-surfaceHighlight border border-white/10 text-text-secondary">
+                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-surfaceHighlight border border-border text-text-secondary">
                   {repository.default_branch}
                 </span>
               )}
@@ -117,15 +117,15 @@ export default function RepositoryNav({
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-1 px-3 py-1.5 bg-surfaceHighlight/20 overflow-x-auto text-xs">
+      <div className="flex items-center gap-1 px-3 py-1.5 bg-surfaceHighlight/50 border-t border-border overflow-x-auto text-xs">
         {tabs.map((tab) => (
           <Link
             key={tab.to}
             to={tab.to}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
               tab.active
-                ? 'bg-primary/15 text-primary font-semibold border border-primary/25 shadow-sm'
-                : 'text-text-muted hover:text-text-primary hover:bg-white/[0.04]'
+                ? 'bg-surface text-primary font-semibold border border-border shadow-xs'
+                : 'text-text-muted hover:text-text-primary hover:bg-surfaceHighlight'
             }`}
           >
             <span className={tab.active ? 'text-primary' : 'text-text-muted'}>{tab.icon}</span>

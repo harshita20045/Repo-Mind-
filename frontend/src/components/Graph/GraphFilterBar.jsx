@@ -24,11 +24,11 @@ export default function GraphFilterBar({
   ];
 
   return (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 bg-surface/80 border-b border-white/[0.08] backdrop-blur-md">
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 bg-surface/80 border-b border-border backdrop-blur-md">
       {/* Left: Mode selector or tabs */}
       <div className="flex items-center gap-2 flex-wrap">
         {availableModes.length > 0 && (
-          <div className="flex items-center rounded-lg bg-surfaceHighlight/50 border border-white/[0.08] p-0.5">
+          <div className="flex items-center rounded-lg bg-surfaceHighlight/50 border border-border p-0.5">
             {availableModes.map((m) => (
               <button
                 key={m.id}
@@ -49,7 +49,7 @@ export default function GraphFilterBar({
         <select
           value={nodeTypeFilter}
           onChange={(e) => onNodeTypeFilterChange && onNodeTypeFilterChange(e.target.value)}
-          className="bg-surfaceHighlight/60 border border-white/[0.09] text-xs rounded-lg px-2.5 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+          className="bg-surfaceHighlight/60 border border-border text-xs rounded-lg px-2.5 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
           aria-label="Filter by node type"
         >
           {nodeTypes.map((t) => (
@@ -69,7 +69,7 @@ export default function GraphFilterBar({
             value={searchQuery}
             onChange={(e) => onSearchQueryChange && onSearchQueryChange(e.target.value)}
             placeholder="Search entity or file..."
-            className="w-full bg-surfaceHighlight/50 border border-white/[0.09] text-xs rounded-lg pl-8 pr-3 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder-text-muted transition-all"
+            className="w-full bg-surfaceHighlight/50 border border-border text-xs rounded-lg pl-8 pr-3 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder-text-muted transition-all"
           />
           <svg
             className="w-3.5 h-3.5 text-text-muted absolute left-2.5 top-1/2 -translate-y-1/2"
@@ -92,7 +92,7 @@ export default function GraphFilterBar({
         </div>
 
         {/* Stats Chips */}
-        <div className="flex items-center gap-2 text-xs font-mono text-text-muted border-l border-white/10 pl-3">
+        <div className="flex items-center gap-2 text-xs font-mono text-text-muted border-l border-border pl-3">
           <span title={`${visibleNodes} visible of ${totalNodes} total nodes`}>
             <span className="text-text-primary font-semibold">{visibleNodes}</span>
             <span className="text-[10px] opacity-60">/{totalNodes}</span> nodes

@@ -12,7 +12,7 @@ function BarRow({ label, value, max, color = 'bg-primary', textColor = '' }) {
   return (
     <div className="flex items-center gap-3">
       <div className="w-28 text-xs font-medium text-text-muted capitalize truncate" title={label}>{label}</div>
-      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+      <div className="flex-1 h-2 bg-surfaceHighlight rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full ${color} transition-all duration-700`}
           style={{ width: `${pct}%` }}

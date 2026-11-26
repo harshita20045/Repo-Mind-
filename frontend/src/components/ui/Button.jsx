@@ -11,13 +11,13 @@ const SIZE = {
 
 const VARIANT = {
   primary:   'bg-primary hover:bg-primary-hover text-white shadow-sm shadow-primary/20 border border-primary/30',
-  secondary: 'bg-surfaceHighlight hover:bg-surfaceElevated text-text-primary border border-white/10',
-  ghost:     'bg-transparent hover:bg-white/5 text-text-secondary hover:text-text-primary border border-transparent hover:border-white/10',
+  secondary: 'bg-surfaceHighlight hover:bg-surfaceElevated text-text-primary border border-border shadow-xs',
+  ghost:     'bg-transparent hover:bg-surfaceHighlight text-text-secondary hover:text-text-primary border border-transparent',
   danger:    'bg-danger/10 hover:bg-danger/20 text-danger border border-danger/25',
-  'danger-solid': 'bg-danger hover:bg-danger/90 text-white border border-white/10 shadow-sm shadow-danger/20',
+  'danger-solid': 'bg-danger hover:bg-danger/90 text-white border border-transparent shadow-sm shadow-danger/20',
   success:   'bg-success/10 hover:bg-success/20 text-success border border-success/25',
-  'success-solid': 'bg-success hover:bg-success/90 text-white border border-white/10 shadow-sm shadow-success/20',
-  outline:   'bg-transparent hover:bg-white/5 text-text-primary border border-white/15 hover:border-white/25',
+  'success-solid': 'bg-success hover:bg-success/90 text-white border border-transparent shadow-sm shadow-success/20',
+  outline:   'bg-transparent hover:bg-surfaceHighlight text-text-primary border border-border hover:border-text-muted/40',
   accent:    'bg-accent/10 hover:bg-accent/20 text-accent border border-accent/25',
 };
 

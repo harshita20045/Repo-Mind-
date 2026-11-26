@@ -9,7 +9,7 @@ function RiskVector({ label, level, description, recommendedAction }) {
     high:     { badge: 'bg-orange-500/10 text-orange-400 border-orange-400/25', bar: 'bg-orange-500', width: '75%' },
     medium:   { badge: 'bg-warning/10 text-warning border-warning/25', bar: 'bg-warning', width: '50%' },
     low:      { badge: 'bg-success/10 text-success border-success/25', bar: 'bg-success', width: '25%' },
-    unknown:  { badge: 'bg-white/5 text-text-muted border-white/10', bar: 'bg-text-muted', width: '0%' },
+    unknown:  { badge: 'bg-surfaceHighlight text-text-muted border-border', bar: 'bg-text-muted', width: '0%' },
   };
   const normalized = level?.toLowerCase() || 'unknown';
   const style = styles[normalized] || styles.unknown;

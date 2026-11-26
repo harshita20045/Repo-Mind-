@@ -19,6 +19,7 @@ class QueryIntent(str, Enum):
     DEPENDENCY_GRAPH = "dependency_graph"
     ENDPOINT_LIFECYCLE = "endpoint_lifecycle"
     TEST_COVERAGE = "test_coverage"
+    HISTORICAL_DECISION = "historical_decision"
     GENERAL_CODE_SEARCH = "general_code_search"
 
 
@@ -245,6 +246,29 @@ def classify_query(text: str, context_type: str = "repository", context_id: Opti
     ):
         return ExtractedEntities(
             intent=QueryIntent.MODULE_EXPLANATION,
+            symbols=symbols,
+            files=files,
+            endpoints=endpoints,
+            pr_id=pr_id,
+        )
+
+    # 9. Historical Decisions & Bug History ("Why was this module refactored?", ADRs, past bugs)
+    if (
+        "why was" in normalized
+        or "refactor" in normalized
+        or "decision" in normalized
+        or "adr" in normalized
+        or "historical" in normalized
+        or "bug before" in normalized
+        or "similar bug" in normalized
+        or "schema change" in normalized
+        or "past change" in normalized
+        or "engineering decision" in normalized
+        or "who changed" in normalized
+        or "when was" in normalized
+    ):
+        return ExtractedEntities(
+            intent=QueryIntent.HISTORICAL_DECISION,
             symbols=symbols,
             files=files,
             endpoints=endpoints,

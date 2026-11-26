@@ -41,7 +41,7 @@ export default function ConfirmDialog({
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative w-full max-w-sm bg-surface border border-white/10 rounded-2xl shadow-modal animate-scale-in p-6">
+      <div className="relative w-full max-w-sm bg-surface border border-border rounded-2xl shadow-modal animate-scale-in p-6">
         {/* Icon */}
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${
           variant === 'danger' ? 'bg-danger/10 text-danger' : 'bg-primary/10 text-primary'

@@ -108,8 +108,8 @@ export default function Sidebar({ user, memberships, onLogout }) {
     'Org Admin': 'text-primary bg-primary/10 border-primary/20',
     'Lead':      'text-info bg-info/10 border-info/20',
     'Reviewer':  'text-success bg-success/10 border-success/20',
-    'Developer': 'text-text-muted bg-white/5 border-white/10',
-    'Read Only': 'text-text-muted bg-white/5 border-white/10',
+    'Developer': 'text-text-muted bg-surfaceHighlight border-border',
+    'Read Only': 'text-text-muted bg-surfaceHighlight border-border',
   };
 
   const handleLogout = async () => {
@@ -134,7 +134,7 @@ export default function Sidebar({ user, memberships, onLogout }) {
     >
       {/* Logo */}
       <div className="h-14 px-4 flex items-center gap-2.5 border-b border-border flex-shrink-0">
-        <div className="w-6 h-6 rounded border border-white/10 bg-surface flex items-center justify-center flex-shrink-0">
+        <div className="w-6 h-6 rounded border border-border bg-surface flex items-center justify-center flex-shrink-0 shadow-xs">
           <svg className="w-3.5 h-3.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
@@ -182,7 +182,7 @@ export default function Sidebar({ user, memberships, onLogout }) {
       {/* User footer */}
       <div className="border-t border-border p-3 flex-shrink-0">
         <div className="flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-surfaceHighlight transition-colors cursor-pointer group">
-          <div className="w-7 h-7 rounded bg-surface border border-white/10 flex items-center justify-center text-xs font-semibold text-text-secondary flex-shrink-0 group-hover:text-text-primary group-hover:border-white/20 transition-all">
+          <div className="w-7 h-7 rounded bg-surface border border-border flex items-center justify-center text-xs font-semibold text-text-secondary flex-shrink-0 group-hover:text-text-primary group-hover:border-primary/40 transition-all shadow-xs">
             {userInitial}
           </div>
           <div className="flex-1 min-w-0">

@@ -35,9 +35,9 @@ export default function NodeDetailsDrawer({
   const apiRoute = metadata.api_route || null;
 
   return (
-    <div className="absolute top-0 right-0 w-96 h-full bg-surface/95 border-l border-white/10 backdrop-blur-xl shadow-2xl z-30 flex flex-col animate-slide-left overflow-hidden">
+    <div className="absolute top-0 right-0 w-96 h-full bg-surface/95 border-l border-border backdrop-blur-xl shadow-2xl z-30 flex flex-col animate-slide-left overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-white/[0.08] flex items-start justify-between gap-3">
+      <div className="p-4 border-b border-border flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span
@@ -70,7 +70,7 @@ export default function NodeDetailsDrawer({
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center border-b border-white/[0.08] px-3 bg-surfaceHighlight/30 text-xs">
+      <div className="flex items-center border-b border-border px-3 bg-surfaceHighlight/30 text-xs">
         <button
           onClick={() => setActiveTab('summary')}
           className={`py-2 px-2.5 font-medium border-b-2 transition-colors ${
@@ -126,11 +126,11 @@ export default function NodeDetailsDrawer({
           <div className="space-y-4 text-xs">
             {/* Degree Chips */}
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-2.5 rounded-lg bg-surfaceHighlight/40 border border-white/[0.06]">
+              <div className="p-2.5 rounded-lg bg-surfaceHighlight/40 border border-border">
                 <div className="text-[10px] uppercase font-semibold text-text-muted">In-Degree (Used By)</div>
                 <div className="text-lg font-bold text-emerald-400 mt-0.5">{incomingConnections.length}</div>
               </div>
-              <div className="p-2.5 rounded-lg bg-surfaceHighlight/40 border border-white/[0.06]">
+              <div className="p-2.5 rounded-lg bg-surfaceHighlight/40 border border-border">
                 <div className="text-[10px] uppercase font-semibold text-text-muted">Out-Degree (Calls)</div>
                 <div className="text-lg font-bold text-cyan-400 mt-0.5">{outgoingConnections.length}</div>
               </div>
@@ -138,7 +138,7 @@ export default function NodeDetailsDrawer({
 
             {/* Line Range */}
             {node.start_line && (
-              <div className="p-2.5 rounded-lg bg-surfaceHighlight/30 border border-white/[0.06] flex items-center justify-between">
+              <div className="p-2.5 rounded-lg bg-surfaceHighlight/30 border border-border flex items-center justify-between">
                 <span className="text-text-muted">Source Code Lines:</span>
                 <span className="font-mono font-bold text-text-primary">
                   L{node.start_line} - L{node.end_line || node.start_line}
@@ -167,7 +167,7 @@ export default function NodeDetailsDrawer({
                 <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
                   Signature
                 </span>
-                <pre className="p-2.5 rounded-lg bg-black/40 border border-white/[0.06] font-mono text-[11px] text-primary overflow-x-auto whitespace-pre-wrap">
+                <pre className="p-2.5 rounded-lg bg-surfaceHighlight border border-border font-mono text-[11px] text-primary overflow-x-auto whitespace-pre-wrap">
                   {signature}
                 </pre>
               </div>
@@ -179,12 +179,12 @@ export default function NodeDetailsDrawer({
                 <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider">
                   Documentation
                 </span>
-                <div className="p-2.5 rounded-lg bg-surfaceHighlight/30 border border-white/[0.06] text-text-secondary leading-relaxed italic whitespace-pre-line">
+                <div className="p-2.5 rounded-lg bg-surfaceHighlight/30 border border-border text-text-secondary leading-relaxed italic whitespace-pre-line">
                   {docstring}
                 </div>
               </div>
             ) : (
-              <div className="p-2.5 rounded-lg bg-surfaceHighlight/20 border border-white/[0.04] text-text-muted italic text-center">
+              <div className="p-2.5 rounded-lg bg-surfaceHighlight/20 border border-border text-text-muted italic text-center">
                 No inline documentation string found in AST.
               </div>
             )}
@@ -203,7 +203,7 @@ export default function NodeDetailsDrawer({
                 <div
                   key={edge.id}
                   onClick={() => onSelectNode && onSelectNode(targetNode.id)}
-                  className="p-2.5 rounded-lg border border-white/[0.06] bg-surfaceHighlight/20 hover:bg-surfaceHighlight/60 hover:border-cyan-500/30 transition-all cursor-pointer group"
+                  className="p-2.5 rounded-lg border border-border bg-surfaceHighlight/20 hover:bg-surfaceHighlight/60 hover:border-cyan-500/30 transition-all cursor-pointer group"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-text-primary group-hover:text-cyan-400 transition-colors text-xs truncate">
@@ -234,7 +234,7 @@ export default function NodeDetailsDrawer({
                 <div
                   key={edge.id}
                   onClick={() => onSelectNode && onSelectNode(sourceNode.id)}
-                  className="p-2.5 rounded-lg border border-white/[0.06] bg-surfaceHighlight/20 hover:bg-surfaceHighlight/60 hover:border-emerald-500/30 transition-all cursor-pointer group"
+                  className="p-2.5 rounded-lg border border-border bg-surfaceHighlight/20 hover:bg-surfaceHighlight/60 hover:border-emerald-500/30 transition-all cursor-pointer group"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-text-primary group-hover:text-emerald-400 transition-colors text-xs truncate">
@@ -263,7 +263,7 @@ export default function NodeDetailsDrawer({
             {/* Link to Topology / Architecture */}
             <Link
               to={`/repositories/${repositoryId}/topology`}
-              className="flex items-center justify-between p-2.5 rounded-lg border border-white/[0.08] bg-surfaceHighlight/30 hover:bg-surfaceHighlight hover:border-primary/40 transition-all text-xs text-text-primary"
+              className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-surfaceHighlight/30 hover:bg-surfaceHighlight hover:border-primary/40 transition-all text-xs text-text-primary"
             >
               <div className="flex items-center gap-2">
                 <span className="text-primary">🏛️</span>
@@ -275,7 +275,7 @@ export default function NodeDetailsDrawer({
             {/* Link to Codebase Guide */}
             <Link
               to={`/repositories/${repositoryId}/guide`}
-              className="flex items-center justify-between p-2.5 rounded-lg border border-white/[0.08] bg-surfaceHighlight/30 hover:bg-surfaceHighlight hover:border-primary/40 transition-all text-xs text-text-primary"
+              className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-surfaceHighlight/30 hover:bg-surfaceHighlight hover:border-primary/40 transition-all text-xs text-text-primary"
             >
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400">📖</span>
@@ -287,7 +287,7 @@ export default function NodeDetailsDrawer({
             {/* Link to Pull Requests */}
             <Link
               to={`/repositories/${repositoryId}/pull-requests`}
-              className="flex items-center justify-between p-2.5 rounded-lg border border-white/[0.08] bg-surfaceHighlight/30 hover:bg-surfaceHighlight hover:border-info/40 transition-all text-xs text-text-primary"
+              className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-surfaceHighlight/30 hover:bg-surfaceHighlight hover:border-info/40 transition-all text-xs text-text-primary"
             >
               <div className="flex items-center gap-2">
                 <span className="text-info">🔀</span>
@@ -299,7 +299,7 @@ export default function NodeDetailsDrawer({
             {/* Link to History */}
             <Link
               to={`/repositories/${repositoryId}/history`}
-              className="flex items-center justify-between p-2.5 rounded-lg border border-white/[0.08] bg-surfaceHighlight/30 hover:bg-surfaceHighlight hover:border-purple-400/40 transition-all text-xs text-text-primary"
+              className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-surfaceHighlight/30 hover:bg-surfaceHighlight hover:border-purple-400/40 transition-all text-xs text-text-primary"
             >
               <div className="flex items-center gap-2">
                 <span className="text-purple-400">📜</span>

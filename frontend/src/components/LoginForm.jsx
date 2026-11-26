@@ -39,15 +39,15 @@ export default function LoginForm({ onLoginSuccess }) {
   }
 
   return (
-    <div className="w-full max-w-md p-8 bg-surface/50 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl z-10 animate-slide-up">
+    <div className="w-full max-w-md p-8 bg-surface border border-border rounded-2xl shadow-xl z-10 animate-slide-up">
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-primary to-accent rounded-xl text-white font-bold text-xl mb-4 shadow-lg shadow-primary/20">
           RM
         </div>
-        <h2 className="text-2xl font-bold tracking-tight text-white">
+        <h2 className="text-2xl font-bold tracking-tight text-text-primary">
           Welcome back
         </h2>
-        <p className="text-sm text-gray-400 mt-2">
+        <p className="text-sm text-text-muted mt-2">
           Enter your credentials to access your dashboard
         </p>
       </div>
@@ -63,7 +63,7 @@ export default function LoginForm({ onLoginSuccess }) {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
             Email Address
           </label>
           <input
@@ -73,13 +73,13 @@ export default function LoginForm({ onLoginSuccess }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="developer@company.com"
-            className="w-full px-4 py-2.5 bg-surfaceHighlight/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent text-sm transition-all"
+            className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent text-sm transition-all"
           />
         </div>
 
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1.5">
             Password
           </label>
           <input
@@ -89,14 +89,14 @@ export default function LoginForm({ onLoginSuccess }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••••••"
-            className="w-full px-4 py-2.5 bg-surfaceHighlight/30 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent text-sm transition-all"
+            className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent text-sm transition-all"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full mt-4 py-3 px-4 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white font-medium rounded-xl text-sm transition-all shadow-lg shadow-primary/25 flex items-center justify-center gap-2 border border-white/10"
+          className="w-full mt-4 py-3 px-4 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white font-medium rounded-xl text-sm transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2 cursor-pointer"
         >
           {loading && (
             <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">

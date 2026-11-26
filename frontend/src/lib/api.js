@@ -419,6 +419,36 @@ export const historyApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  getEvolutionOverview: (repoId) =>
+    apiRequest(`/repositories/${repoId}/history/evolution/overview`, {
+      method: 'GET',
+    }),
+  getEvolutionMilestones: (repoId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/repositories/${repoId}/history/evolution/milestones${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
+  getModuleEvolution: (repoId, moduleName) =>
+    apiRequest(`/repositories/${repoId}/history/modules/${moduleName}/evolution`, {
+      method: 'GET',
+    }),
+  getBugLessons: (repoId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/repositories/${repoId}/history/bug-lessons${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
+  runImpactAnalysis: (repoId, payload) =>
+    apiRequest(`/repositories/${repoId}/history/impact-analysis`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  searchSimilarPrs: (repoId, payload) =>
+    apiRequest(`/repositories/${repoId}/history/similar-prs`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   triggerIndex: (repoId, payload = {}) =>
     apiRequest(`/repositories/${repoId}/history/index`, {
       method: 'POST',

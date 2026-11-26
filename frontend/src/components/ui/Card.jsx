@@ -6,7 +6,7 @@ export function Card({ children, className = '', hover = false, padding = true, 
     <div
       className={`
         bg-surface border border-border rounded-lg shadow-sm
-        ${hover ? 'hover:bg-surfaceHighlight hover:border-white/10 hover:shadow-card-hover cursor-pointer transition-all duration-200' : ''}
+        ${hover ? 'hover:bg-surfaceHighlight hover:border-border hover:shadow-card-hover cursor-pointer transition-all duration-200' : ''}
         ${padding ? 'p-5' : ''}
         ${className}
       `}
@@ -31,7 +31,7 @@ export function MetricCard({ title, value, icon, color = 'primary', subtitle, tr
   const c = colorMap[color] || colorMap.primary;
 
   return (
-    <div className={`bg-surface border border-border rounded-lg p-5 flex flex-col justify-between h-full hover:border-white/10 transition-all duration-150 ${className}`}>
+    <div className={`bg-surface border border-border rounded-lg p-5 flex flex-col justify-between h-full hover:border-primary/30 transition-all duration-150 ${className}`}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[13px] font-medium text-text-secondary">{title}</h3>
         {icon && (

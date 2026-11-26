@@ -71,7 +71,7 @@ export default function FindingList({ findings }) {
     high: 'text-orange-400 bg-orange-500/10 border-orange-400/20',
     medium: 'text-warning bg-warning/10 border-warning/20',
     low: 'text-success bg-success/10 border-success/20',
-    info: 'text-text-muted bg-white/5 border-white/10',
+    info: 'text-text-muted bg-surfaceHighlight border-border',
   };
 
   return (
@@ -80,7 +80,7 @@ export default function FindingList({ findings }) {
       <div className="flex items-center justify-between flex-wrap gap-3 mb-2">
         <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
           Findings
-          <span className="text-xs font-bold px-2 py-0.5 bg-white/5 border border-white/10 rounded text-text-muted">
+          <span className="text-xs font-bold px-2 py-0.5 bg-surfaceHighlight border border-border rounded text-text-muted">
             {findings.length}
           </span>
         </h3>

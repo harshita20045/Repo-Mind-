@@ -29,6 +29,14 @@ from backend.app.history.schemas import (
     ChangeComparisonResponse,
     HistoricalIndexRequest,
     HistoricalIndexResponse,
+    EvolutionOverviewResponse,
+    EvolutionMilestoneResponse,
+    ModuleEvolutionResponse,
+    BugLessonResponse,
+    HistoricalImpactAnalysisRequest,
+    HistoricalImpactAnalysisResponse,
+    SimilarPRSearchRequest,
+    SimilarPRMatchResponse,
 )
 from backend.app.history.service import (
     search_historical_prs,
@@ -37,6 +45,12 @@ from backend.app.history.service import (
     get_relevant_adrs,
     get_similar_resolved_bugs,
     compare_changes_with_history,
+    get_evolution_overview,
+    get_evolution_milestones,
+    get_module_evolution,
+    get_bug_lessons,
+    analyze_historical_impact,
+    search_similar_prs_intelligent,
 )
 from backend.app.history.indexer import (
     parse_and_index_adrs,
@@ -219,4 +233,114 @@ def trigger_historical_index(
         indexed_commits_count=commits_count,
         hotspots_detected_count=hotspots_count,
     )
+
+
+# ---------------------------------------------------------------------------
+# Enhanced Historical Evolution & Impact Endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/evolution/overview", response_model=EvolutionOverviewResponse)
+def get_repository_evolution_overview(
+    repository_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get aggregated repository evolution metrics across all 6 engineering dimensions."""
+    repo = _get_authorized_repo(repository_id, user, db)
+    return get_evolution_overview(db=db, repository_id=repo.id)
+
+
+@router.get("/evolution/milestones", response_model=List[EvolutionMilestoneResponse])
+def get_repository_evolution_milestones(
+    repository_id: int,
+    category: Optional[str] = Query(None, description="Filter by evolution dimension (architecture, api, database, dependency, security, performance)"),
+    module_name: Optional[str] = Query(None, description="Filter by module name (e.g. auth, orders, users)"),
+    limit: int = Query(50, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retrieve chronological engineering milestones and architectural transformations."""
+    repo = _get_authorized_repo(repository_id, user, db)
+    return get_evolution_milestones(
+        db=db,
+        repository_id=repo.id,
+        category=category,
+        module_name=module_name,
+        limit=limit,
+    )
+
+
+@router.get("/modules/{module_name}/evolution", response_model=ModuleEvolutionResponse)
+def get_module_historical_evolution(
+    repository_id: int,
+    module_name: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retrieve deep lifecycle evolution history, governing ADRs, and bug records for a specific module."""
+    repo = _get_authorized_repo(repository_id, user, db)
+    return get_module_evolution(
+        db=db,
+        repository_id=repo.id,
+        module_name=module_name,
+    )
+
+
+@router.get("/bug-lessons", response_model=List[BugLessonResponse])
+def get_historical_bug_lessons(
+    repository_id: int,
+    module_name: Optional[str] = Query(None, description="Filter by module"),
+    category: Optional[str] = Query(None, description="Filter by bug category (concurrency, validation, security, etc.)"),
+    limit: int = Query(20, ge=1, le=50),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retrieve historical bugs, root causes, resolutions, and preventive guidance."""
+    repo = _get_authorized_repo(repository_id, user, db)
+    return get_bug_lessons(
+        db=db,
+        repository_id=repo.id,
+        module_name=module_name,
+        category=category,
+        limit=limit,
+    )
+
+
+@router.post("/impact-analysis", response_model=HistoricalImpactAnalysisResponse)
+def run_historical_impact_analysis(
+    repository_id: int,
+    request: HistoricalImpactAnalysisRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate structured historical impact analysis report connecting planned changes with past decisions and bugs."""
+    repo = _get_authorized_repo(repository_id, user, db)
+    return analyze_historical_impact(
+        db=db,
+        repository_id=repo.id,
+        module_name=request.module_name,
+        file_path=request.file_path,
+        proposed_change_summary=request.proposed_change_summary,
+    )
+
+
+@router.post("/similar-prs", response_model=List[SimilarPRMatchResponse])
+def discover_similar_historical_prs(
+    repository_id: int,
+    request: SimilarPRSearchRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Find historically relevant PRs with matching rationale, lessons learned, and diff evidence."""
+    repo = _get_authorized_repo(repository_id, user, db)
+    return search_similar_prs_intelligent(
+        db=db,
+        repository_id=repo.id,
+        query=request.query,
+        file_path=request.file_path,
+        module_name=request.module_name,
+        change_category=request.change_category,
+        limit=request.limit,
+    )
+
 

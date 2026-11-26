@@ -11,10 +11,10 @@ export default function ActivityLog({ events }) {
         <div key={evt.id || idx} className="flex gap-4 relative animate-fade-in">
           {/* Vertical line connecting events */}
           {idx !== events.length - 1 && (
-            <div className="absolute left-[11px] top-6 bottom-[-16px] w-[2px] bg-white/[0.05]" />
+            <div className="absolute left-[11px] top-6 bottom-[-16px] w-[2px] bg-border" />
           )}
 
-          <div className="w-6 h-6 rounded-full bg-white/[0.05] border border-white/10 flex items-center justify-center flex-shrink-0 z-10">
+          <div className="w-6 h-6 rounded-full bg-surfaceHighlight border border-border flex items-center justify-center flex-shrink-0 z-10 shadow-xs">
             <div className="w-2 h-2 rounded-full bg-primary/80" />
           </div>
 

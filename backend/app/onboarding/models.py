@@ -21,6 +21,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from backend.app.db import Base
+from backend.app.organizations.models import Repository
 
 
 class RepositoryBlueprint(Base):

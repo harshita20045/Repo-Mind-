@@ -137,7 +137,7 @@ export default function SettingsPage() {
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                   activeTab === tab.id
                     ? 'bg-primary/10 text-primary'
-                    : 'text-text-muted hover:text-text-primary hover:bg-white/[0.05]'
+                    : 'text-text-muted hover:text-text-primary hover:bg-surfaceHighlight'
                 }`}
               >
                 <span className={`flex-shrink-0 ${activeTab === tab.id ? 'text-primary' : 'text-text-muted'}`}>
@@ -160,8 +160,8 @@ export default function SettingsPage() {
                 <p className="text-xs text-text-muted">Manage your personal account details.</p>
               </div>
 
-              <div className="flex items-center gap-5 pb-5 border-b border-white/[0.06]">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 border border-white/10 flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
+              <div className="flex items-center gap-5 pb-5 border-b border-border">
+                <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-2xl font-bold text-primary flex-shrink-0 shadow-xs">
                   {user?.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div>
@@ -180,7 +180,7 @@ export default function SettingsPage() {
                   <TextInput placeholder="e.g. Jane Doe" />
                 </SettingField>
                 <div className="pt-2">
-                  <button className="px-5 py-2 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-lg transition-all shadow-sm shadow-primary/20 border border-white/10">
+                  <button className="px-5 py-2 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-lg transition-all shadow-sm shadow-primary/20 border border-primary/30 cursor-pointer">
                     Save Changes
                   </button>
                 </div>
@@ -203,7 +203,7 @@ export default function SettingsPage() {
                   <TextInput value={String(orgId || '—')} readOnly />
                 </SettingField>
                 <div className="pt-2">
-                  <button className="px-5 py-2 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-lg transition-all shadow-sm shadow-primary/20 border border-white/10">
+                  <button className="px-5 py-2 bg-primary hover:bg-primary-hover text-white text-sm font-semibold rounded-lg transition-all shadow-sm shadow-primary/20 border border-primary/30 cursor-pointer">
                     Update Organization
                   </button>
                 </div>

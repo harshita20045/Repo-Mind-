@@ -31,7 +31,7 @@ function TextInput({ value, onChange, placeholder, type = 'text', className = ''
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      className={`w-full bg-surfaceHighlight/40 border border-white/[0.09] text-text-primary text-sm rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 placeholder-text-muted transition-all ${className}`}
+      className={`w-full bg-background border border-border text-text-primary text-sm rounded-lg px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 placeholder-text-muted transition-all ${className}`}
       {...rest}
     />
   );
@@ -220,7 +220,7 @@ export default function RepositoriesPage() {
                 className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-all duration-150 ${
                   selectedProjectId === p.id
                     ? 'bg-primary/10 text-primary border-primary/25'
-                    : 'bg-transparent text-text-muted border-white/[0.08] hover:text-text-primary hover:border-white/15 hover:bg-white/[0.04]'
+                    : 'bg-transparent text-text-muted border-border hover:text-text-primary hover:border-border hover:bg-surfaceHighlight'
                 }`}
               >
                 {p.name}
@@ -236,7 +236,7 @@ export default function RepositoriesPage() {
           <div className="p-6">
             <div className="space-y-1">
               {/* Header skeleton */}
-              <div className="flex gap-4 px-4 py-3 border-b border-white/[0.06]">
+              <div className="flex gap-4 px-4 py-3 border-b border-border">
                 {['w-32', 'w-24', 'w-20', 'w-24', 'w-16'].map((w, i) => (
                   <div key={i} className={`h-3 ${w} skeleton rounded`} />
                 ))}
@@ -317,7 +317,7 @@ export default function RepositoriesPage() {
                       <span className="text-sm text-text-muted">{repo.github_owner}</span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="font-mono text-xs text-text-muted bg-white/5 border border-white/[0.07] px-2 py-0.5 rounded">
+                      <span className="font-mono text-xs text-text-muted bg-surfaceHighlight border border-border px-2 py-0.5 rounded">
                         {repo.default_branch}
                       </span>
                     </td>

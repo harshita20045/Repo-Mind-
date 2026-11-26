@@ -14,7 +14,7 @@ export default function GraphToolbar({
   hasSelection,
 }) {
   return (
-    <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 p-1 rounded-xl bg-surface/90 border border-white/10 backdrop-blur-md shadow-lg">
+    <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 p-1 rounded-xl bg-surface/90 border border-border backdrop-blur-md shadow-lg">
       <button
         onClick={onZoomIn}
         className="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-text-primary hover:bg-white/[0.08] transition-colors"

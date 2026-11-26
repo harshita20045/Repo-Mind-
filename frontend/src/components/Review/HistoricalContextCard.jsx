@@ -69,8 +69,8 @@ export default function HistoricalContextCard({ repositoryId, pullRequestId }) {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Overview Banner */}
-      <div className="bg-surface border border-white/[0.08] rounded-lg p-5 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
+      <div className="bg-surface border border-border rounded-lg p-5 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-border">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -118,7 +118,7 @@ export default function HistoricalContextCard({ repositoryId, pullRequestId }) {
 
         {/* Evolution Summary */}
         {change_evolution_summary && (
-          <div className="mt-4 p-3 bg-surfaceHighlight/40 border border-white/[0.04] rounded-md text-xs text-text-secondary leading-relaxed">
+          <div className="mt-4 p-3 bg-surfaceHighlight/50 border border-border rounded-md text-xs text-text-secondary leading-relaxed">
             <span className="font-semibold text-text-primary mr-1">Change Evolution:</span>
             {change_evolution_summary}
           </div>
@@ -153,13 +153,13 @@ export default function HistoricalContextCard({ repositoryId, pullRequestId }) {
                       <span className="text-xs font-semibold text-text-primary">{adr.title}</span>
                       <Badge variant="outline" size="sm">{adr.status}</Badge>
                     </div>
-                    <p className="text-xs text-text-secondary mt-1.5 leading-relaxed font-mono bg-surfaceHighlight/50 p-2 rounded border border-white/[0.04]">
+                    <p className="text-xs text-text-secondary mt-1.5 leading-relaxed font-mono bg-surfaceHighlight/50 p-2 rounded border border-border">
                       {adr.decision}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-3 pt-3 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[11px] text-text-muted">
+                <div className="mt-3 pt-3 border-t border-border flex flex-wrap items-center justify-between gap-2 text-[11px] text-text-muted">
                   <div>
                     <span className="font-medium text-text-secondary">Rationale:</span> {adr.reason}
                   </div>
@@ -190,11 +190,11 @@ export default function HistoricalContextCard({ repositoryId, pullRequestId }) {
             {historical_commits.map(commit => (
               <div
                 key={commit.id}
-                className="p-3 bg-surface border border-white/[0.06] rounded-lg text-xs hover:border-white/[0.12] transition-colors"
+                className="p-3 bg-surface border border-border rounded-lg text-xs hover:border-primary/40 transition-colors"
               >
                 <div className="flex items-center justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold text-text-primary bg-surfaceHighlight px-1.5 py-0.5 rounded border border-white/[0.08]">
+                    <span className="font-mono font-semibold text-text-primary bg-surfaceHighlight px-1.5 py-0.5 rounded border border-border">
                       {commit.commit_sha.substring(0, 7)}
                     </span>
                     {commit.pull_request_number && (
@@ -211,7 +211,7 @@ export default function HistoricalContextCard({ repositoryId, pullRequestId }) {
                 </div>
 
                 {commit.original_decision && (
-                  <div className="mt-2 text-[11px] text-text-secondary bg-surfaceHighlight/30 p-2 rounded border border-white/[0.04]">
+                  <div className="mt-2 text-[11px] text-text-secondary bg-surfaceHighlight/50 p-2 rounded border border-border">
                     <span className="font-semibold text-text-primary">Original Engineering Decision:</span>{' '}
                     {commit.original_decision}
                   </div>
@@ -246,14 +246,14 @@ export default function HistoricalContextCard({ repositoryId, pullRequestId }) {
             {similar_resolved_bugs.map(bug => (
               <div
                 key={bug.id}
-                className="p-3 bg-surface border border-white/[0.06] rounded-lg text-xs"
+                className="p-3 bg-surface border border-border rounded-lg text-xs"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="font-semibold text-text-primary">{bug.title}</div>
                   <Badge variant="outline" size="sm">{bug.category}</Badge>
                 </div>
                 <div className="text-text-secondary mt-1 leading-relaxed">{bug.resolution_notes}</div>
-                <div className="mt-2 pt-2 border-t border-white/[0.04] flex items-center justify-between text-[11px] text-text-muted">
+                <div className="mt-2 pt-2 border-t border-border flex items-center justify-between text-[11px] text-text-muted">
                   <span className="font-mono text-text-muted">{bug.file_path}</span>
                   {bug.commit_sha && (
                     <span className="font-mono bg-surfaceHighlight px-1.5 py-0.5 rounded">

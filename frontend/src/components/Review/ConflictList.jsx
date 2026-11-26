@@ -72,9 +72,9 @@ function ConflictCard({ conflict }) {
 
         {/* Confidence */}
         {conflict.confidence_score != null && (
-          <div className="mt-3 pt-3 border-t border-white/[0.05] flex items-center gap-2">
+          <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
             <span className="text-xs text-text-muted">Confidence</span>
-            <div className="flex-1 max-w-[80px] h-1 bg-white/5 rounded-full overflow-hidden">
+            <div className="flex-1 max-w-[80px] h-1 bg-surfaceHighlight rounded-full overflow-hidden">
               <div
                 className="h-full bg-primary rounded-full"
                 style={{ width: `${(conflict.confidence_score * 100).toFixed(0)}%` }}
@@ -117,7 +117,7 @@ export default function ConflictList({ conflicts = [] }) {
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
           Semantic Conflicts
-          <span className="text-xs font-bold px-2 py-0.5 bg-white/5 border border-white/10 rounded text-text-muted">
+          <span className="text-xs font-bold px-2 py-0.5 bg-surfaceHighlight border border-border rounded text-text-muted">
             {conflicts.length}
           </span>
         </h3>

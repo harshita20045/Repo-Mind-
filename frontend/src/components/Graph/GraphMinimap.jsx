@@ -41,7 +41,7 @@ export default function GraphMinimap({
 
   return (
     <div
-      className="absolute bottom-4 right-4 z-20 rounded-lg bg-surface/90 border border-white/10 shadow-lg overflow-hidden backdrop-blur-md pointer-events-none"
+      className="absolute bottom-4 right-4 z-20 rounded-lg bg-surface/90 border border-border shadow-lg overflow-hidden backdrop-blur-md pointer-events-none"
       style={{ width: minimapWidth, height: minimapHeight }}
     >
       <svg width={minimapWidth} height={minimapHeight} className="w-full h-full">

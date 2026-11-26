@@ -27,6 +27,13 @@ from backend.app.architecture.models import ArchitectureRule, ArchitectureAnalys
 from backend.app.github.models import PullRequest, PullRequestFile
 from backend.app.review.models import ReviewRun, Finding, HumanDecision
 from backend.app.testing.models import TestScenario
+from backend.app.history.models import (
+    ArchitectureDecisionRecord,
+    HistoricalCommitRecord,
+    RecurringIssueHotspot,
+    HistoricalEvolutionMilestone,
+    HistoricalBugLesson,
+)
 from backend.app.rag.retriever import RAGRetriever
 
 logger = logging.getLogger(__name__)
@@ -440,6 +447,169 @@ class MultiSourceContextRetriever:
                         "summary": f"[{ts.category}] {ts.title} (Gap: {ts.coverage_gap})",
                     })
                 evidence_sections.append("=== AI TEST INTELLIGENCE & SCENARIOS ===\n" + "\n\n".join(test_texts))
+
+        # -------------------------------------------------------------
+        # 7b. HISTORICAL DECISIONS & RECURRING BUGS (ADRs, Commits, Hotspots)
+        # -------------------------------------------------------------
+        if entities.intent in (QueryIntent.HISTORICAL_DECISION, QueryIntent.MODULE_EXPLANATION, QueryIntent.GENERAL_CODE_SEARCH):
+            adr_query = self.db.query(ArchitectureDecisionRecord).filter(
+                ArchitectureDecisionRecord.repository_id == repository_id
+            )
+            # Check if query matches ADR titles, decisions, or affected modules
+            words = [w for w in query.lower().split() if len(w) > 3 and w not in ("what", "which", "when", "where", "this", "that", "does", "explain", "about")]
+            if words:
+                conditions = []
+                for w in words[:4]:
+                    conditions.append(ArchitectureDecisionRecord.title.ilike(f"%{w}%"))
+                    conditions.append(ArchitectureDecisionRecord.decision.ilike(f"%{w}%"))
+                    conditions.append(ArchitectureDecisionRecord.context.ilike(f"%{w}%"))
+                matching_adrs = adr_query.filter(or_(*conditions)).limit(4).all()
+            else:
+                matching_adrs = adr_query.limit(3).all()
+
+            if not matching_adrs and entities.intent == QueryIntent.HISTORICAL_DECISION:
+                matching_adrs = adr_query.limit(4).all()
+
+            if matching_adrs:
+                adr_texts = []
+                for adr in matching_adrs:
+                    adr_texts.append(
+                        f"ADR [{adr.adr_number}] {adr.title} ({adr.status})\n"
+                        f"Context: {adr.context}\n"
+                        f"Decision: {adr.decision}\n"
+                        f"Reason: {adr.reason}\n"
+                        f"Consequences: {adr.consequences}"
+                    )
+                    sources.append({
+                        "type": "architecture_decision_record",
+                        "path": adr.file_source or f"ADR/{adr.adr_number}",
+                        "symbol": adr.adr_number,
+                        "summary": f"{adr.title}: {adr.decision[:120]}",
+                    })
+                evidence_sections.append("=== ARCHITECTURE DECISION RECORDS (ADRs) ===\n" + "\n\n".join(adr_texts))
+
+            # Historical bugfix commits or commits matching keywords
+            commit_query = self.db.query(HistoricalCommitRecord).filter(
+                HistoricalCommitRecord.repository_id == repository_id
+            )
+            if "bug" in query.lower() or "issue" in query.lower() or "regression" in query.lower() or "fix" in query.lower():
+                commit_query = commit_query.filter(HistoricalCommitRecord.is_bugfix == True)
+            if words:
+                c_conditions = []
+                for w in words[:3]:
+                    c_conditions.append(HistoricalCommitRecord.message.ilike(f"%{w}%"))
+                    c_conditions.append(HistoricalCommitRecord.original_decision_rationale.ilike(f"%{w}%"))
+                matching_commits = commit_query.filter(or_(*c_conditions)).limit(4).all()
+            else:
+                matching_commits = commit_query.order_by(desc(HistoricalCommitRecord.committed_at)).limit(3).all()
+
+            if not matching_commits and entities.intent == QueryIntent.HISTORICAL_DECISION:
+                matching_commits = commit_query.order_by(desc(HistoricalCommitRecord.committed_at)).limit(4).all()
+
+            if matching_commits:
+                commit_texts = []
+                for c in matching_commits:
+                    date_str = c.committed_at.strftime("%Y-%m-%d") if c.committed_at else "past"
+                    commit_texts.append(
+                        f"Commit {c.commit_sha[:8]} by {c.author} ({date_str}) [Bugfix: {c.is_bugfix}]\n"
+                        f"Message: {c.message}\n"
+                        f"Rationale: {c.original_decision_rationale or 'N/A'}"
+                    )
+                    sources.append({
+                        "type": "historical_commit",
+                        "path": f"commit/{c.commit_sha[:8]}",
+                        "symbol": c.commit_sha[:8],
+                        "summary": f"{c.message[:100]}",
+                    })
+                evidence_sections.append("=== HISTORICAL COMMITS & CHANGE RATIONALE ===\n" + "\n\n".join(commit_texts))
+
+            # Recurring hotspots
+            hotspots = self.db.query(RecurringIssueHotspot).filter(
+                RecurringIssueHotspot.repository_id == repository_id
+            ).order_by(desc(RecurringIssueHotspot.hotspot_score)).limit(3).all()
+            if hotspots:
+                hs_texts = [
+                    f"Hotspot File: {h.file_path} (Severity: {h.severity.upper()}, Score: {h.hotspot_score}) - {h.bugfix_commits_count} bugfixes, {h.recurring_findings_count} review findings"
+                    for h in hotspots
+                ]
+                evidence_sections.append("=== RECURRING ISSUE HOTSPOTS ===\n" + "\n".join(hs_texts))
+                for h in hotspots:
+                    sources.append({
+                        "type": "recurring_hotspot",
+                        "path": h.file_path,
+                        "symbol": f"Hotspot:{h.file_path}",
+                        "summary": f"{h.severity} hotspot (score: {h.hotspot_score})",
+                    })
+
+            # Evolution milestones
+            milestones_q = self.db.query(HistoricalEvolutionMilestone).filter(
+                HistoricalEvolutionMilestone.repository_id == repository_id
+            )
+            if words:
+                m_conds = []
+                for w in words[:3]:
+                    m_conds.append(HistoricalEvolutionMilestone.title.ilike(f"%{w}%"))
+                    m_conds.append(HistoricalEvolutionMilestone.problem_solved.ilike(f"%{w}%"))
+                    m_conds.append(HistoricalEvolutionMilestone.module_name.ilike(f"%{w}%"))
+                matching_milestones = milestones_q.filter(or_(*m_conds)).limit(4).all()
+            else:
+                matching_milestones = milestones_q.order_by(desc(HistoricalEvolutionMilestone.milestone_date)).limit(3).all()
+
+            if not matching_milestones and ("architecture" in query.lower() or "evolv" in query.lower() or "change" in query.lower() or "refactor" in query.lower()):
+                matching_milestones = milestones_q.order_by(desc(HistoricalEvolutionMilestone.milestone_date)).limit(4).all()
+
+            if matching_milestones:
+                m_texts = []
+                for m in matching_milestones:
+                    m_texts.append(
+                        f"Milestone [{m.category.upper()}] - {m.title} (Module: {m.module_name}, Date: {m.milestone_date.strftime('%Y-%m-%d')})\n"
+                        f"Previous Approach: {m.previous_approach}\n"
+                        f"Current Approach: {m.current_approach}\n"
+                        f"Problem Solved: {m.problem_solved}\n"
+                        f"Reason for Change: {m.reason_for_change}\n"
+                        f"Consequences: {m.consequences}"
+                    )
+                    sources.append({
+                        "type": "evolution_milestone",
+                        "path": f"milestone/{m.category}/{m.module_name}",
+                        "symbol": m.title,
+                        "summary": f"{m.category}: {m.problem_solved[:100]}",
+                    })
+                evidence_sections.append("=== ARCHITECTURE & SYSTEM EVOLUTION MILESTONES ===\n" + "\n\n".join(m_texts))
+
+            # Historical bug lessons
+            bug_q = self.db.query(HistoricalBugLesson).filter(
+                HistoricalBugLesson.repository_id == repository_id
+            )
+            if "bug" in query.lower() or "issue" in query.lower() or "similar" in query.lower() or "prevent" in query.lower():
+                matching_bugs = bug_q.limit(3).all()
+            elif words:
+                b_conds = []
+                for w in words[:3]:
+                    b_conds.append(HistoricalBugLesson.issue_title.ilike(f"%{w}%"))
+                    b_conds.append(HistoricalBugLesson.description.ilike(f"%{w}%"))
+                    b_conds.append(HistoricalBugLesson.module_name.ilike(f"%{w}%"))
+                matching_bugs = bug_q.filter(or_(*b_conds)).limit(3).all()
+            else:
+                matching_bugs = []
+
+            if matching_bugs:
+                bug_texts = []
+                for b in matching_bugs:
+                    bug_texts.append(
+                        f"Bug Lesson [{b.issue_category.upper()}] - {b.issue_title} (Module: {b.module_name})\n"
+                        f"Description: {b.description}\n"
+                        f"Root Cause: {b.root_cause}\n"
+                        f"Resolution: {b.resolution_details}\n"
+                        f"Preventative Rule: {b.prevention_recommendations}"
+                    )
+                    sources.append({
+                        "type": "bug_lesson",
+                        "path": f"bug/{b.module_name}/{b.issue_category}",
+                        "symbol": b.issue_title,
+                        "summary": f"[{b.issue_category}] {b.resolution_details[:100]}",
+                    })
+                evidence_sections.append("=== HISTORICAL BUG LESSONS & PREVENTATIVE RULES ===\n" + "\n\n".join(bug_texts))
 
         # -------------------------------------------------------------
         # 8. RAG VECTOR CHUNKS (Source code & documentation text chunks)

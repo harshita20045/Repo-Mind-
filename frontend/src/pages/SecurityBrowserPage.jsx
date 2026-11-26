@@ -99,7 +99,7 @@ export default function SecurityBrowserPage() {
                   <select
                     value={f.status}
                     onChange={(e) => updateStatus({ findingId: f.id, status: e.target.value })}
-                    className="bg-surfaceHighlight border border-white/[0.07] text-text-primary text-xs rounded px-2 py-1 focus:outline-none"
+                    className="bg-surfaceHighlight border border-border text-text-primary text-xs rounded px-2 py-1 focus:outline-none"
                   >
                     <option value="" disabled>Set Status</option>
                     <option value="accept">Accept</option>

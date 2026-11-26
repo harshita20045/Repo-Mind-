@@ -9,57 +9,57 @@ export default {
         mono: ['JetBrains Mono', 'IBM Plex Mono', 'Fira Code', 'monospace'],
       },
       colors: {
-        // Base surfaces (Premium Dark Theme)
-        background: '#0A0C0F',
-        surface: '#111418',
-        surfaceHighlight: '#171B21',
-        surfaceElevated: '#1D232B',
-        border: 'rgba(255,255,255,0.08)',
+        // Base surfaces with CSS variables & opacity support
+        background: 'rgb(var(--color-background-rgb) / <alpha-value>)',
+        surface: 'rgb(var(--color-surface-rgb) / <alpha-value>)',
+        surfaceHighlight: 'rgb(var(--color-surface-highlight-rgb) / <alpha-value>)',
+        surfaceElevated: 'rgb(var(--color-surface-elevated-rgb) / <alpha-value>)',
+        border: 'var(--color-border)',
 
         // Brand
         primary: {
-          DEFAULT: '#18D6C1', // teal/mint
-          hover: '#14B8A6',
-          dim: 'rgba(24,214,193,0.12)',
+          DEFAULT: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
+          hover: 'var(--color-primary-hover)',
+          dim: 'var(--color-primary-dim)',
         },
         accent: {
-          DEFAULT: '#0EA5E9', // cyan
-          hover: '#0284C7',
-          dim: 'rgba(14,165,233,0.12)',
+          DEFAULT: 'rgb(var(--color-accent-rgb) / <alpha-value>)',
+          hover: 'var(--color-accent-hover)',
+          dim: 'var(--color-accent-dim)',
         },
 
         // Semantic
         success: {
-          DEFAULT: '#10b981', // emerald
-          dim: 'rgba(16,185,129,0.12)',
+          DEFAULT: 'rgb(var(--color-success-rgb) / <alpha-value>)',
+          dim: 'var(--color-success-dim)',
         },
         warning: {
-          DEFAULT: '#f59e0b', // amber
-          dim: 'rgba(245,158,11,0.12)',
+          DEFAULT: 'rgb(var(--color-warning-rgb) / <alpha-value>)',
+          dim: 'var(--color-warning-dim)',
         },
         danger: {
-          DEFAULT: '#ef4444', // red
-          dim: 'rgba(239,68,68,0.12)',
+          DEFAULT: 'rgb(var(--color-danger-rgb) / <alpha-value>)',
+          dim: 'var(--color-danger-dim)',
         },
         info: {
-          DEFAULT: '#3b82f6', // blue
-          dim: 'rgba(59,130,246,0.12)',
+          DEFAULT: 'rgb(var(--color-info-rgb) / <alpha-value>)',
+          dim: 'var(--color-info-dim)',
         },
 
         // Risk levels
         risk: {
-          low: '#10b981',
-          medium: '#f59e0b',
-          high: '#f97316',
-          critical: '#ef4444',
+          low: 'var(--color-risk-low)',
+          medium: 'var(--color-risk-medium)',
+          high: 'var(--color-risk-high)',
+          critical: 'var(--color-risk-critical)',
         },
 
         // Text
         text: {
-          primary: '#f8fafc',
-          secondary: '#cbd5e1',
-          muted: '#8492a6',
-          code: '#e2e8f0',
+          primary: 'rgb(var(--color-text-primary-rgb) / <alpha-value>)',
+          secondary: 'rgb(var(--color-text-secondary-rgb) / <alpha-value>)',
+          muted: 'rgb(var(--color-text-muted-rgb) / <alpha-value>)',
+          code: 'rgb(var(--color-text-code-rgb) / <alpha-value>)',
         },
       },
 
@@ -68,12 +68,12 @@ export default {
       },
 
       boxShadow: {
-        'glow-primary': '0 0 20px rgba(24,214,193,0.15)',
-        'glow-danger': '0 0 20px rgba(239,68,68,0.15)',
-        'glow-success': '0 0 20px rgba(16,185,129,0.15)',
-        'card': '0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)',
-        'card-hover': '0 4px 12px rgba(0,0,0,0.4)',
-        'modal': '0 25px 50px rgba(0,0,0,0.6)',
+        'glow-primary': '0 0 20px rgba(13,148,136,0.18)',
+        'glow-danger': '0 0 20px rgba(220,38,38,0.18)',
+        'glow-success': '0 0 20px rgba(5,150,105,0.18)',
+        'card': 'var(--shadow-sm)',
+        'card-hover': 'var(--shadow-md)',
+        'modal': 'var(--shadow-modal)',
       },
 
       borderRadius: {

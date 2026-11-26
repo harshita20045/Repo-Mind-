@@ -437,7 +437,7 @@ export default function EngineeringGraphEngine({
   return (
     <div
       ref={containerRef}
-      className={`relative rounded-xl border border-white/10 bg-background overflow-hidden flex flex-col select-none ${
+      className={`relative rounded-xl border border-border bg-background overflow-hidden flex flex-col select-none ${
         isFullscreen ? 'fixed inset-0 z-50 rounded-none' : ''
       } ${className}`}
       style={{ height: isFullscreen ? '100vh' : height }}
@@ -492,7 +492,7 @@ export default function EngineeringGraphEngine({
                     setNodeTypeFilter('all');
                     setSearchQuery('');
                   }}
-                  className="px-3.5 py-1.5 rounded-lg bg-surfaceHighlight border border-white/10 text-xs text-text-primary hover:bg-white/[0.08] transition-colors"
+                  className="px-3.5 py-1.5 rounded-lg bg-surfaceHighlight border border-border text-xs text-text-primary hover:bg-white/[0.08] transition-colors"
                 >
                   Reset Filters
                 </button>

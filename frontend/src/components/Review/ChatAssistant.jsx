@@ -154,7 +154,7 @@ export default function ChatAssistant({ organizationId, repositoryId, contextTyp
       )}
 
       {/* Quick Prompt Chips */}
-      <div className="mb-2 pb-2 border-b border-white/[0.06] flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+      <div className="mb-2 pb-2 border-b border-border flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
         <span className="text-[11px] font-semibold text-text-muted uppercase tracking-wider whitespace-nowrap pl-0.5 mr-1">
           Supported:
         </span>
@@ -164,7 +164,7 @@ export default function ChatAssistant({ organizationId, repositoryId, contextTyp
             type="button"
             onClick={() => handlePromptClick(q.query)}
             disabled={!activeSession || isSending}
-            className="text-[11px] whitespace-nowrap px-2.5 py-1 rounded-full bg-surfaceHighlight/80 hover:bg-surface border border-white/[0.08] text-text-secondary hover:text-text-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+            className="text-[11px] whitespace-nowrap px-2.5 py-1 rounded-full bg-surfaceHighlight hover:bg-surface border border-border text-text-secondary hover:text-text-primary transition-all disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
           >
             {q.label}
           </button>
@@ -274,17 +274,17 @@ export default function ChatAssistant({ organizationId, repositoryId, contextTyp
 
                     {/* Expandable Citations Drawer */}
                     {msg.sources && msg.sources.length > 0 && expandedSources[msg.id] && (
-                      <div className="mt-2 bg-surfaceHighlight/50 border border-white/[0.07] rounded-lg p-2.5 space-y-2 text-xs animate-slide-up">
+                      <div className="mt-2 bg-surfaceHighlight/50 border border-border rounded-lg p-2.5 space-y-2 text-xs animate-slide-up">
                         <div className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider">
                           Retrieved Repository Evidence:
                         </div>
                         <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto pr-1">
                           {msg.sources.map((src, sIdx) => {
-                            const badgeStyle = SOURCE_TYPE_STYLES[src.type] || 'bg-white/10 text-text-secondary border-white/20';
+                            const badgeStyle = SOURCE_TYPE_STYLES[src.type] || 'bg-surfaceHighlight text-text-secondary border-border';
                             return (
                               <div
                                 key={sIdx}
-                                className="flex flex-col gap-0.5 bg-surface/80 border border-white/[0.05] rounded p-2"
+                                className="flex flex-col gap-0.5 bg-surface border border-border rounded p-2"
                               >
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded border ${badgeStyle}`}>
@@ -341,7 +341,7 @@ export default function ChatAssistant({ organizationId, repositoryId, contextTyp
       </div>
 
       {/* Input area */}
-      <div className="mt-3 border-t border-white/[0.07] pt-3">
+      <div className="mt-3 border-t border-border pt-3">
         <form onSubmit={handleSubmit} className="flex items-end gap-2">
           <textarea
             ref={inputRef}

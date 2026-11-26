@@ -104,7 +104,7 @@ export default function RepositoryTopologyPage() {
       )}
 
       {/* Header Banner */}
-      <div className="rounded-xl border border-white/[0.08] bg-surface/50 p-6 backdrop-blur-md">
+      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
@@ -127,7 +127,7 @@ export default function RepositoryTopologyPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-white/[0.06]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-border">
           <div>
             <div className="text-xs uppercase font-semibold text-text-muted">Primary Language</div>
             <div className="text-lg font-bold text-text-primary mt-1">
@@ -156,7 +156,7 @@ export default function RepositoryTopologyPage() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-white/[0.08] pb-1">
+      <div className="flex items-center gap-2 border-b border-border pb-1">
         <button
           onClick={() => setActiveTab('architecture')}
           className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
@@ -212,7 +212,7 @@ export default function RepositoryTopologyPage() {
             <select
               value={nodeTypeFilter}
               onChange={(e) => setNodeTypeFilter(e.target.value)}
-              className="bg-surfaceHighlight/40 border border-white/[0.09] text-xs rounded-lg px-2.5 py-1.5 text-text-primary focus:outline-none"
+              className="bg-surfaceHighlight border border-border text-xs rounded-lg px-2.5 py-1.5 text-text-primary focus:outline-none"
             >
               <option value="">All Node Types</option>
               <option value="api_endpoint">API Endpoints</option>
@@ -232,18 +232,18 @@ export default function RepositoryTopologyPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-white/[0.08] text-xs font-semibold text-text-muted uppercase">
+                  <tr className="border-b border-border text-xs font-semibold text-text-muted uppercase">
                     <th className="py-2.5 px-3">Type</th>
                     <th className="py-2.5 px-3">Entity Name</th>
                     <th className="py-2.5 px-3">File Path</th>
                     <th className="py-2.5 px-3">Lines</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.04]">
+                <tbody className="divide-y divide-border">
                   {graphData?.nodes?.map((n) => (
-                    <tr key={n.id} className="hover:bg-white/[0.02]">
+                    <tr key={n.id} className="hover:bg-surfaceHighlight">
                       <td className="py-2 px-3">
-                        <span className="text-xs px-2 py-0.5 rounded bg-white/[0.06] font-mono">{n.node_type}</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-surfaceHighlight border border-border font-mono">{n.node_type}</span>
                       </td>
                       <td className="py-2 px-3 font-semibold text-text-primary">{n.name}</td>
                       <td className="py-2 px-3 font-mono text-xs text-text-muted">{n.file_path}</td>
@@ -268,12 +268,12 @@ export default function RepositoryTopologyPage() {
                 placeholder="Search symbol..."
                 value={symbolSearch}
                 onChange={(e) => setSymbolSearch(e.target.value)}
-                className="bg-surfaceHighlight/40 border border-white/[0.09] text-xs rounded-lg px-3 py-1.5 text-text-primary focus:outline-none"
+                className="bg-surfaceHighlight border border-border text-xs rounded-lg px-3 py-1.5 text-text-primary focus:outline-none"
               />
               <select
                 value={symbolFilter}
                 onChange={(e) => setSymbolFilter(e.target.value)}
-                className="bg-surfaceHighlight/40 border border-white/[0.09] text-xs rounded-lg px-2.5 py-1.5 text-text-primary focus:outline-none"
+                className="bg-surfaceHighlight border border-border text-xs rounded-lg px-2.5 py-1.5 text-text-primary focus:outline-none"
               >
                 <option value="">All Types</option>
                 <option value="class">Class</option>
@@ -292,7 +292,7 @@ export default function RepositoryTopologyPage() {
           ) : (
             <div className="space-y-3">
               {symbols.map((sym, idx) => (
-                <div key={idx} className="p-3.5 rounded-lg border border-white/[0.06] bg-surfaceHighlight/20 flex flex-col gap-1.5">
+                <div key={idx} className="p-3.5 rounded-lg border border-border bg-surface flex flex-col gap-1.5 shadow-xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-sm font-bold text-text-primary">{sym.name}</span>
@@ -331,7 +331,7 @@ export default function RepositoryTopologyPage() {
               placeholder="Search package..."
               value={depSearch}
               onChange={(e) => setDepSearch(e.target.value)}
-              className="bg-surfaceHighlight/40 border border-white/[0.09] text-xs rounded-lg px-3 py-1.5 text-text-primary focus:outline-none"
+              className="bg-surfaceHighlight border border-border text-xs rounded-lg px-3 py-1.5 text-text-primary focus:outline-none"
             />
           }
         >
@@ -343,7 +343,7 @@ export default function RepositoryTopologyPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-white/[0.08] text-xs font-semibold text-text-muted uppercase">
+                  <tr className="border-b border-border text-xs font-semibold text-text-muted uppercase">
                     <th className="py-2.5 px-3">Ecosystem</th>
                     <th className="py-2.5 px-3">Package Name</th>
                     <th className="py-2.5 px-3">Version Spec</th>
@@ -351,7 +351,7 @@ export default function RepositoryTopologyPage() {
                     <th className="py-2.5 px-3">Manifest File</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.04]">
+                <tbody className="divide-y divide-border">
                   {dependencies
                     .filter((d) => !depSearch || d.package_name.toLowerCase().includes(depSearch.toLowerCase()))
                     .map((d, i) => (

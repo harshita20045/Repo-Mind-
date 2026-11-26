@@ -20,7 +20,7 @@ export default function EdgeDetailsModal({ edge, allNodes = [], onClose }) {
     >
       <div className="space-y-4 text-xs">
         {/* Source and Target Chain */}
-        <div className="p-3 rounded-lg bg-surfaceHighlight/40 border border-white/[0.08] flex items-center justify-between gap-3">
+        <div className="p-3 rounded-lg bg-surfaceHighlight/40 border border-border flex items-center justify-between gap-3">
           <div className="min-w-0">
             <span className="text-[10px] uppercase font-bold text-text-muted block">Source Entity</span>
             <span className="font-semibold text-text-primary text-sm truncate block">
@@ -50,7 +50,7 @@ export default function EdgeDetailsModal({ edge, allNodes = [], onClose }) {
         </div>
 
         {/* Verification Status */}
-        <div className="flex items-center justify-between p-2.5 rounded-lg border border-white/[0.06] bg-surfaceHighlight/20">
+        <div className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-surfaceHighlight/20">
           <span className="text-text-muted">Relationship Provenance:</span>
           {isInferred ? (
             <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
@@ -69,7 +69,7 @@ export default function EdgeDetailsModal({ edge, allNodes = [], onClose }) {
             <span className="text-[10px] font-semibold uppercase text-text-muted tracking-wider block">
               Extraction Evidence
             </span>
-            <pre className="p-2.5 rounded-lg bg-black/40 border border-white/[0.06] font-mono text-[11px] text-text-secondary overflow-x-auto whitespace-pre-wrap">
+            <pre className="p-2.5 rounded-lg bg-surfaceHighlight border border-border font-mono text-[11px] text-text-secondary overflow-x-auto whitespace-pre-wrap">
               {JSON.stringify(evidence, null, 2)}
             </pre>
           </div>

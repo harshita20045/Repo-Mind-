@@ -5,7 +5,7 @@ function LifecycleBadge({ status }) {
   const styles = {
     new: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
     persistent: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
-    resolved: 'text-text-muted bg-white/5 border-white/10 line-through',
+    resolved: 'text-text-muted bg-surfaceHighlight border-border line-through',
     reopened: 'text-rose-400 bg-rose-500/10 border-rose-500/20 animate-pulse',
   };
   const normalized = status?.toLowerCase() || 'new';
@@ -74,7 +74,7 @@ export default function FindingCard({ finding }) {
     performance: 'text-accent bg-accent/10 border-accent/20',
     bug: 'text-warning bg-warning/10 border-warning/20',
   };
-  const catColor = categoryColors[finding.type?.toLowerCase()] || 'text-text-muted bg-surfaceHighlight border-white/5';
+  const catColor = categoryColors[finding.type?.toLowerCase()] || 'text-text-muted bg-surfaceHighlight border-border';
 
   return (
     <div className="relative flex flex-col bg-surface border border-border rounded-lg shadow-sm mb-4 transition-colors">

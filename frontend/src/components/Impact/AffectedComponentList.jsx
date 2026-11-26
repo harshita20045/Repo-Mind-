@@ -44,10 +44,10 @@ export default function AffectedComponentList({ affectedComponents = [] }) {
       }
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        const matchesName = item.component_name?.toLowerCase().includes(query);
+        const matchesName = (item.component_name || item.name)?.toLowerCase().includes(query);
         const matchesFile = item.file_path?.toLowerCase().includes(query);
-        const matchesReason = item.reason?.toLowerCase().includes(query);
-        const matchesType = item.node_type?.toLowerCase().includes(query);
+        const matchesReason = (item.reason || item.why_affected)?.toLowerCase().includes(query);
+        const matchesType = (item.node_type || item.component_type)?.toLowerCase().includes(query);
         return matchesName || matchesFile || matchesReason || matchesType;
       }
       return true;
@@ -132,13 +132,13 @@ export default function AffectedComponentList({ affectedComponents = [] }) {
                       {tier.label}
                     </span>
                     <SeverityBadge severity={item.severity || 'medium'} />
-                    {item.node_type && (
+                    {(item.node_type || item.component_type) && (
                       <span className="text-[10px] uppercase font-bold font-mono px-1.5 py-0.5 rounded bg-surfaceHighlight text-text-muted border border-border">
-                        {item.node_type}
+                        {item.node_type || item.component_type}
                       </span>
                     )}
                     <span className="font-mono text-xs font-semibold text-text-primary">
-                      {item.component_name}
+                      {item.component_name || item.name || item.file_path}
                     </span>
                   </div>
                   <span className="font-mono text-[11px] text-text-muted truncate max-w-sm" title={item.file_path}>
@@ -161,7 +161,7 @@ export default function AffectedComponentList({ affectedComponents = [] }) {
                       Why Affected
                     </span>
                     <span className="text-text-secondary">
-                      {item.reason}
+                      {item.reason || item.why_affected}
                     </span>
                   </div>
                 </div>
@@ -175,10 +175,10 @@ export default function AffectedComponentList({ affectedComponents = [] }) {
                   </div>
                 )}
 
-                {item.evidence && (
+                {(item.evidence || item.supporting_evidence) && (
                   <div className="mt-2 text-[11px] font-mono text-text-muted bg-surfaceHighlight/60 p-2 rounded border border-border">
                     <span className="text-text-muted font-sans font-medium uppercase text-[10px] tracking-wider block mb-0.5">Supporting Evidence</span>
-                    {item.evidence}
+                    {item.evidence || item.supporting_evidence}
                   </div>
                 )}
               </div>

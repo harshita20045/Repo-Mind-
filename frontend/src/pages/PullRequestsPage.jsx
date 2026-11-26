@@ -30,7 +30,7 @@ function PrStateIcon({ state }) {
     );
   }
   return (
-    <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0" aria-label="Closed PR">
+    <div className="w-6 h-6 rounded-full bg-surfaceHighlight border border-border flex items-center justify-center flex-shrink-0" aria-label="Closed PR">
       <svg className="w-3.5 h-3.5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
       </svg>
@@ -189,7 +189,7 @@ export default function PullRequestsPage() {
                     </td>
                     <td className="px-4 py-3.5 hidden lg:table-cell">
                       {pr.head_sha ? (
-                        <span className="font-mono text-xs text-text-muted bg-white/5 border border-white/[0.07] px-2 py-0.5 rounded">
+                        <span className="font-mono text-xs text-text-muted bg-surfaceHighlight border border-border px-2 py-0.5 rounded">
                           {pr.head_sha.substring(0, 7)}
                         </span>
                       ) : (
